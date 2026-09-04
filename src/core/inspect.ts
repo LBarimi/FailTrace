@@ -136,7 +136,7 @@ function unhealthyTrial(trial: TrialResult, command: string): boolean {
     || trial.exitCode === null
     || trial.exitCode < 0
     || matched === null
-    || !['passed', 'failed'].includes(trial.status);
+    || trial.status !== (matched ? 'failed' : 'passed');
 }
 
 function includeTrial(trial: TrialResult, run: RunSummary, filter: RunEvidenceFilter): boolean {
