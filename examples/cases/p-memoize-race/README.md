@@ -6,6 +6,19 @@ The upstream report describes concurrent calls during page generation and the re
 
 This is an authored, offline reproducer of that real race. A promise barrier controls whether a second same-key request overlaps the first or starts after it finishes. It uses neither a remote API nor random delays. The six schedules are declared in `schedule.json` before either version runs: overlap, sequential, repeated three times. The affected release has three matching schedule outcomes; the fixed release completes all six successfully. **These counts describe controlled schedule coverage, not a naturally sampled flaky-failure probability.**
 
+## Reproduce and verify from the repository root
+
+After cloning FailTrace and installing its locked development dependencies, one root command builds Core, installs this case's pinned dependencies, tests the checker, and runs the affected, negative-control and fixed Verify samples:
+
+```sh
+git clone --depth 1 https://github.com/LBarimi/FailTrace.git
+cd FailTrace
+npm ci
+npm run case:p-memoize
+```
+
+The expected final lines report 3/6 matching affected schedules, unchanged and ineffective-fix controls that retain the target, an invalid setup classified as inconclusive, and a fixed candidate with 0/6 matches plus six healthy exits. Evidence remains under this case's ignored `.failtrace/` directory.
+
 ## Run the checker
 
 Requires Node.js 22.12+ and npm. From this directory:

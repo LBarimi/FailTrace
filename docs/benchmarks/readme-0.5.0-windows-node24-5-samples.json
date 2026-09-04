@@ -1,0 +1,1380 @@
+{
+  "schemaVersion": 1,
+  "title": "FailTrace 0.5.0 README benchmark evidence",
+  "release": "0.5.0",
+  "sampleCount": 5,
+  "sampleTimestamps": [
+    {
+      "sample": 1,
+      "createdAt": "2026-09-04T18:40:10.458Z"
+    },
+    {
+      "sample": 2,
+      "createdAt": "2026-09-04T18:50:07.331Z"
+    },
+    {
+      "sample": 3,
+      "createdAt": "2026-09-04T18:51:04.715Z"
+    },
+    {
+      "sample": 4,
+      "createdAt": "2026-09-04T18:52:02.306Z"
+    },
+    {
+      "sample": 5,
+      "createdAt": "2026-09-04T18:53:04.614Z"
+    }
+  ],
+  "coreJavaScriptSha256": "dcd990b591c52e7686137d913153d08a90d8a1eb2fe42bc145ef08675e700963",
+  "host": {
+    "platform": "win32",
+    "arch": "x64",
+    "osRelease": "10.0.19045",
+    "node": "v24.19.0"
+  },
+  "execution": {
+    "suite": "ci",
+    "includesControlExperiments": true,
+    "samplesRunSequentially": true,
+    "budgetChecksPassed": true
+  },
+  "methodology": {
+    "wall": "Measured inside an isolated worker after module import and fixture setup; includes target startup/execution, evidence, predicates and final metadata. Worker startup is separately recorded.",
+    "io": "Instrumented node:fs/promises and FileHandle API calls in the runner process, not OS syscalls. Successful logical write bytes and attempted/completed fsync/datasync calls. Excludes child direct-FD writes, callback/synchronous fs APIs, recursive internal calls, regex worker I/O and kernel caching/physical device writes.",
+    "baselines": "Identical Node fixture/environment/trial indices with file-descriptor stdout/stderr, sequential spawn via shell or executable+argv. No FailTrace predicates or durable metadata.",
+    "target": "Every trial exits 1; writes exactly outputBytes to stdout and none to stderr. Positive outputs contain the matching sentinel; zero-byte text/regex predicates intentionally do not match. Delay excludes Node startup.",
+    "privacy": "Reports omit command paths, working directories, environment values and usernames. Raw local artifacts remain private under the output directory.",
+    "code": "Built Core is copied once before worker execution; its JavaScript file names and contents are SHA-256 fingerprinted. Build before benchmarking. Benchmark results do not change if dist is rebuilt concurrently.",
+    "aggregation": "For each stable result ID, samples remain in timestamp order. Min and max are the observed extrema; median is the third value after sorting five observations. No raw artifact path, command path, environment value or username is copied."
+  },
+  "limitations": [
+    "Five complete benchmark reports were run sequentially on one Windows x64 host with Node.js 24.19.0 and the same snapshotted Core JavaScript digest. Case order was fixed rather than randomized.",
+    "Timing ranges describe this host and sample only. They are not latency guarantees and do not establish behavior on another operating system, filesystem, Node.js release or workload.",
+    "Logical metadata bytes and fsync counts are instrumented Node.js API-level measures, not physical storage I/O. CPU, RSS, throughput, artifact-size and detailed call-count fields are omitted from this README-focused aggregate.",
+    "Concurrency 4 overlaps target commands. Shared files, ports, services, CPU and memory can change failure behavior, so concurrent and sequential runs are different experiments even when all trials complete.",
+    "Threshold 1 stops an always-matching classification after the first match. It executes less work than the full budget and is not a full-sample failure-rate estimate.",
+    "Every synthetic target exits 1. Positive-output cases contain the selected sentinel; zero-output substring and regex cases intentionally do not match."
+  ],
+  "readmeClaims": {
+    "logicalMetadata100Trials": {
+      "historicalReference": {
+        "release": "0.3.1",
+        "source": "windows-node24.json",
+        "sampleCount": 1,
+        "logicalMetadataBytesWritten": 3132662
+      },
+      "release050": {
+        "sampleCount": 5,
+        "min": 111094,
+        "median": 111141,
+        "max": 111228
+      },
+      "percentFewerUsingRelease050Median": 96.45,
+      "limit": "The 0.3.1 reference is one earlier same-host sample; the 0.5.0 value is the median of five later sequential samples. Logical bytes are instrumented writes, not physical I/O."
+    },
+    "concurrencyTenOneSecondTargets": {
+      "sequentialWallMs": {
+        "min": 10968.128200000001,
+        "median": 11046.8447,
+        "max": 11184.7633
+      },
+      "concurrency4WallMs": {
+        "min": 3345.4618,
+        "median": 3379.7219,
+        "max": 3524.6564000000003
+      },
+      "medianWallTimeRatio": 3.27,
+      "completedTrialsEach": 10,
+      "limit": "Concurrency overlaps commands and can change the experiment through shared resources; this ratio describes only the controlled target on this host."
+    },
+    "thresholdTenTenMillisecondTargets": {
+      "fullBudgetWallMs": {
+        "min": 995.3573,
+        "median": 1275.4029,
+        "max": 1330.8946999999998
+      },
+      "threshold1WallMs": {
+        "min": 110.7065,
+        "median": 123.9533,
+        "max": 156.5337
+      },
+      "percentLowerMedianWallTime": 90.3,
+      "completedTrials": {
+        "fullBudget": 10,
+        "threshold1": 1
+      },
+      "limit": "The always-matching threshold classification stops after its first match. It is less executed work, not a full-budget failure-rate sample."
+    }
+  },
+  "results": [
+    {
+      "id": "direct-argv-0ms-10x-0b-nonzero_exit",
+      "mode": "direct-argv",
+      "case": {
+        "durationMs": 0,
+        "repeat": 10,
+        "outputBytes": 0,
+        "predicate": "nonzero_exit"
+      },
+      "decision": null,
+      "observations": {
+        "wallMs": [
+          647.4967,
+          602.4865,
+          576.3896,
+          815.4167,
+          632.2132
+        ],
+        "logicalMetadataBytesWritten": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fsyncCalls": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "completedTrials": [
+          10,
+          10,
+          10,
+          10,
+          10
+        ]
+      },
+      "summary": {
+        "wallMs": {
+          "min": 576.3896,
+          "median": 632.2132,
+          "max": 815.4167
+        },
+        "logicalMetadataBytesWritten": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "fsyncCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "completedTrials": {
+          "min": 10,
+          "median": 10,
+          "max": 10
+        }
+      }
+    },
+    {
+      "id": "direct-shell-0ms-10x-0b-nonzero_exit",
+      "mode": "direct-shell",
+      "case": {
+        "durationMs": 0,
+        "repeat": 10,
+        "outputBytes": 0,
+        "predicate": "nonzero_exit"
+      },
+      "decision": null,
+      "observations": {
+        "wallMs": [
+          977.2302000000001,
+          873.5981,
+          833.9415,
+          1091.5486,
+          831.0434
+        ],
+        "logicalMetadataBytesWritten": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fsyncCalls": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "completedTrials": [
+          10,
+          10,
+          10,
+          10,
+          10
+        ]
+      },
+      "summary": {
+        "wallMs": {
+          "min": 831.0434,
+          "median": 873.5981,
+          "max": 1091.5486
+        },
+        "logicalMetadataBytesWritten": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "fsyncCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "completedTrials": {
+          "min": 10,
+          "median": 10,
+          "max": 10
+        }
+      }
+    },
+    {
+      "id": "failtrace-0ms-10x-0b-nonzero_exit",
+      "mode": "failtrace",
+      "case": {
+        "durationMs": 0,
+        "repeat": 10,
+        "outputBytes": 0,
+        "predicate": "nonzero_exit"
+      },
+      "decision": null,
+      "observations": {
+        "wallMs": [
+          1064.0639999999999,
+          929.4585,
+          954.0858000000001,
+          1390.4701,
+          967.8479
+        ],
+        "logicalMetadataBytesWritten": [
+          13235,
+          13312,
+          13293,
+          13361,
+          13323
+        ],
+        "fsyncCalls": [
+          12,
+          12,
+          12,
+          12,
+          12
+        ],
+        "matchedTrials": [
+          10,
+          10,
+          10,
+          10,
+          10
+        ],
+        "completedTrials": [
+          10,
+          10,
+          10,
+          10,
+          10
+        ]
+      },
+      "summary": {
+        "wallMs": {
+          "min": 929.4585,
+          "median": 967.8479,
+          "max": 1390.4701
+        },
+        "logicalMetadataBytesWritten": {
+          "min": 13235,
+          "median": 13312,
+          "max": 13361
+        },
+        "fsyncCalls": {
+          "min": 12,
+          "median": 12,
+          "max": 12
+        },
+        "matchedTrials": {
+          "min": 10,
+          "median": 10,
+          "max": 10
+        },
+        "completedTrials": {
+          "min": 10,
+          "median": 10,
+          "max": 10
+        }
+      }
+    },
+    {
+      "id": "direct-argv-0ms-100x-0b-nonzero_exit",
+      "mode": "direct-argv",
+      "case": {
+        "durationMs": 0,
+        "repeat": 100,
+        "outputBytes": 0,
+        "predicate": "nonzero_exit"
+      },
+      "decision": null,
+      "observations": {
+        "wallMs": [
+          6129.7148,
+          6254.498,
+          6316.2772,
+          8342.724100000001,
+          6277.4032
+        ],
+        "logicalMetadataBytesWritten": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fsyncCalls": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "completedTrials": [
+          100,
+          100,
+          100,
+          100,
+          100
+        ]
+      },
+      "summary": {
+        "wallMs": {
+          "min": 6129.7148,
+          "median": 6277.4032,
+          "max": 8342.724100000001
+        },
+        "logicalMetadataBytesWritten": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "fsyncCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "completedTrials": {
+          "min": 100,
+          "median": 100,
+          "max": 100
+        }
+      }
+    },
+    {
+      "id": "direct-shell-0ms-100x-0b-nonzero_exit",
+      "mode": "direct-shell",
+      "case": {
+        "durationMs": 0,
+        "repeat": 100,
+        "outputBytes": 0,
+        "predicate": "nonzero_exit"
+      },
+      "decision": null,
+      "observations": {
+        "wallMs": [
+          8764.2562,
+          9377.9092,
+          8424.869299999998,
+          11787.1521,
+          7866.7761
+        ],
+        "logicalMetadataBytesWritten": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fsyncCalls": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "completedTrials": [
+          100,
+          100,
+          100,
+          100,
+          100
+        ]
+      },
+      "summary": {
+        "wallMs": {
+          "min": 7866.7761,
+          "median": 8764.2562,
+          "max": 11787.1521
+        },
+        "logicalMetadataBytesWritten": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "fsyncCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "completedTrials": {
+          "min": 100,
+          "median": 100,
+          "max": 100
+        }
+      }
+    },
+    {
+      "id": "failtrace-0ms-100x-0b-nonzero_exit",
+      "mode": "failtrace",
+      "case": {
+        "durationMs": 0,
+        "repeat": 100,
+        "outputBytes": 0,
+        "predicate": "nonzero_exit"
+      },
+      "decision": null,
+      "observations": {
+        "wallMs": [
+          8373.8591,
+          12098.2051,
+          10749.634199999999,
+          11337.0325,
+          9223.783300000001
+        ],
+        "logicalMetadataBytesWritten": [
+          111094,
+          111228,
+          111163,
+          111141,
+          111133
+        ],
+        "fsyncCalls": [
+          102,
+          102,
+          102,
+          102,
+          102
+        ],
+        "matchedTrials": [
+          100,
+          100,
+          100,
+          100,
+          100
+        ],
+        "completedTrials": [
+          100,
+          100,
+          100,
+          100,
+          100
+        ]
+      },
+      "summary": {
+        "wallMs": {
+          "min": 8373.8591,
+          "median": 10749.634199999999,
+          "max": 12098.2051
+        },
+        "logicalMetadataBytesWritten": {
+          "min": 111094,
+          "median": 111141,
+          "max": 111228
+        },
+        "fsyncCalls": {
+          "min": 102,
+          "median": 102,
+          "max": 102
+        },
+        "matchedTrials": {
+          "min": 100,
+          "median": 100,
+          "max": 100
+        },
+        "completedTrials": {
+          "min": 100,
+          "median": 100,
+          "max": 100
+        }
+      }
+    },
+    {
+      "id": "direct-argv-0ms-10x-10240b-substring",
+      "mode": "direct-argv",
+      "case": {
+        "durationMs": 0,
+        "repeat": 10,
+        "outputBytes": 10240,
+        "predicate": "substring"
+      },
+      "decision": null,
+      "observations": {
+        "wallMs": [
+          566.3766999999999,
+          787.556,
+          961.7175,
+          769.1023,
+          679.3722
+        ],
+        "logicalMetadataBytesWritten": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fsyncCalls": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "completedTrials": [
+          10,
+          10,
+          10,
+          10,
+          10
+        ]
+      },
+      "summary": {
+        "wallMs": {
+          "min": 566.3766999999999,
+          "median": 769.1023,
+          "max": 961.7175
+        },
+        "logicalMetadataBytesWritten": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "fsyncCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "completedTrials": {
+          "min": 10,
+          "median": 10,
+          "max": 10
+        }
+      }
+    },
+    {
+      "id": "direct-shell-0ms-10x-10240b-substring",
+      "mode": "direct-shell",
+      "case": {
+        "durationMs": 0,
+        "repeat": 10,
+        "outputBytes": 10240,
+        "predicate": "substring"
+      },
+      "decision": null,
+      "observations": {
+        "wallMs": [
+          809.4948999999999,
+          1000.1519,
+          1231.9243,
+          1183.9162999999999,
+          1033.702
+        ],
+        "logicalMetadataBytesWritten": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fsyncCalls": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "completedTrials": [
+          10,
+          10,
+          10,
+          10,
+          10
+        ]
+      },
+      "summary": {
+        "wallMs": {
+          "min": 809.4948999999999,
+          "median": 1033.702,
+          "max": 1231.9243
+        },
+        "logicalMetadataBytesWritten": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "fsyncCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "completedTrials": {
+          "min": 10,
+          "median": 10,
+          "max": 10
+        }
+      }
+    },
+    {
+      "id": "failtrace-0ms-10x-10240b-substring",
+      "mode": "failtrace",
+      "case": {
+        "durationMs": 0,
+        "repeat": 10,
+        "outputBytes": 10240,
+        "predicate": "substring"
+      },
+      "decision": null,
+      "observations": {
+        "wallMs": [
+          797.5442,
+          1231.2945,
+          1474.1135,
+          1097.6642,
+          1059.1234
+        ],
+        "logicalMetadataBytesWritten": [
+          13388,
+          13431,
+          13449,
+          13425,
+          13454
+        ],
+        "fsyncCalls": [
+          12,
+          12,
+          12,
+          12,
+          12
+        ],
+        "matchedTrials": [
+          10,
+          10,
+          10,
+          10,
+          10
+        ],
+        "completedTrials": [
+          10,
+          10,
+          10,
+          10,
+          10
+        ]
+      },
+      "summary": {
+        "wallMs": {
+          "min": 797.5442,
+          "median": 1097.6642,
+          "max": 1474.1135
+        },
+        "logicalMetadataBytesWritten": {
+          "min": 13388,
+          "median": 13431,
+          "max": 13454
+        },
+        "fsyncCalls": {
+          "min": 12,
+          "median": 12,
+          "max": 12
+        },
+        "matchedTrials": {
+          "min": 10,
+          "median": 10,
+          "max": 10
+        },
+        "completedTrials": {
+          "min": 10,
+          "median": 10,
+          "max": 10
+        }
+      }
+    },
+    {
+      "id": "direct-argv-0ms-10x-1048576b-regex",
+      "mode": "direct-argv",
+      "case": {
+        "durationMs": 0,
+        "repeat": 10,
+        "outputBytes": 1048576,
+        "predicate": "regex"
+      },
+      "decision": null,
+      "observations": {
+        "wallMs": [
+          555.4676000000001,
+          752.1021,
+          926.2207,
+          739.5489,
+          815.5041
+        ],
+        "logicalMetadataBytesWritten": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fsyncCalls": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "completedTrials": [
+          10,
+          10,
+          10,
+          10,
+          10
+        ]
+      },
+      "summary": {
+        "wallMs": {
+          "min": 555.4676000000001,
+          "median": 752.1021,
+          "max": 926.2207
+        },
+        "logicalMetadataBytesWritten": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "fsyncCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "completedTrials": {
+          "min": 10,
+          "median": 10,
+          "max": 10
+        }
+      }
+    },
+    {
+      "id": "direct-shell-0ms-10x-1048576b-regex",
+      "mode": "direct-shell",
+      "case": {
+        "durationMs": 0,
+        "repeat": 10,
+        "outputBytes": 1048576,
+        "predicate": "regex"
+      },
+      "decision": null,
+      "observations": {
+        "wallMs": [
+          701.6021000000001,
+          1070.2514,
+          1410.8139,
+          984.2126000000001,
+          1205.3337999999999
+        ],
+        "logicalMetadataBytesWritten": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fsyncCalls": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "completedTrials": [
+          10,
+          10,
+          10,
+          10,
+          10
+        ]
+      },
+      "summary": {
+        "wallMs": {
+          "min": 701.6021000000001,
+          "median": 1070.2514,
+          "max": 1410.8139
+        },
+        "logicalMetadataBytesWritten": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "fsyncCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "completedTrials": {
+          "min": 10,
+          "median": 10,
+          "max": 10
+        }
+      }
+    },
+    {
+      "id": "failtrace-0ms-10x-1048576b-regex",
+      "mode": "failtrace",
+      "case": {
+        "durationMs": 0,
+        "repeat": 10,
+        "outputBytes": 1048576,
+        "predicate": "regex"
+      },
+      "decision": null,
+      "observations": {
+        "wallMs": [
+          1138.898,
+          1356.7149,
+          1814.2423000000001,
+          1467.134,
+          1591.6379
+        ],
+        "logicalMetadataBytesWritten": [
+          13345,
+          13442,
+          13448,
+          13428,
+          13404
+        ],
+        "fsyncCalls": [
+          12,
+          12,
+          12,
+          12,
+          12
+        ],
+        "matchedTrials": [
+          10,
+          10,
+          10,
+          10,
+          10
+        ],
+        "completedTrials": [
+          10,
+          10,
+          10,
+          10,
+          10
+        ]
+      },
+      "summary": {
+        "wallMs": {
+          "min": 1138.898,
+          "median": 1467.134,
+          "max": 1814.2423000000001
+        },
+        "logicalMetadataBytesWritten": {
+          "min": 13345,
+          "median": 13428,
+          "max": 13448
+        },
+        "fsyncCalls": {
+          "min": 12,
+          "median": 12,
+          "max": 12
+        },
+        "matchedTrials": {
+          "min": 10,
+          "median": 10,
+          "max": 10
+        },
+        "completedTrials": {
+          "min": 10,
+          "median": 10,
+          "max": 10
+        }
+      }
+    },
+    {
+      "id": "failtrace-10ms-10x-0b-nonzero_exit-full",
+      "mode": "failtrace",
+      "case": {
+        "durationMs": 10,
+        "repeat": 10,
+        "outputBytes": 0,
+        "predicate": "nonzero_exit",
+        "experiment": "full"
+      },
+      "decision": null,
+      "observations": {
+        "wallMs": [
+          995.3573,
+          1321.7739,
+          1330.8946999999998,
+          1191.9850999999999,
+          1275.4029
+        ],
+        "logicalMetadataBytesWritten": [
+          13362,
+          13376,
+          13349,
+          13392,
+          13301
+        ],
+        "fsyncCalls": [
+          12,
+          12,
+          12,
+          12,
+          12
+        ],
+        "matchedTrials": [
+          10,
+          10,
+          10,
+          10,
+          10
+        ],
+        "completedTrials": [
+          10,
+          10,
+          10,
+          10,
+          10
+        ]
+      },
+      "summary": {
+        "wallMs": {
+          "min": 995.3573,
+          "median": 1275.4029,
+          "max": 1330.8946999999998
+        },
+        "logicalMetadataBytesWritten": {
+          "min": 13301,
+          "median": 13362,
+          "max": 13392
+        },
+        "fsyncCalls": {
+          "min": 12,
+          "median": 12,
+          "max": 12
+        },
+        "matchedTrials": {
+          "min": 10,
+          "median": 10,
+          "max": 10
+        },
+        "completedTrials": {
+          "min": 10,
+          "median": 10,
+          "max": 10
+        }
+      }
+    },
+    {
+      "id": "failtrace-10ms-10x-0b-nonzero_exit-decision",
+      "mode": "failtrace",
+      "case": {
+        "durationMs": 10,
+        "repeat": 10,
+        "outputBytes": 0,
+        "predicate": "nonzero_exit",
+        "experiment": "decision",
+        "minFailures": 1
+      },
+      "decision": {
+        "minFailures": 1,
+        "outcome": "reproduced",
+        "completedTrials": 1
+      },
+      "observations": {
+        "wallMs": [
+          110.7065,
+          125.363,
+          156.5337,
+          121.9999,
+          123.9533
+        ],
+        "logicalMetadataBytesWritten": [
+          3682,
+          3690,
+          3695,
+          3690,
+          3740
+        ],
+        "fsyncCalls": [
+          3,
+          3,
+          3,
+          3,
+          3
+        ],
+        "matchedTrials": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "completedTrials": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "summary": {
+        "wallMs": {
+          "min": 110.7065,
+          "median": 123.9533,
+          "max": 156.5337
+        },
+        "logicalMetadataBytesWritten": {
+          "min": 3682,
+          "median": 3690,
+          "max": 3740
+        },
+        "fsyncCalls": {
+          "min": 3,
+          "median": 3,
+          "max": 3
+        },
+        "matchedTrials": {
+          "min": 1,
+          "median": 1,
+          "max": 1
+        },
+        "completedTrials": {
+          "min": 1,
+          "median": 1,
+          "max": 1
+        }
+      }
+    },
+    {
+      "id": "failtrace-100ms-10x-0b-nonzero_exit-sequential",
+      "mode": "failtrace",
+      "case": {
+        "durationMs": 100,
+        "repeat": 10,
+        "outputBytes": 0,
+        "predicate": "nonzero_exit",
+        "experiment": "sequential",
+        "concurrency": 1
+      },
+      "decision": null,
+      "observations": {
+        "wallMs": [
+          1880.9390999999998,
+          1986.1608,
+          2195.4454,
+          2105.3849,
+          1960.7223999999999
+        ],
+        "logicalMetadataBytesWritten": [
+          13366,
+          13380,
+          13425,
+          13382,
+          13369
+        ],
+        "fsyncCalls": [
+          12,
+          12,
+          12,
+          12,
+          12
+        ],
+        "matchedTrials": [
+          10,
+          10,
+          10,
+          10,
+          10
+        ],
+        "completedTrials": [
+          10,
+          10,
+          10,
+          10,
+          10
+        ]
+      },
+      "summary": {
+        "wallMs": {
+          "min": 1880.9390999999998,
+          "median": 1986.1608,
+          "max": 2195.4454
+        },
+        "logicalMetadataBytesWritten": {
+          "min": 13366,
+          "median": 13380,
+          "max": 13425
+        },
+        "fsyncCalls": {
+          "min": 12,
+          "median": 12,
+          "max": 12
+        },
+        "matchedTrials": {
+          "min": 10,
+          "median": 10,
+          "max": 10
+        },
+        "completedTrials": {
+          "min": 10,
+          "median": 10,
+          "max": 10
+        }
+      }
+    },
+    {
+      "id": "failtrace-100ms-10x-0b-nonzero_exit-parallel",
+      "mode": "failtrace",
+      "case": {
+        "durationMs": 100,
+        "repeat": 10,
+        "outputBytes": 0,
+        "predicate": "nonzero_exit",
+        "experiment": "parallel",
+        "concurrency": 4
+      },
+      "decision": null,
+      "observations": {
+        "wallMs": [
+          627.9831,
+          664.4747,
+          724.423,
+          692.6687000000001,
+          644.6511
+        ],
+        "logicalMetadataBytesWritten": [
+          13242,
+          13340,
+          13390,
+          13379,
+          13345
+        ],
+        "fsyncCalls": [
+          12,
+          12,
+          12,
+          12,
+          12
+        ],
+        "matchedTrials": [
+          10,
+          10,
+          10,
+          10,
+          10
+        ],
+        "completedTrials": [
+          10,
+          10,
+          10,
+          10,
+          10
+        ]
+      },
+      "summary": {
+        "wallMs": {
+          "min": 627.9831,
+          "median": 664.4747,
+          "max": 724.423
+        },
+        "logicalMetadataBytesWritten": {
+          "min": 13242,
+          "median": 13345,
+          "max": 13390
+        },
+        "fsyncCalls": {
+          "min": 12,
+          "median": 12,
+          "max": 12
+        },
+        "matchedTrials": {
+          "min": 10,
+          "median": 10,
+          "max": 10
+        },
+        "completedTrials": {
+          "min": 10,
+          "median": 10,
+          "max": 10
+        }
+      }
+    },
+    {
+      "id": "failtrace-1000ms-10x-0b-nonzero_exit-sequential",
+      "mode": "failtrace",
+      "case": {
+        "durationMs": 1000,
+        "repeat": 10,
+        "outputBytes": 0,
+        "predicate": "nonzero_exit",
+        "experiment": "sequential",
+        "concurrency": 1
+      },
+      "decision": null,
+      "observations": {
+        "wallMs": [
+          10968.128200000001,
+          11046.8447,
+          11184.7633,
+          11055.524,
+          10990.7892
+        ],
+        "logicalMetadataBytesWritten": [
+          13354,
+          13361,
+          13406,
+          13361,
+          13299
+        ],
+        "fsyncCalls": [
+          12,
+          12,
+          12,
+          12,
+          12
+        ],
+        "matchedTrials": [
+          10,
+          10,
+          10,
+          10,
+          10
+        ],
+        "completedTrials": [
+          10,
+          10,
+          10,
+          10,
+          10
+        ]
+      },
+      "summary": {
+        "wallMs": {
+          "min": 10968.128200000001,
+          "median": 11046.8447,
+          "max": 11184.7633
+        },
+        "logicalMetadataBytesWritten": {
+          "min": 13299,
+          "median": 13361,
+          "max": 13406
+        },
+        "fsyncCalls": {
+          "min": 12,
+          "median": 12,
+          "max": 12
+        },
+        "matchedTrials": {
+          "min": 10,
+          "median": 10,
+          "max": 10
+        },
+        "completedTrials": {
+          "min": 10,
+          "median": 10,
+          "max": 10
+        }
+      }
+    },
+    {
+      "id": "failtrace-1000ms-10x-0b-nonzero_exit-parallel",
+      "mode": "failtrace",
+      "case": {
+        "durationMs": 1000,
+        "repeat": 10,
+        "outputBytes": 0,
+        "predicate": "nonzero_exit",
+        "experiment": "parallel",
+        "concurrency": 4
+      },
+      "decision": null,
+      "observations": {
+        "wallMs": [
+          3345.4618,
+          3379.7219,
+          3524.6564000000003,
+          3367.7474,
+          3414.4150999999997
+        ],
+        "logicalMetadataBytesWritten": [
+          13289,
+          13337,
+          13347,
+          13336,
+          13285
+        ],
+        "fsyncCalls": [
+          12,
+          12,
+          12,
+          12,
+          12
+        ],
+        "matchedTrials": [
+          10,
+          10,
+          10,
+          10,
+          10
+        ],
+        "completedTrials": [
+          10,
+          10,
+          10,
+          10,
+          10
+        ]
+      },
+      "summary": {
+        "wallMs": {
+          "min": 3345.4618,
+          "median": 3379.7219,
+          "max": 3524.6564000000003
+        },
+        "logicalMetadataBytesWritten": {
+          "min": 13285,
+          "median": 13336,
+          "max": 13347
+        },
+        "fsyncCalls": {
+          "min": 12,
+          "median": 12,
+          "max": 12
+        },
+        "matchedTrials": {
+          "min": 10,
+          "median": 10,
+          "max": 10
+        },
+        "completedTrials": {
+          "min": 10,
+          "median": 10,
+          "max": 10
+        }
+      }
+    }
+  ]
+}
