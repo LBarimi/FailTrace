@@ -1,3 +1,5 @@
+import type { ContextCaptureOptions, RunContext } from './verify-context.js';
+
 export type TrialStatus = 'passed' | 'failed' | 'timed_out' | 'spawn_error' | 'interrupted';
 export type TerminationReason = 'exit' | 'signal' | 'timeout' | 'spawn_error' | 'interrupted';
 
@@ -67,6 +69,8 @@ export interface RunSummary {
   error?: string;
   predicate?: FailurePredicate;
   environment?: EnvironmentSnapshot;
+  /** Opt-in declared file and local source identities, captured before and after execution. */
+  context?: RunContext;
   /** Immutable source provenance for runs executed in temporary Git worktrees. */
   source?: { kind: 'git'; repository: string; commit: string; subdirectory: string };
 }
@@ -88,6 +92,7 @@ export interface RunOptions {
   stopWhenDecided?: { minFailures: number };
   predicate?: FailurePredicate;
   captureEnv?: string[];
+  captureContext?: ContextCaptureOptions;
 }
 
 /** Internal execution contract; paths returned in TrialResult are run-relative. */
