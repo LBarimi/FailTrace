@@ -119,9 +119,9 @@ function assertPortableCommand(command: string, originalCwd: string): void {
   }
 }
 
-const REPLAY_SCRIPT = `import { readFile } from 'node:fs/promises';
+const REPLAY_SCRIPT = `import { readFile, realpath } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { runTrials } from './engine/run-trials.js';
 import { assessRun } from './engine/predicates.js';
 
@@ -168,7 +168,11 @@ export async function replay() {
 }
 
 // Importing this module never starts the target command.
-if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
+// Resolve aliases such as macOS /var -> /private/var and directory junctions.
+const isMain = process.argv[1] && await Promise.all([
+  realpath(resolve(process.argv[1])), realpath(fileURLToPath(import.meta.url)),
+]).then(([invoked, module]) => invoked === module, () => false);
+if (isMain) {
   replay().then((code) => { process.exitCode = code; }).catch((error) => {
     console.error('Replay failed: ' + (error instanceof Error ? error.message : String(error)));
     process.exitCode = 2;

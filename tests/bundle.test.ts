@@ -84,6 +84,18 @@ describe('self-contained reproduction bundles', () => {
     expect(await readdir(bundle.directory)).not.toContain('replay-artifacts');
   });
 
+  it('executes replay when launched through a symbolic directory alias', async () => {
+    const { root, run } = await setup();
+    const bundle = await createBundle({ run: run.artifactDirectory, cwd: root, files: ['nested/target.mjs'] });
+    const alias = join(root, 'bundle directory alias');
+    await symlink(bundle.directory, alias, process.platform === 'win32' ? 'junction' : 'dir');
+    const replay = await runNode([join(alias, 'repro.mjs')], root);
+    expect(replay.stderr).toBe('');
+    expect(replay.code).toBe(1);
+    expect(replay.stdout).toContain('Target failure reproduced: 1 / 2');
+    expect(await readdir(join(bundle.directory, 'replay-artifacts', 'runs'))).toHaveLength(1);
+  });
+
   it('does not mistake an unrelated failing exit for the chosen predicate', async () => {
     const { root, run } = await setup();
     const bundle = await createBundle({ run: join(run.artifactDirectory, 'run.json'), cwd: root, command: 'node nested/target.mjs unrelated', files: ['nested/target.mjs'] });

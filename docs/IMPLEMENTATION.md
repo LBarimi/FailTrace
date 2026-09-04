@@ -15,10 +15,10 @@ FailTrace 0.2.0 implements all six milestones. CLI and MCP delegate to the reusa
 ## Verification
 
 - Milestone 1 baseline: `66736cd`, with 70 tests and six passing CI jobs.
-- Full 0.2.0 local suite: 185 tests across 12 files passed; TypeScript checking and production build passed.
+- Full 0.2.0 local suite: 186 tests across 12 files passed; TypeScript checking and production build passed.
 - The packed npm artifact was installed into a separate local prefix. Its executable and public Core exports worked; an official SDK client discovered all five MCP tools and reproduced a target failure through the installed server.
 - An installed-CLI workflow recorded four passing and two failing trials, compared their evidence, reduced a JSON input to `["BUG"]`, replayed the copied bundle with one match in three trials, and identified a known regression in a disposable Git repository.
-- Integration coverage verifies that bisect evidence can export committed source, binary bytes, and executable modes after worktree cleanup while preserving the caller's dirty checkout. Replay also works after moving a bundle and removing its original source/artifacts.
+- Integration coverage verifies that bisect evidence can export committed source, binary bytes, and executable modes after worktree cleanup while preserving the caller's dirty checkout. Replay also works after moving a bundle and removing its original source/artifacts, including launch through directory aliases such as macOS temporary paths and Windows junctions.
 - CI runs typecheck, all tests, build, and package checks on Windows/macOS/Linux with Node.js 22 and 24. The workflow attached to each commit records the cross-platform result.
 
 ## Boundaries
