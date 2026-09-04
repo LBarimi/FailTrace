@@ -102,7 +102,13 @@ describe('runTrials', () => {
       env: { FAILTRACE_TEST_VALUE: 'explicit value' },
     });
     expect(summary.statistics.passed).toBe(1);
-    expect(await readFile(join(summary.artifactDirectory, summary.trials[0]!.stdoutPath), 'utf8')).toBe(`explicit value\n${await realpath(cwd)}\n`);
+    const output = (await readFile(join(summary.artifactDirectory, summary.trials[0]!.stdoutPath), 'utf8')).split('\n');
+    expect(output).toHaveLength(3);
+    expect(output[0]).toBe('explicit value');
+    expect(output[2]).toBe('');
+    // macOS resolves /var symlinks; Windows may preserve an 8.3 path alias.
+    // Compare directory identity without requiring one textual spelling.
+    expect(await realpath(output[1]!)).toBe(await realpath(cwd));
   });
 
   it('handles command-not-found as failure evidence', async () => {
