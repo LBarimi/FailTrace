@@ -5,6 +5,7 @@
   "scripts": {
     "test": "node --test check.test.mjs",
     "investigate": "node investigate.mjs",
+    "verify": "node verify.mjs",
     "check:affected": "node check.mjs affected",
     "check:fixed": "node check.mjs fixed"
   },
