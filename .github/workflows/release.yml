@@ -1,0 +1,101 @@
+name: Prepare release tarball
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Exact package version to prepare, without v (for example 0.3.0)'
+        required: true
+        type: string
+
+# This workflow prepares reviewable assets. It never creates tags or releases,
+# uploads release assets, or publishes to npm.
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: prepare-release-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - name: Verify version, main commit, tag and six-job CI gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { execFileSync, spawnSync } from 'node:child_process';
+          import { appendFileSync, readFileSync } from 'node:fs';
+          const version = process.env.RELEASE_VERSION;
+          assert(/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?$/.test(version), 'Supply an exact package version');
+          assert.equal(process.env.GITHUB_REF, 'refs/heads/main', 'Dispatch this workflow from main');
+          const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
+          const commit = git('rev-parse', 'HEAD');
+          assert.equal(commit, process.env.GITHUB_SHA);
+          assert.equal(commit, git('rev-parse', 'origin/main'), 'main moved; dispatch the workflow again');
+          const manifest = JSON.parse(readFileSync('package.json', 'utf8'));
+          assert.equal(manifest.version, version, 'Input version must match package.json');
+          const tag = `v${version}`;
+          const tagCheck = spawnSync('git', ['show-ref', '--verify', '--quiet', `refs/tags/${tag}`]);
+          assert([0, 1].includes(tagCheck.status), 'Unable to inspect the version tag');
+          if (tagCheck.status === 0) assert.equal(git('rev-parse', `${tag}^{commit}`), commit, 'Existing version tag points to another commit');
+          const api = (path) => JSON.parse(execFileSync('gh', ['api', path], { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }));
+          const repo = process.env.GITHUB_REPOSITORY;
+          const runs = api(`/repos/${repo}/actions/workflows/ci.yml/runs?head_sha=${commit}&event=push&per_page=100`).workflow_runs;
+          const run = runs.find((item) => item.head_sha === commit && item.head_branch === 'main');
+          assert(run?.status === 'completed' && run.conclusion === 'success', 'Wait for successful CI on this exact main commit, then dispatch again');
+          const jobs = api(`/repos/${repo}/actions/runs/${run.id}/jobs?per_page=100`).jobs;
+          for (const os of ['ubuntu-latest', 'windows-latest', 'macos-latest']) {
+            for (const node of [22, 24]) {
+              assert(jobs.some((job) => job.name === `check (${os}, ${node})` && job.conclusion === 'success'), `Missing successful CI job: ${os}, Node ${node}`);
+            }
+          }
+          appendFileSync(process.env.GITHUB_ENV, `RELEASE_COMMIT=${commit}\nRELEASE_CI_RUN=${run.id}\n`);
+          NODE
+      - run: npm ci
+      - run: npm run build
+      - name: Pack and smoke-test the installed artifact
+        run: |
+          mkdir -p .failtrace/release
+          npm pack --pack-destination .failtrace/release
+          node scripts/package-smoke.mjs ".failtrace/release/failtrace-${RELEASE_VERSION}.tgz"
+      - name: Write checksum and release metadata
+        run: |
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto';
+          import { readFileSync, writeFileSync, appendFileSync } from 'node:fs';
+          const version = process.env.RELEASE_VERSION;
+          const filename = `failtrace-${version}.tgz`;
+          const sha256 = createHash('sha256').update(readFileSync(`.failtrace/release/${filename}`)).digest('hex');
+          const installCommand = `npm install --global https://github.com/${process.env.GITHUB_REPOSITORY}/releases/download/v${version}/${filename}`;
+          writeFileSync('.failtrace/release/SHA256SUMS', `${sha256}  ${filename}\n`);
+          writeFileSync('.failtrace/release/release.json', JSON.stringify({
+            name: 'failtrace', version, tag: `v${version}`, commit: process.env.RELEASE_COMMIT,
+            ciRunId: process.env.RELEASE_CI_RUN, filename, sha256, published: false, installCommand,
+          }, null, 2) + '\n');
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY, `Prepared **${filename}** from \`${process.env.RELEASE_COMMIT}\`.\n\nSHA256: \`${sha256}\`\n\nThese assets are ready for review. This workflow does not publish them. After the reviewed tarball is attached to release v${version}, installation will be:\n\n\`\`\`sh\n${installCommand}\n\`\`\`\n`);
+          NODE
+      - uses: actions/upload-artifact@v7
+        with:
+          name: failtrace-${{ inputs.version }}-release
+          path: |
+            .failtrace/release/*.tgz
+            .failtrace/release/SHA256SUMS
+            .failtrace/release/release.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30

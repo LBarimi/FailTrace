@@ -9,7 +9,9 @@
 - Preserve Windows, macOS, and Linux compatibility, especially shell quoting, paths, signals, and process-tree cleanup.
 - Update README.md when user-visible behavior changes. Never advertise planned features as implemented.
 - Keep generated FailTrace artifacts inside `.failtrace/` by default. Never overwrite unrelated project files.
-- Work only on requested milestones. Milestones 1–6 are currently authorized: repetition, failure predicates/comparison, regression isolation, minimization, reproduction bundles, and a thin MCP adapter.
+- Prioritize adoption over feature count. The six initial milestones are implemented; current work should help real developers and coding agents install, try, integrate, and repeatedly use them.
+- Before adding a major feature, identify the recognizable debugging problem, the evidence it matters to users, and how it improves adoption. Prefer a faster first success, reliable integration, and useful demos over speculative capabilities.
+- Keep install instructions executable against an actually available package or source revision. Verify the installed artifact outside this checkout, not just the source build. Do not present stars, downloads, or green tests as proof of active use.
 - Do not add SaaS, cloud, database, authentication, telemetry, AI API, or LLM SDK functionality.
 
 ## Layout
@@ -21,3 +23,5 @@
 - `examples`: small runnable demonstrations.
 
 CLI and future adapters depend on Core. Important behavior belongs in Core, independently of terminal output and process-global signal listeners.
+
+See `docs/ADOPTION.md` for the adoption objective, baseline, and evidence-driven priorities. Do not add telemetry or contact other projects on the user's behalf without explicit authorization.

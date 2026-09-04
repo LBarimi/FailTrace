@@ -1,0 +1,31 @@
+name: Debugging workflow report
+description: Tell us how FailTrace helped, or where first use got stuck.
+title: "Workflow: "
+body:
+  - type: markdown
+    attributes:
+      value: "A useful report can be short. Private code, logs, and company details are not required. Please remove secrets before sharing."
+  - type: textarea
+    id: task
+    attributes:
+      label: What were you trying to debug?
+      description: Describe the failure and the result you needed. A public project link is optional.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: "OS, Node.js version, FailTrace version, and agent/client if used"
+  - type: textarea
+    id: workflow
+    attributes:
+      label: What did you try, and what happened?
+      description: Include an install command, FailTrace command, or MCP tool call if you can. Describe what worked or blocked you.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Was the evidence useful?
+      description: Did it change your next debugging step? Would you use it again? What would make that easier?

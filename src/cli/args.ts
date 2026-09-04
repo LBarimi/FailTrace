@@ -5,6 +5,7 @@ type Experiment = { command: string; repeat: number; timeoutMs: number; predicat
 export type CliInvocation =
   | { kind: 'help' }
   | { kind: 'version' }
+  | ({ kind: 'demo' } & Common)
   | ({ kind: 'run'; captureEnv?: string[] } & Common & Experiment)
   | ({ kind: 'compare' } & Common & CompareOptions)
   | ({ kind: 'bisect'; good: string; bad: string; minFailures: number } & Common & Experiment)
@@ -37,6 +38,7 @@ function integer(value: string, name: string, min = 1, max = Number.MAX_SAFE_INT
 const predicateFlags = ['exit-code', 'stdout-contains', 'stderr-contains', 'stdout-regex', 'stderr-regex'];
 const experiments = ['command', 'repeat', 'timeout', ...predicateFlags, 'regex-flags'];
 const allowed: Record<string, string[]> = {
+  demo: ['cwd', 'json'],
   run: ['repeat', 'timeout', ...predicateFlags, 'regex-flags', 'capture-env', 'cwd', 'json'],
   compare: ['trial-a', 'trial-b', 'max-lines', 'max-bytes', 'cwd', 'json'],
   bisect: [...experiments, 'good', 'bad', 'min-failures', 'cwd', 'json'],
@@ -100,6 +102,7 @@ export function parseArgs(argv: string[]): CliInvocation {
   const maximum = kind === 'compare' ? 2 : kind === 'run' || kind === 'bundle' ? 1 : 0;
   if (positional.length > maximum) throw new Error('Unexpected argument. Quote the entire target command.');
   if (kind === 'mcp') return { kind, ...(cwd === undefined ? {} : { cwd }) };
+  if (kind === 'demo') return { kind, ...common };
   if (kind === 'compare') {
     if (!positional[0]?.trim()) throw new Error('Provide a run ID or path to compare.');
     return {

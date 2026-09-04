@@ -57,6 +57,7 @@ function runProjection(run: RunSummary): Record<string, unknown> {
     metadataPath: join(run.artifactDirectory, 'run.json'),
     requestedTrials: run.requestedTrials,
     statistics: run.statistics,
+    matchedTrials: run.trials.filter((trial) => trial.failureMatched === true).length,
     predicate: run.predicate,
     startedAt: run.startedAt,
     endedAt: run.endedAt,
@@ -78,8 +79,11 @@ function toolResult(data: Record<string, unknown>, isError = false): CallToolRes
 function createServer(cwd: string, shutdown: AbortSignal, pending: Set<Promise<CallToolResult>>): McpServer {
   const server = new McpServer({ name: 'failtrace', version: VERSION }, {
     capabilities: { tools: {} },
-    instructions: 'FailTrace investigates local command failures. Target failures are evidence, not tool errors. '
-      + 'Inspect the returned artifact paths for complete metadata and logs. Commands use the platform shell.',
+    instructions: 'Use FailTrace for repeated debugging experiments. Run measures a flaky failure; compare inspects PASS/FAIL output; '
+      + 'bisect searches known good/bad revisions; minimize reduces a reproducing input; bundle prepares a replay. '
+      + 'Reuse returned artifact paths between tools. Select a specific failure predicate before bisect or minimize. '
+      + 'Check status and finalVerified; sampled outcomes are evidence, not proof. Target failures are data, not tool errors. '
+      + 'Commands run locally in the selected cwd using the platform shell. Complete metadata and logs remain in artifacts.',
   });
   const disconnected = new AbortController();
   server.server.onclose = () => disconnected.abort();

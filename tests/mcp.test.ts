@@ -84,6 +84,7 @@ describe('official SDK stdio MCP adapter', () => {
     const run = structured(runCall);
     expect(run.status).toBe('completed');
     expect(run.statistics).toMatchObject({ total: 2, passed: 1, failed: 1, failureRate: 0.5 });
+    expect(run.matchedTrials).toBe(1);
     const runDirectory = run.artifactDirectory as string;
     expect(await readFile(join(runDirectory, 'trials', '002', 'stderr.txt'), 'utf8')).toContain('EXPECTED_BUNDLE_FAILURE');
 
@@ -181,11 +182,15 @@ describe('official SDK stdio MCP adapter', () => {
   it('bounds returned trial details while preserving the complete run on disk', async () => {
     const { client } = await startClient();
     const call = await client.callTool({
-      name: 'failtrace_run', arguments: { command: process.platform === 'win32' ? 'exit /b 0' : 'exit 0', repeat: 45 },
+      name: 'failtrace_run', arguments: {
+        command: process.platform === 'win32' ? 'exit /b 0' : 'exit 0', repeat: 45,
+        predicate: { kind: 'exit_code', value: 0 },
+      },
     }, { timeout: 30_000 });
     const data = structured(call);
     expect(data.trialsOmitted).toBe(5);
     expect(data.trials).toHaveLength(40);
+    expect(data.matchedTrials).toBe(45);
     expect((data.trials as Array<{ index: number }>).map((trial) => trial.index)).toEqual([
       ...Array.from({ length: 20 }, (_, index) => index + 1), ...Array.from({ length: 20 }, (_, index) => index + 26),
     ]);

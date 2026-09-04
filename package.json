@@ -1,6 +1,6 @@
 {
   "name": "failtrace",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Reproduce, isolate, and minimize software failures. Built for humans and coding agents.",
   "type": "module",
   "license": "MIT",
@@ -22,6 +22,9 @@
     "dist",
     "examples",
     "README.md",
+    "CONTRIBUTING.md",
+    "CHANGELOG.md",
+    "docs",
     "LICENSE"
   ],
   "scripts": {
@@ -30,7 +33,8 @@
     "pretest": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest",
-    "demo": "node dist/cli/index.js run \"node examples/flaky-demo.js\" --repeat 10",
+    "test:package": "node scripts/package-smoke.mjs",
+    "demo": "node dist/cli/index.js demo",
     "prepack": "npm run build"
   },
   "repository": {

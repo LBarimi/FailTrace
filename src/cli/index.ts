@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { bisectRegression, compareRuns, createBundle, minimizeFailure, runTrials, VERSION } from '../core/index.js';
 import { parseArgs } from './args.js';
-import { formatComparison, formatHeader, formatSummary, formatTrial, HELP } from './presentation.js';
+import { formatComparison, formatDemoProgress, formatDemoResult, formatHeader, formatSummary, formatTrial, HELP } from './presentation.js';
 
 async function environmentFile(path: string): Promise<Record<string, string | null>> {
   const value: unknown = JSON.parse(await readFile(path, 'utf8'));
@@ -41,6 +41,22 @@ async function main(): Promise<number> {
   try {
     let exitCode: number;
     switch (invocation.kind) {
+      case 'demo': {
+        const { runDemo } = await import('../demo/index.js');
+        print('FailTrace demo\n\nReproduce a flaky failure, minimize its input, and keep a replayable example.');
+        const demo = await runDemo({
+          ...(invocation.cwd === undefined ? {} : { cwd: invocation.cwd }),
+          signal: controller.signal,
+          onProgress: (progress) => {
+            const message = formatDemoProgress(progress);
+            if (message !== undefined) print(message);
+          },
+        });
+        print(formatDemoResult(demo));
+        result(demo);
+        exitCode = demo.status === 'completed' ? 0 : 2;
+        break;
+      }
       case 'run': {
         print(formatHeader(invocation.command, invocation.repeat, invocation.timeoutMs));
         const summary = await runTrials({

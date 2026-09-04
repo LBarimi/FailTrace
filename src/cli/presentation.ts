@@ -1,11 +1,13 @@
 import { relative } from 'node:path';
 import type { ComparisonResult, RunSummary, TrialResult } from '../core/index.js';
+import type { DemoProgress, DemoResult } from '../demo/index.js';
 
 export const HELP = `FailTrace - Reproduce. Isolate. Minimize.
 
 Reproduce failures, compare evidence, isolate regressions, and reduce inputs.
 
 Usage:
+  failtrace demo [--cwd DIRECTORY] [--json]
   failtrace run "<command>" [--repeat N] [--timeout DURATION]
   failtrace compare <run-a> [run-b] [--trial-a N] [--trial-b N]
   failtrace bisect --good REF --bad REF --command "<command>"
@@ -40,13 +42,15 @@ Common options:
   --version, -v      Show the installed version
 
 Examples:
+  failtrace demo
   failtrace run "npm test -- checkout" --repeat 20
   failtrace run "node examples/flaky-demo.js" --repeat 10
   failtrace run "npm test" --repeat 5 --stderr-contains "checkout failed"
   failtrace minimize --input examples/advanced-input.json --format json --command "node examples/advanced-demo.js" --stderr-contains "BUG reproduced"
 
 The command runs in the current directory using the platform shell.
-Artifacts: .failtrace/ (runs, bisects, minimizations, reproduction).
+Artifacts: .failtrace/ (runs, bisects, minimizations, reproduction, demos).
+Demo works from any directory and exits 0 when its expected failures are shown.
 Minimize exposes FAILTRACE_INPUT or FAILTRACE_INPUT_DIR to the command.
 Bundles contain the Node engine; install target dependencies separately.
 Exit codes: 0 success, 1 run target failure, 2 error/inconclusive/limit,
@@ -134,5 +138,31 @@ export function formatComparison(result: ComparisonResult): string {
     lines.push('', 'Environment changes');
     for (const change of result.environmentChanges) lines.push(`  ${change.key}: ${JSON.stringify(change.before)} -> ${JSON.stringify(change.after)}`);
   }
+  return lines.join('\n');
+}
+
+export function formatDemoProgress(progress: DemoProgress): string | undefined {
+  if (progress.trial) return formatTrial(progress.trial, 10);
+  if (progress.evaluation) {
+    return progress.evaluation.accepted ? `  Kept a smaller input: ${progress.evaluation.units} JSON nodes; failure still reproduced.` : undefined;
+  }
+  return {
+    repetition: '\n1/3  Measure a flaky command\n',
+    minimization: '\n2/3  Remove input while keeping the same failure\n',
+    bundle: '\n3/3  Save a portable reproduction',
+  }[progress.stage];
+}
+
+export function formatDemoResult(result: DemoResult): string {
+  const lines = ['', result.status === 'completed' ? 'Demo complete.' : `Demo ${result.status}.`];
+  if (result.repetition) {
+    const { passed, failed, total, failureRate } = result.repetition.statistics;
+    lines.push(`  ${passed} passed, ${failed} failed out of ${total} trials (${(failureRate * 100).toFixed(1)}%).`);
+  }
+  if (result.reduction) lines.push(`  Input: ${JSON.stringify(result.reduction.originalInput)} -> ${JSON.stringify(result.reduction.minimizedInput)}`, `  Final failure verified: ${result.reduction.finalVerified ? 'yes' : 'no'}.`);
+  if (result.error) lines.push('', result.error);
+  if (result.replayCommand) lines.push('', 'Replay the reduced failure:', result.replayCommand, 'Replay exits 1 when the expected failure is reproduced.');
+  lines.push('', 'Evidence:', result.artifactDirectory);
+  if (result.status === 'completed') lines.push('', 'Try your own command:', 'failtrace run "npm test" --repeat 20');
   return lines.join('\n');
 }
