@@ -10,7 +10,7 @@ import { DEFAULT_PREDICATE, matchesFailure, validatePredicate } from './predicat
 import { captureContext, contextDeclaration, snapshotsEqual } from './verify-context.js';
 import type { RunOptions, RunSummary } from './types.js';
 
-export const VERSION = '0.5.0';
+export const VERSION = '0.6.0';
 export const DEFAULT_REPEAT = 10;
 export const DEFAULT_TIMEOUT_MS = 30_000;
 

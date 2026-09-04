@@ -1,6 +1,6 @@
 {
   "name": "failtrace",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "mcpName": "io.github.LBarimi/failtrace",
   "description": "Reproduce, isolate, and minimize failures, then verify proposed fixes.",
   "type": "module",
@@ -61,7 +61,10 @@
     "reproduction",
     "cli",
     "testing",
-    "coding-agents"
+    "coding-agents",
+    "mcp",
+    "delta-debugging",
+    "bug-reproduction"
   ],
   "devDependencies": {
     "@modelcontextprotocol/client": "^2.0.0",

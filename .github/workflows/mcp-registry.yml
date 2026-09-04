@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Exact version already published to npm, without v (for example 0.3.1)'
+        description: 'Exact version already published to npm, without v (for example 0.6.0)'
         required: true
         type: string
 

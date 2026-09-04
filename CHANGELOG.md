@@ -2,9 +2,13 @@
 
 ## Unreleased
 
+## 0.6.0 — 2026-09-05
+
 - Extended the guided demo into one measurement-to-replay flow without removing its 7/3 repetition, `["BUG"]` reduction or replay bundle. The minimized input becomes a captured baseline; the demo observes the unchanged target, rejects an unrelated crash as inconclusive, reports a healthy fixed candidate sample without claiming elimination, then restores the affected implementation for replay.
+- Added bounded, read-only saved-run inspection through public Core `inspectRunEvidence` and MCP `failtrace_inspect_run`. Agents can page complete trial evidence and stdout/stderr byte ranges without executing recorded commands or supplying arbitrary artifact paths; output changes during a read are rejected.
+- Replaced global npm-root path assembly with version-pinned one-command `npx` setup for Codex, Claude Code, Cursor and generic stdio clients. Installed-package smoke tests now verify all seven MCP tools, read-only inspection annotations, paged evidence and output chunks.
 - Added `npm run case:p-memoize` as a repository-root entry point for the pinned race checker and its affected, negative-control and fixed Verify workflow.
-- Added sanitized five-sample 0.5.0 benchmark evidence and README medians from one Windows x64/Node.js 24 host. The published table keeps timing ranges, logical metadata writes, concurrency semantics and threshold-sampling limits with the measurements.
+- Added sanitized five-sample 0.5.0 benchmark evidence and README medians from one Windows x64/Node.js 24 host. The README table keeps timing ranges, logical metadata writes, concurrency semantics and threshold-sampling limits with the measurements.
 
 ## 0.5.0 — 2026-09-05
 

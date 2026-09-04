@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Exact package version to prepare, without v (for example 0.3.0)'
+        description: 'Exact package version to prepare, without v (for example 0.6.0)'
         required: true
         type: string
 

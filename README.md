@@ -102,6 +102,7 @@ Paths in angle brackets come from the preceding result. If a failed outcome is a
 | “Which revision introduced it?” | `bisect` | Repeated candidate trials and a sampled first-parent boundary |
 | “The reproducer is too large.” | `minimize` | Reduced text, JSON/arrays, files, or environment keys; final verification |
 | “Did my code change help?” | `verify` | Original target observations, execution health and declared context changes; [workflow and older-version fallback](docs/VERIFY.md) |
+| “The agent response omitted the trial I need.” | Core `inspectRunEvidence` / MCP `failtrace_inspect_run` | Filtered saved-trial pages and bounded stdout/stderr chunks without command execution |
 | “Someone else needs the evidence?” | `bundle` | Selected source/input, original evidence, included Core engine, replay scripts |
 
 [Full command reference](docs/CLI.md) · [Runnable examples](examples) · [Implementation and verification](docs/IMPLEMENTATION.md)
@@ -110,7 +111,7 @@ Paths in angle brackets come from the preceding result. If a failed outcome is a
 
 **Predicate → Compare → Bisect → Minimize → Verify → Bundle → MCP**
 
-Predicate, Compare, Bisect, Minimize, Bundle, and the thin MCP adapter are implemented. **Verify is implemented in 0.5.0** through Core, `failtrace verify`, and `failtrace_verify`. It requires a baseline with captured context, checks healthy completion, and reports finite target observations without claiming elimination. The sequence expresses product emphasis; the existing MCP adapter remains supported. See the [roadmap and status](docs/ROADMAP.md) and [verification workflow and limits](docs/VERIFY.md).
+Predicate, Compare, Bisect, Minimize, Bundle, and the thin MCP adapter are implemented. **Verify is implemented in 0.5.0** through Core, `failtrace verify`, and `failtrace_verify`. It requires a baseline with captured context, checks healthy completion, and reports finite target observations without claiming elimination. Version 0.6.0 adds bounded saved-run inspection through public Core and a seventh, read-only MCP tool. The sequence expresses product emphasis; the existing MCP adapter remains supported. See the [roadmap and status](docs/ROADMAP.md) and [verification workflow and limits](docs/VERIFY.md).
 
 ## For coding agents
 
