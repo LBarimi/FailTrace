@@ -1,4 +1,4 @@
-import { readFile, readdir, writeFile } from 'node:fs/promises';
+import { readFile, readdir, realpath, writeFile } from 'node:fs/promises';
 import { isAbsolute, join, relative } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { runTrials } from '../src/core/run-trials.js';
@@ -102,7 +102,7 @@ describe('runTrials', () => {
       env: { FAILTRACE_TEST_VALUE: 'explicit value' },
     });
     expect(summary.statistics.passed).toBe(1);
-    expect(await readFile(join(summary.artifactDirectory, summary.trials[0]!.stdoutPath), 'utf8')).toBe(`explicit value\n${cwd}\n`);
+    expect(await readFile(join(summary.artifactDirectory, summary.trials[0]!.stdoutPath), 'utf8')).toBe(`explicit value\n${await realpath(cwd)}\n`);
   });
 
   it('handles command-not-found as failure evidence', async () => {
