@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { cp, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
 import { delimiter, dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -66,7 +66,8 @@ describe('guided demo onboarding', () => {
     expect(demo.repetition?.statistics).toMatchObject({ total: 10, passed: 7, failed: 3, failureRate: 0.3 });
     expect(demo.reduction).toMatchObject({ finalVerified: true, minimizedInput: ['BUG'] });
     expect(demo.reduction?.originalInput).toHaveLength(6);
-    expect(relative(cwd, demo.artifactDirectory).replaceAll('\\', '/')).toMatch(/^\.failtrace\/demos\/[^/]+$/);
+    const [canonicalCwd, canonicalArtifacts] = await Promise.all([realpath(cwd), realpath(demo.artifactDirectory)]);
+    expect(relative(canonicalCwd, canonicalArtifacts).replaceAll('\\', '/')).toMatch(/^\.failtrace\/demos\/[^/]+$/);
     expect(JSON.parse(await readFile(join(demo.artifactDirectory, 'demo.json'), 'utf8'))).toEqual(demo);
     expect(await readFile(join(cwd, 'keep.txt'), 'utf8')).toBe('user file stays unchanged');
     expect((await readdir(cwd)).sort()).toEqual(['.failtrace', 'keep.txt']);
