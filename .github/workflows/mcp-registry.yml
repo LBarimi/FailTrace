@@ -24,7 +24,6 @@ jobs:
       id-token: write
     env:
       RELEASE_VERSION: ${{ inputs.version }}
-      PUBLISHER_DIRECTORY: ${{ runner.temp }}/mcp-publisher
       PUBLISHER_VERSION: v1.8.1
       # Official v1.8.1 checksums and GitHub release asset digest agree.
       PUBLISHER_SHA256: a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc
@@ -90,6 +89,8 @@ jobs:
           NODE
       - name: Install the pinned official MCP publisher
         run: |
+          PUBLISHER_DIRECTORY="$RUNNER_TEMP/mcp-publisher"
+          printf 'PUBLISHER_DIRECTORY=%s\n' "$PUBLISHER_DIRECTORY" >> "$GITHUB_ENV"
           mkdir -p "$PUBLISHER_DIRECTORY"
           curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 --max-time 60 --retry 2 \
             "https://github.com/modelcontextprotocol/registry/releases/download/${PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz" \
