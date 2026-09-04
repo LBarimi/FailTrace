@@ -1,0 +1,14 @@
+{
+  "name": "failtrace-case-p-memoize-race",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test check.test.mjs",
+    "check": "node check.mjs",
+    "verify": "node verify.mjs"
+  },
+  "dependencies": {
+    "memoize-affected": "npm:p-memoize@6.0.2",
+    "memoize-fixed": "npm:p-memoize@7.0.0"
+  }
+}
