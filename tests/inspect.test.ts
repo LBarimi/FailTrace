@@ -107,11 +107,13 @@ describe('inspectRunEvidence', () => {
 
   it('filters only explicit match states and operationally unhealthy evidence', async () => {
     const run = await savedRun(await workspace());
-    // Exit status and predicate match are separate evidence dimensions. Neither
-    // combination makes a normally completed trial operationally unhealthy.
-    run.trials[0] = { ...run.trials[0]!, exitCode: 0, status: 'passed', failureMatched: true };
-    run.trials[1] = { ...run.trials[1]!, exitCode: 7, status: 'failed', failureMatched: false };
+    // Exit code and predicate match are separate evidence dimensions. Status records
+    // the predicate result after a normal run, so these combinations remain healthy.
+    run.trials[0] = { ...run.trials[0]!, exitCode: 0, status: 'failed', failureMatched: true };
+    run.trials[1] = { ...run.trials[1]!, exitCode: 7, status: 'passed', failureMatched: false };
     delete run.trials[2]!.failureMatched;
+    run.trials[3] = { ...run.trials[3]!, status: 'passed', failureMatched: true };
+    run.trials[4] = { ...run.trials[4]!, status: 'failed', failureMatched: false };
     await writeFile(join(run.artifactDirectory, 'run.json'), JSON.stringify(run));
     const matched = await inspectRunEvidence({
       view: 'trials', run: run.artifactDirectory, filter: 'matched', afterTrial: 10, limit: 2,
@@ -122,15 +124,17 @@ describe('inspectRunEvidence', () => {
     expect(matched.nextAfterTrial).toBe(30);
     expect(unhealthy.trials).toEqual([
       expect.objectContaining({ index: 3, unhealthy: true, failureMatched: null }),
+      expect.objectContaining({ index: 4, unhealthy: true, status: 'passed', failureMatched: true }),
+      expect.objectContaining({ index: 5, unhealthy: true, status: 'failed', failureMatched: false }),
       expect.objectContaining({ index: 23, unhealthy: true, status: 'timed_out', failureMatched: false }),
     ]);
     const combinations = await inspectRunEvidence({ view: 'trials', run: run.artifactDirectory, limit: 2 });
     if (combinations.view !== 'trials') throw new Error('Expected trial evidence.');
-    expect(combinations.trials.map(({ index, unhealthy, exitCode, failureMatched }) => ({
-      index, unhealthy, exitCode, failureMatched,
+    expect(combinations.trials.map(({ index, unhealthy, status, exitCode, failureMatched }) => ({
+      index, unhealthy, status, exitCode, failureMatched,
     }))).toEqual([
-      { index: 1, unhealthy: false, exitCode: 0, failureMatched: true },
-      { index: 2, unhealthy: false, exitCode: 7, failureMatched: false },
+      { index: 1, unhealthy: false, status: 'failed', exitCode: 0, failureMatched: true },
+      { index: 2, unhealthy: false, status: 'passed', exitCode: 7, failureMatched: false },
     ]);
     await expect(inspectRunEvidence({ view: 'trials', run: run.artifactDirectory, limit: 41 })).rejects.toThrow(/cannot exceed/);
     await expect(inspectRunEvidence({
