@@ -173,6 +173,7 @@ That command should report five passes and exit `0`. In investigations that reco
 | Passing and failing logs need comparison | `failtrace_compare`: selected trial indices, stream hashes, bounded diffs, and truncation. |
 | A known good revision became bad | `failtrace_bisect`: verified endpoint assessments, `status`, `firstBad`, and cleanup diagnostics. |
 | An input reproduces but is too large | `failtrace_minimize`: accepted candidates, `status`, `finalVerified`, and `minimizedPath`. |
+| Code was changed and the original failure needs rechecking | Two full `failtrace_run` samples and `failtrace_compare`; inspect raw outcomes using the [after-fix workflow](VERIFY.md). A dedicated Verify tool is planned. |
 | Someone else needs the evidence and input | `failtrace_bundle`: selected source/input files, `configPath`, and returned bundle directory. |
 
 ### Repeat, then compare
@@ -180,6 +181,12 @@ That command should report five passes and exit `0`. In investigations that reco
 > Investigate the checkout failure with FailTrace. Run the known command 20 times and use `{"kind":"stderr_contains","value":"checkout failed"}` as the predicate. Inspect the results, then call `failtrace_compare` with the returned run directory and the actual indices of a clean passing trial and a trial with `failureMatched: true`. Explain the differing evidence before changing code.
 
 Comparison accepts `runA`, optional `runB`, and optional `trialA`/`trialB`. With one run and no explicit indices, it selects the first passing and first failed outcome; that failed outcome could be a timeout. With two runs it defaults to their first trials. Select explicit indices when investigating a particular target failure. If the run has no suitable pair, report that instead of inventing trial indices.
+
+### Recheck after a code change
+
+> Preserve a full baseline that reproduces the known failure. After applying the proposed code change, use `failtrace_run` with the same predicate, input/setup, timeout and relevant environment, and a repeat count chosen before seeing the outcome. Count actual target matches and inspect every trial's termination and exit code. An unrelated error without the target message is not a successful fix. Compare actual matching baseline and clean candidate trial indices. Report incomplete or incomparable evidence, and do not claim that zero matches proves the bug is gone.
+
+This workflow uses the existing tools; no `failtrace_verify` tool exists yet. Minimization's `finalVerified` verifies that a reduction still fails, not that a code change fixes it. See the [current procedure and planned Verify contract](VERIFY.md) for baseline eligibility, healthy completion and statistical limits.
 
 ### Minimize, then bundle
 
@@ -256,6 +263,12 @@ from timeouts, spawn errors, MCP errors, and incomplete investigations.
 Use actual returned run IDs and artifact paths. Inspect complete metadata
 when tool output omits trials or candidates. Compare meaningful passing and
 matching trials, then base code changes on the observed evidence.
+
+After changing code, recheck the original failure using a prechosen full trial
+budget and the same predicate, input/setup and relevant settings. Count target
+matches separately from execution failures and require healthy exit codes for
+nonmatches. Report incomplete or incomparable evidence; zero observed matches
+does not establish elimination. See the project's verification procedure.
 
 For minimization, make the target read FAILTRACE_INPUT or FAILTRACE_INPUT_DIR.
 Check finalVerified and status before claiming a reduction works. Bundle only

@@ -48,6 +48,8 @@ With one run, comparison selects its first passing and first failing trial. With
 
 Results include aggregate failure-rate changes, command/predicate/concurrency changes, selected environment changes, stdout/stderr byte counts, full-stream SHA-256 hashes, and bounded line-aligned differences. A concurrency change identifies different experiment settings. Default limits are 200 displayed lines and a 64 KiB prefix per stream; truncation is explicit. This is an inspectable positional diff, not a semantic comparison or an optimal edit script. Matching hashes still compare the complete files.
 
+After modifying code, use [full runs before and after the change](VERIFY.md) and inspect raw trial outcomes alongside comparison. `compare` is not a fix verdict, and there is no `verify` command yet.
+
 ## Isolate a regression
 
 ```sh

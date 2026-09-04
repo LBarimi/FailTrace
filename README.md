@@ -68,6 +68,7 @@ Paths in angle brackets come from the preceding result. If a failed outcome is a
 | “What changed between PASS and FAIL?” | `compare` | Bounded output differences, full hashes, selected environment changes |
 | “Which revision introduced it?” | `bisect` | Repeated candidate trials and a sampled first-parent boundary |
 | “The reproducer is too large.” | `minimize` | Reduced text, JSON/arrays, files, or environment keys; final verification |
+| “Did my code change help?” | `run`, then `compare` | Observed outcomes before and after the change; [current workflow](docs/VERIFY.md) |
 | “Someone else needs the evidence?” | `bundle` | Selected source/input, original evidence, included Core engine, replay scripts |
 
 [Full command reference](docs/CLI.md) · [Runnable examples](examples) · [Implementation and verification](docs/IMPLEMENTATION.md)
@@ -75,6 +76,12 @@ Paths in angle brackets come from the preceding result. If a failed outcome is a
 **Unreleased performance improvements in the source checkout:** `run --concurrency N` opts into overlapping trials while the default stays `1`. Shared ports, files, databases, and resource contention can change failure probability. Bisect/minimize keep sequential trials and stop when their classification threshold is decided. Ordinary runs still attempt the full requested count. See [performance measurements and operational guidance](docs/PERFORMANCE.md) for metadata recovery, external dependency caches, and remaining tradeoffs. These changes are not included in the published 0.3.1 package.
 
 **[Real bug case: reduce a Prettier formatting failure from 464 to 11 characters →](https://github.com/LBarimi/FailTrace/tree/main/examples/cases/prettier-chain)** The runnable investigation uses pinned affected/fixed releases, rejects unrelated parser errors, and produces a replayable bundle. The case includes authored surrounding code and links to the original upstream report.
+
+## Product priorities
+
+**Predicate → Compare → Bisect → Minimize → Verify → Bundle → MCP**
+
+Predicate, Compare, Bisect, Minimize, Bundle, and the thin MCP adapter are implemented. **Verify is the next Core priority and is planned**: there is no `failtrace verify` command or `failtrace_verify` MCP tool. The sequence expresses product emphasis; the existing MCP adapter remains supported while Core develops. See the [roadmap and status](docs/ROADMAP.md) and [verification design and current run/compare workflow](docs/VERIFY.md).
 
 ## For coding agents
 

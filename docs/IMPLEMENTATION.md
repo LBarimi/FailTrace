@@ -4,6 +4,8 @@ FailTrace 0.2.0 implements all six milestones. CLI and MCP delegate to the reusa
 
 The current source also contains unreleased performance changes: optional run concurrency, sequential threshold stopping for bisect/minimize, incremental run statistics, and reconstruction from authoritative per-trial records. See [performance guidance and benchmarks](PERFORMANCE.md). These changes are separate from the historical 0.2.0/0.3.0 verification results below.
 
+Dedicated code-fix verification is planned as the next Core priority; no `verify` CLI command or MCP tool exists. The current [run/compare workflow](VERIFY.md) can record and compare outcomes before and after a code change. Minimization's `finalVerified` means the reduced input reproduced the chosen failure in an independent final evaluation; it does not mean a code fix was verified. The [roadmap](ROADMAP.md) keeps this distinction explicit while retaining the already implemented MCP adapter.
+
 ## Required outcomes
 
 - M2: explicit exit-code, stdout/stderr substring and regex predicates; inspectable selected environment snapshots; compare saved runs and successful/failed trial outputs with bounded text diffs and stream hashes.
