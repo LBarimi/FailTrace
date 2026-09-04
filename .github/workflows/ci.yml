@@ -33,10 +33,5 @@ jobs:
         working-directory: examples/cases/prettier-chain
       - run: npm run verify
         working-directory: examples/cases/prettier-chain
-      - run: npm ci --ignore-scripts
-        working-directory: examples/cases/p-memoize-race
-      - run: npm test
-        working-directory: examples/cases/p-memoize-race
-      - run: npm run verify
-        working-directory: examples/cases/p-memoize-race
+      - run: npm run case:p-memoize
       - run: npm run test:package

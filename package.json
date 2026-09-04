@@ -43,6 +43,7 @@
     "test:package": "node scripts/package-smoke.mjs",
     "bench": "npm run build && node scripts/bench.mjs",
     "bench:ci": "npm run build && node scripts/bench.mjs --suite ci --check",
+    "case:p-memoize": "npm run build && npm --prefix examples/cases/p-memoize-race ci --ignore-scripts && npm --prefix examples/cases/p-memoize-race test && npm --prefix examples/cases/p-memoize-race run verify",
     "demo": "node dist/cli/index.js demo",
     "prepack": "npm run build"
   },

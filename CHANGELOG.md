@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Extended the guided demo into one measurement-to-replay flow without removing its 7/3 repetition, `["BUG"]` reduction or replay bundle. The minimized input becomes a captured baseline; the demo observes the unchanged target, rejects an unrelated crash as inconclusive, reports a healthy fixed candidate sample without claiming elimination, then restores the affected implementation for replay.
+- Added `npm run case:p-memoize` as a repository-root entry point for the pinned race checker and its affected, negative-control and fixed Verify workflow.
+- Added sanitized five-sample 0.5.0 benchmark evidence and README medians from one Windows x64/Node.js 24 host. The published table keeps timing ranges, logical metadata writes, concurrency semantics and threshold-sampling limits with the measurements.
 
 ## 0.5.0 — 2026-09-05
 

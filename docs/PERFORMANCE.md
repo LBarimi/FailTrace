@@ -75,7 +75,33 @@ Use `--output <new-directory>` to measure a selected local or CI filesystem; the
 
 `--experiments` compares full-budget classification with threshold stopping and concurrency 1 with 4. `--hash` compares repeated full-log comparisons against a measurement-only eager-hash/cache prototype; the prototype is not a Core feature. CI uses four representative cases and checks logical metadata bytes `<= 40,000 + 8,192 × trials`, fsync count `<= 8 + trials`, a 100-versus-10-trial metadata growth ratio `<= 15`, and Core wall time `<= 8 ×` its direct-shell baseline `+ 3,000 ms`. These broad regression guards catch scaling mistakes without asserting a portable latency guarantee.
 
-## Measured sample — 2026-09-05
+## Five-sample 0.5.0 measurement — 2026-09-05
+
+The README table comes from five complete benchmark reports run sequentially on the same Windows x64 host, OS release 10.0.19045, with Node.js 24.19.0. Every report used the same snapshotted Core JavaScript digest and passed the CI budget checks. Each run used this shape with a new output directory and label:
+
+```sh
+node scripts/bench.mjs --suite ci --check --experiments --output <new-directory> --label <label>
+```
+
+The fixed case order includes the CI structural cases followed by the full-budget, threshold and concurrency controls. The [sanitized five-sample evidence](benchmarks/readme-0.5.0-windows-node24-5-samples.json) retains all five observations for all 18 result IDs and records min, median and max for wall time, logical metadata writes, fsync calls and completed/matched trials. Its median is the third sorted observation. CPU, RSS, throughput, artifact-size and detailed API call counts are excluded from this README-focused aggregate. Raw `.failtrace/` directories, target output and local paths remain private and are not source files.
+
+For 100 sequential no-output trials, an earlier same-host 0.3.1 sample wrote 3,132,662 logical metadata bytes. The five 0.5.0 samples range from 111,094 to 111,228 bytes, with a median of 111,141: 96.45% fewer than that single reference. This percentage compares one historical observation with the later five-sample median; it describes instrumented logical writes rather than timing or physical storage traffic.
+
+Selected values used in the README:
+
+| Workload and setting | Median wall time (min–max) | Completed work and evidence |
+| --- | ---: | --- |
+| 100 no-op targets, direct shell baseline | 8.764 s (7.867–11.787) | 100 commands; no FailTrace evidence metadata |
+| 100 no-op targets, FailTrace | 10.750 s (8.374–12.098) | 100 trials; 111,141 logical metadata bytes (111,094–111,228); 102 fsync calls |
+| Ten 10 ms targets, full budget → threshold 1 | 1.275 s (0.995–1.331) → 0.124 s (0.111–0.157) | 10 → 1 trial; classification stopped after the first match |
+| Ten 100 ms targets, concurrency 1 → 4 | 1.986 s (1.881–2.195) → 0.664 s (0.628–0.724) | All 10 trials retained in both runs |
+| Ten 1 s targets, concurrency 1 → 4 | 11.047 s (10.968–11.185) → 3.380 s (3.345–3.525) | All 10 trials retained in both runs |
+
+These are five fixed-order samples from one host, not randomized trials or portable performance guarantees. Filesystem, process load, Node version and target workload affect timing. Logical metadata bytes count successful parent-process writes, and fsync counts instrumented Node.js `sync`/`datasync` calls; neither is physical device I/O. Parent CPU and peak RSS exclude target and shell subprocesses.
+
+The concurrency controls retain all ten outcomes but overlap target commands. Shared files, ports, services, CPU and memory can change failure behavior, so concurrency 1 and 4 are different experiments. The threshold control uses an always-matching target and `minFailures: 1`; its one completed trial establishes a decided classification, not a full-budget failure-rate estimate. Ordinary `run` does not use that stopping rule.
+
+## Earlier single-sample implementation comparison — 2026-09-05
 
 These are single maintainer samples on Windows x64, OS release 10.0.19045, Node.js 24.19.0, using the benchmark's local output directory. They compare the 0.3.1 implementation with source changes during this review. The [sanitized comparison report](benchmarks/windows-node24.json) collects before/after measurements; complete [baseline](benchmarks/baseline-0.3.1.json) and [source](benchmarks/source-review.json) reports include CPU, peak RSS, artifact size, throughput, and instrumented I/O. No other OS or filesystem performance claim follows from these samples.
 
