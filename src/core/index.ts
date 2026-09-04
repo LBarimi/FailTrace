@@ -10,4 +10,7 @@ export { minimizeFailure } from './minimize.js';
 export type { MinimizeOptions, MinimizeResult, MinimizeEvaluation, MinimizeFormat } from './minimize.js';
 export { createBundle } from './bundle.js';
 export type { BundleOptions, BundleResult } from './bundle.js';
+export { verifyFix, assessBaselineEligibility } from './verify.js';
+export type { VerifyOptions, VerifyResult, VerifyRunEvidence, VerifyContextChange, VerifyChangeField, VerifyAllowedChange, BaselineEligibility } from './verify.js';
+export type { ContextCaptureOptions, ContextDeclaration, ContextSnapshot, FileIdentity, RunContext } from './verify-context.js';
 export type { RunOptions, RunSummary, RunStatistics, TrialResult, TrialStatus, TerminationReason, FailurePredicate, EnvironmentSnapshot } from './types.js';
