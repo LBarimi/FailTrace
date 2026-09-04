@@ -55,7 +55,7 @@ async function exerciseInstalledCore() {
   const within = relative(installed, imported);
   assert(!isAbsolute(within) && within !== '..' && !within.startsWith('..'), 'Core must resolve from the installed tarball');
   assert.equal(api.VERSION, process.env.FAILTRACE_SMOKE_VERSION);
-  for (const name of ['runTrials', 'compareRuns', 'bisectRegression', 'minimizeFailure', 'verifyFix', 'createBundle']) {
+  for (const name of ['runTrials', 'compareRuns', 'bisectRegression', 'minimizeFailure', 'verifyFix', 'createBundle', 'inspectRunEvidence']) {
     assert.equal(typeof api[name], 'function', `Missing public Core export: ${name}`);
   }
   const project = join(consumer, 'independent project');
@@ -79,9 +79,33 @@ async function exerciseInstalledCore() {
   const comparison = await api.compareRuns({ runA: run.artifactDirectory });
   assert.equal(comparison.stdout.equal, false);
   assert.equal(comparison.stderr.equal, true);
+  const firstMatches = await api.inspectRunEvidence({
+    view: 'trials', run: run.artifactDirectory, filter: 'matched', limit: 1,
+  });
+  assert.equal(firstMatches.recordedTrials, 4);
+  assert.equal(firstMatches.matchedTrials, 2);
+  assert.deepEqual(firstMatches.trials.map((trial) => trial.index), [2]);
+  assert.equal(firstMatches.nextAfterTrial, 2);
+  const remainingMatches = await api.inspectRunEvidence({
+    view: 'trials', run: run.artifactDirectory, filter: 'matched', limit: 1,
+    afterTrial: firstMatches.nextAfterTrial,
+  });
+  assert.deepEqual(remainingMatches.trials.map((trial) => trial.index), [4]);
+  assert.equal(remainingMatches.nextAfterTrial, null);
+  const firstOutput = await api.inspectRunEvidence({
+    view: 'output', run: run.artifactDirectory, trial: 2, stream: 'stdout', maxBytes: 5,
+  });
+  assert.equal(firstOutput.text, 'trial');
+  assert.equal(firstOutput.nextOffsetBytes, 5);
+  const remainingOutput = await api.inspectRunEvidence({
+    view: 'output', run: run.artifactDirectory, trial: 2, stream: 'stdout',
+    offsetBytes: firstOutput.nextOffsetBytes, maxBytes: 8,
+  });
+  assert.equal(firstOutput.text + remainingOutput.text, 'trial 2\n');
+  assert.equal(remainingOutput.nextOffsetBytes, null);
   console.log(JSON.stringify({
     total: run.statistics.total, failed: run.statistics.failed,
-    artifactDirectory: run.artifactDirectory, comparison: 'passed',
+    artifactDirectory: run.artifactDirectory, comparison: 'passed', inspection: 'passed',
   }));
 }
 
@@ -162,7 +186,16 @@ async function exerciseInstalledMcp(installedDirectory, verification, environmen
   try {
     await client.connect(transport);
     const listing = await client.listTools();
-    assert(listing.tools.some((tool) => tool.name === 'failtrace_verify'), 'Installed MCP must register Verify');
+    assert.deepEqual(listing.tools.map((tool) => tool.name).sort(), [
+      'failtrace_bisect', 'failtrace_bundle', 'failtrace_compare', 'failtrace_inspect_run',
+      'failtrace_minimize', 'failtrace_run', 'failtrace_verify',
+    ], 'Installed MCP must register all seven tools');
+    const inspectTool = listing.tools.find((tool) => tool.name === 'failtrace_inspect_run');
+    assert(inspectTool, 'Installed MCP must expose the inspection tool');
+    assert.equal(inspectTool.annotations?.readOnlyHint, true);
+    assert.equal(inspectTool.annotations?.destructiveHint, false);
+    assert.equal(inspectTool.annotations?.idempotentHint, true);
+    assert.equal(inspectTool.annotations?.openWorldHint, false);
     const arguments_ = {
       baseline: verification.baseline, command: verification.command, cwd: verification.cwd,
       allowChanges: [{ field: 'source', reason: 'fixed control' }],
@@ -171,6 +204,27 @@ async function exerciseInstalledMcp(installedDirectory, verification, environmen
     assert.equal(valid.isError, false);
     assert.equal(valid.structuredContent.status, 'target_not_observed');
     assert.equal(valid.structuredContent.candidate.healthyTrials, 2);
+    const page = await client.callTool({ name: 'failtrace_inspect_run', arguments: {
+      view: 'trials', run: verification.baseline, filter: 'matched', limit: 1,
+    } });
+    assert.equal(page.isError, false);
+    assert.equal(page.structuredContent.recordedTrials, 2);
+    assert.equal(page.structuredContent.matchedTrials, 2);
+    assert.deepEqual(page.structuredContent.trials.map((trial) => trial.index), [1]);
+    assert.equal(page.structuredContent.nextAfterTrial, 1);
+    const outputStart = await client.callTool({ name: 'failtrace_inspect_run', arguments: {
+      view: 'output', run: verification.baseline, trial: 1, stream: 'stderr', maxBytes: 6,
+    } });
+    assert.equal(outputStart.isError, false);
+    assert.equal(outputStart.structuredContent.text, 'SMOKE_');
+    assert.equal(outputStart.structuredContent.nextOffsetBytes, 6);
+    const outputEnd = await client.callTool({ name: 'failtrace_inspect_run', arguments: {
+      view: 'output', run: verification.baseline, trial: 1, stream: 'stderr',
+      offsetBytes: outputStart.structuredContent.nextOffsetBytes, maxBytes: 64,
+    } });
+    assert.equal(outputEnd.isError, false);
+    assert.equal(outputStart.structuredContent.text + outputEnd.structuredContent.text, 'SMOKE_TARGET\n');
+    assert.equal(outputEnd.structuredContent.nextOffsetBytes, null);
     await writeFile(join(verification.cwd, 'target.mjs'), "throw new Error('UNRELATED_SMOKE_FAILURE');\n");
     const invalid = await client.callTool({ name: 'failtrace_verify', arguments: arguments_ });
     assert.equal(invalid.isError, false);
@@ -178,7 +232,7 @@ async function exerciseInstalledMcp(installedDirectory, verification, environmen
     assert.equal(invalid.structuredContent.candidate.unhealthyTrials, 2);
     assert.deepEqual(errors, []);
     assert.equal(stderr.join(''), '', 'MCP stdout must stay protocol-only and stderr should be quiet');
-    return 'passed';
+    return { verification: 'passed', inspection: 'passed' };
   } finally {
     await client.close();
   }
@@ -247,7 +301,7 @@ try {
     cwd: consumer, env: environment, windowsHide: true, timeout: 60_000, maxBuffer: 2 * 1024 * 1024,
   });
   const verification = JSON.parse(verifyOutput.stdout);
-  const mcpVerification = await exerciseInstalledMcp(installedDirectory, verification, environment);
+  const mcpChecks = await exerciseInstalledMcp(installedDirectory, verification, environment);
   const help = await npmRun(['exec', '--offline', '--', 'failtrace', '--help'], consumer);
   assert(/\bfailtrace demo\b/.test(help.stdout), 'Installed CLI must advertise the demo');
   const demoOutput = await npmRun(['exec', '--offline', '--', 'failtrace', 'demo', '--json'], consumer);
@@ -273,10 +327,11 @@ try {
   assert.deepEqual(demo.reduction.minimizedInput, ['BUG']);
   assert((await stat(demo.bundle.directory)).isDirectory());
   const report = {
-    package: manifest.name, version: manifest.version, tarball, sha256,
+    package: manifest.name, version: manifest.version, tarball: basename(tarball), sha256,
     checks: { installedCli: 'passed', installedCore: 'passed', productionDependenciesOnly: 'passed', installedDemo: 'passed',
-      installedVerifyCore: verification.core, installedVerifyCli: verification.cli, installedVerifyMcp: mcpVerification, unrelatedErrorGuard: verification.unrelatedErrorGuard },
-    core: { total: core.total, failed: core.failed, comparison: core.comparison },
+      installedVerifyCore: verification.core, installedVerifyCli: verification.cli, installedVerifyMcp: mcpChecks.verification,
+      installedInspectMcp: mcpChecks.inspection, unrelatedErrorGuard: verification.unrelatedErrorGuard },
+    core: { total: core.total, failed: core.failed, comparison: core.comparison, inspection: core.inspection },
     retained: keep,
     ...(keep ? { consumerDirectory: consumer, coreRunDirectory: core.artifactDirectory,
       demoDirectory: demo.artifactDirectory, bundleDirectory: demo.bundle.directory } : {}),
