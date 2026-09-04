@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Added opt-in `run --concurrency N` and the equivalent Core/MCP run option, keeping sequential execution as the default. Progress follows completion order with explicit trial indices; results remain index-sorted.
+- Bisect/minimize use sequential threshold decisions to avoid unnecessary trials while retaining independent final minimization verification. Regular runs still attempt the full requested count.
+- Run statistics update incrementally. Individual trial records are authoritative, run summaries are written initially and at finalization, and large summaries use compact storage reconstructed by `loadRun`.
+- File-set minimization requests copy-on-write copies with ordinary-copy fallback. Bundles preserve run concurrency and replay the original full trial budget.
+- Added reproducible performance benchmarks and guidance for external dependency caches. See `docs/PERFORMANCE.md` for measured scope, remaining costs, and deferred optimizations.
+
 ## 0.3.1 — 2026-09-05
 
 - Installation guides use the public npm package for the demo, regular CLI use, and agent setup. The versioned GitHub archive remains an alternative.

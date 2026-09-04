@@ -15,7 +15,7 @@ describe('run comparison', () => {
     const cwd = await workspace();
     const run = await runTrials({ command: fixtureCommand('alternate'), repeat: 2, cwd });
     const comparison = await compareRuns({ runA: run.id, cwd });
-    expect(comparison).toMatchObject({ runA: run.id, runB: run.id, trialA: 1, trialB: 2 });
+    expect(comparison).toMatchObject({ runA: run.id, runB: run.id, trialA: 1, trialB: 2, concurrencyChanged: false });
     expect(comparison.stdout.equal).toBe(false);
     expect(comparison.stdout.diff).toContain('-trial 1');
     expect(comparison.stdout.diff).toContain('+trial 2');
@@ -26,11 +26,12 @@ describe('run comparison', () => {
     const cwd = await workspace();
     const first = await runTrials({ command: fixtureCommand('pass'), repeat: 1, cwd,
       captureEnv: ['VARIANT'], env: { VARIANT: 'A' } });
-    const second = await runTrials({ command: fixtureCommand('fail'), repeat: 1, cwd,
+    const second = await runTrials({ command: fixtureCommand('fail'), repeat: 1, concurrency: 2, cwd,
       captureEnv: ['VARIANT'], env: { VARIANT: 'B' } });
     const comparison = await compareRuns({ runA: first.artifactDirectory, runB: join(second.artifactDirectory, 'run.json') });
     expect(comparison.failureRateDelta).toBe(1);
     expect(comparison.commandChanged).toBe(true);
+    expect(comparison.concurrencyChanged).toBe(true);
     expect(comparison.stdout.sha256A).toMatch(/^[a-f0-9]{64}$/);
     expect(comparison.environmentChanges).toContainEqual({ key: 'variables.VARIANT', before: 'A', after: 'B' });
     const bounded = await compareRuns({ runA: first.artifactDirectory, runB: second.artifactDirectory, maxBytes: 3, maxLines: 2 });

@@ -53,6 +53,8 @@ export interface RunSummary {
   command: string;
   cwd: string;
   requestedTrials: number;
+  /** Maximum simultaneous trials; absent in older artifacts means one. */
+  concurrency?: number;
   timeoutMs: number;
   startedAt: string;
   endedAt: string | null;
@@ -60,6 +62,8 @@ export interface RunSummary {
   artifactDirectory: string;
   trials: TrialResult[];
   statistics: RunStatistics;
+  /** A clean threshold decision; requestedTrials remains the original budget. */
+  decision?: { minFailures: number; outcome: 'reproduced' | 'not_reproduced'; completedTrials: number };
   error?: string;
   predicate?: FailurePredicate;
   environment?: EnvironmentSnapshot;
@@ -70,13 +74,18 @@ export interface RunSummary {
 export interface RunOptions {
   command: string;
   repeat?: number;
+  /** Opt-in parallelism changes resource contention and potentially failure behavior. Defaults to one. */
+  concurrency?: number;
   timeoutMs?: number;
   cwd?: string;
   /** Parent directory for runs; defaults to cwd/.failtrace. */
   artifactsDir?: string;
   env?: NodeJS.ProcessEnv;
   signal?: AbortSignal;
-  onTrialComplete?: (trial: TrialResult) => void;
+  /** Called after durable trial metadata, in completion order. Returned trials are index ordered. */
+  onTrialComplete?: ((trial: TrialResult) => void) | ((trial: TrialResult) => Promise<void>);
+  /** Classification only, with concurrency one; ordinary runs always exhaust repeat. */
+  stopWhenDecided?: { minFailures: number };
   predicate?: FailurePredicate;
   captureEnv?: string[];
 }

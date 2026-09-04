@@ -37,6 +37,7 @@ interface ReproductionConfig {
   sourceRunId: string;
   command: string;
   repeat: number;
+  concurrency: number;
   timeoutMs: number;
   predicate: FailurePredicate;
   sourceDirectory: 'source';
@@ -147,6 +148,7 @@ export async function replay() {
     const summary = await runTrials({
       command: config.command,
       repeat: config.repeat,
+      concurrency: config.concurrency ?? 1,
       timeoutMs: config.timeoutMs,
       predicate: config.predicate,
       cwd: resolve(directory, config.sourceDirectory),
@@ -181,7 +183,7 @@ if (isMain) {
 `;
 
 function bundleReadme(config: ReproductionConfig): string {
-  return `# FailTrace reproduction\n\nThis directory contains the FailTrace Core engine, selected source/input files, and evidence from run \`${config.sourceRunId}\`. Creating the bundle did not execute its command.\n\n## Replay\n\n1. Install Node.js 22.12 or newer and any external tools needed by the target command. FailTrace itself needs no install or network connection.\n2. Inspect \`repro.json\`, the scripts, \`source/\`, and original evidence under \`logs/\`. The configured command runs with your permissions.\n3. Install the target project's dependencies or perform its setup inside \`source/\`, if needed. Only explicitly selected files are included; dependencies and external services are not captured automatically.\n4. Run \`node repro.mjs\` (or \`sh repro.sh\` / \`repro.cmd\`) from any directory.\n\nThe command runs from \`source/\`. It uses the original trial count, timeout, and failure predicate recorded in \`repro.json\`. The script prints how many trials matched the target predicate, so unrelated non-zero exits do not establish reproduction for a specific predicate. An exit code of 1 means the target failure was reproduced, 0 means it was not, 2 means replay could not run, and 130/143 mean interruption. New evidence is written under \`replay-artifacts/runs/\`; original logs remain unchanged.\n\nExplicit environment overrides (or the original explicitly selected snapshot) appear in \`repro.json\`; null unsets a variable. Other variables are inherited from the replay environment. Check these values for secrets or machine-specific paths before sharing. ${config.input ? 'The selected input is under `input/`; replay sets `' + (config.input.kind === 'file' ? 'FAILTRACE_INPUT' : 'FAILTRACE_INPUT_DIR') + '` to its new location automatically.' : 'No separate input was selected.'}\n\n## Portability limits\n\nThe engine is included under \`engine/\` and uses Node.js built-ins. Target commands retain their shell syntax and may require platform-specific tools, dependency installation, environment variables, or external state. Original evidence may contain private output and absolute paths from the source machine. The bundle does not reconstruct unselected files or uncaptured environment state. Inspect and supply a portable command in \`repro.json\` as necessary. Process-tree cleanup remains best effort.\n`;
+  return `# FailTrace reproduction\n\nThis directory contains the FailTrace Core engine, selected source/input files, and evidence from run \`${config.sourceRunId}\`. Creating the bundle did not execute its command.\n\n## Replay\n\n1. Install Node.js 22.12 or newer and any external tools needed by the target command. FailTrace itself needs no install or network connection.\n2. Inspect \`repro.json\`, the scripts, \`source/\`, and original evidence under \`logs/\`. The configured command runs with your permissions.\n3. Install the target project's dependencies or perform its setup inside \`source/\`, if needed. Only explicitly selected files are included; dependencies and external services are not captured automatically.\n4. Run \`node repro.mjs\` (or \`sh repro.sh\` / \`repro.cmd\`) from any directory.\n\nThe command runs from \`source/\`. It uses the original trial budget, concurrency, timeout, and failure predicate recorded in \`repro.json\`. Concurrency above one can change failure behavior through resource contention or shared state. Trial progress is printed in completion order; saved results are ordered by trial index. The script prints how many trials matched the target predicate, so unrelated non-zero exits do not establish reproduction for a specific predicate. An exit code of 1 means the target failure was reproduced, 0 means it was not, 2 means replay could not run, and 130/143 mean interruption. New evidence is written under \`replay-artifacts/runs/\`; original logs remain unchanged.\n\nExplicit environment overrides (or the original explicitly selected snapshot) appear in \`repro.json\`; null unsets a variable. Other variables are inherited from the replay environment. Check these values for secrets or machine-specific paths before sharing. ${config.input ? 'The selected input is under `input/`; replay sets `' + (config.input.kind === 'file' ? 'FAILTRACE_INPUT' : 'FAILTRACE_INPUT_DIR') + '` to its new location automatically.' : 'No separate input was selected.'}\n\n## Portability limits\n\nThe engine is included under \`engine/\` and uses Node.js built-ins. Target commands retain their shell syntax and may require platform-specific tools, dependency installation, environment variables, or external state. Original evidence may contain private output and absolute paths from the source machine. The bundle does not reconstruct unselected files or uncaptured environment state. Inspect and supply a portable command in \`repro.json\` as necessary. Process-tree cleanup remains best effort.\n`;
 }
 
 /** Build a local, self-contained replay directory without executing its command. */
@@ -240,6 +242,7 @@ export async function createBundle(options: BundleOptions): Promise<BundleResult
       sourceRunId: run.id,
       command,
       repeat: run.requestedTrials,
+      concurrency: run.concurrency ?? 1,
       timeoutMs: run.timeoutMs,
       predicate: run.predicate ?? { kind: 'nonzero_exit' },
       sourceDirectory: 'source',

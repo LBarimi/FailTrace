@@ -73,6 +73,10 @@ describe('official SDK stdio MCP adapter', () => {
       'failtrace_bisect', 'failtrace_bundle', 'failtrace_compare', 'failtrace_minimize', 'failtrace_run',
     ]);
     for (const tool of listing.tools) expect(tool.inputSchema.type).toBe('object');
+    expect(listing.tools.find((tool) => tool.name === 'failtrace_run')!.inputSchema.properties).toHaveProperty('concurrency');
+    for (const name of ['failtrace_bisect', 'failtrace_minimize']) {
+      expect(listing.tools.find((tool) => tool.name === name)!.inputSchema.properties).not.toHaveProperty('concurrency');
+    }
     for (const name of ['failtrace_run', 'failtrace_bisect', 'failtrace_minimize']) {
       expect(listing.tools.find((tool) => tool.name === name)!.annotations?.destructiveHint).toBe(true);
     }
@@ -85,6 +89,7 @@ describe('official SDK stdio MCP adapter', () => {
     expect(run.status).toBe('completed');
     expect(run.statistics).toMatchObject({ total: 2, passed: 1, failed: 1, failureRate: 0.5 });
     expect(run.matchedTrials).toBe(1);
+    expect(run.concurrency).toBe(1);
     const runDirectory = run.artifactDirectory as string;
     expect(await readFile(join(runDirectory, 'trials', '002', 'stderr.txt'), 'utf8')).toContain('EXPECTED_BUNDLE_FAILURE');
 
@@ -147,12 +152,35 @@ describe('official SDK stdio MCP adapter', () => {
     expect(stderr.join('')).toBe('');
   });
 
+  it('forwards optional concurrency and returns index-sorted evidence after out-of-order completion', async () => {
+    const { client, cwd, errors, stderr } = await startClient();
+    await copyFile(join(fixtures, 'adapter-concurrency.mjs'), join(cwd, 'target.mjs'));
+    const call = await client.callTool({
+      name: 'failtrace_run', arguments: { command: `${node} target.mjs`, repeat: 2, concurrency: 2 },
+    }, { timeout: 20_000 });
+    expect(call.isError).toBe(false);
+    const run = structured(call);
+    expect(run).toMatchObject({ status: 'completed', concurrency: 2, matchedTrials: 1, statistics: { total: 2, passed: 1, failed: 1 } });
+    expect((run.trials as Array<{ index: number }>).map((trial) => trial.index)).toEqual([1, 2]);
+    expect(await readFile(join(run.artifactDirectory as string, 'trials', '001', 'stdout.txt'), 'utf8')).toBe('trial=1\n');
+    expect(errors).toEqual([]);
+    expect(stderr.join('')).toBe('');
+  }, 20_000);
+
   it('validates schemas and reports Core errors without terminating the server', async () => {
     const { client } = await startClient();
     await client.listTools();
     const invalidInput = await client.callTool({ name: 'failtrace_run', arguments: { command: 'exit 0', repeat: 0 } });
     expect(invalidInput.isError).toBe(true);
     expect(invalidInput.content).toEqual([expect.objectContaining({ type: 'text', text: expect.stringContaining('Input validation error') })]);
+    for (const concurrency of [0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+      const invalidConcurrency = await client.callTool({ name: 'failtrace_run', arguments: { command: 'exit 0', concurrency } });
+      expect(invalidConcurrency.isError).toBe(true);
+    }
+    for (const name of ['failtrace_bisect', 'failtrace_minimize']) {
+      const unsupported = await client.callTool({ name, arguments: { command: 'exit 0', concurrency: 2 } });
+      expect(unsupported.isError).toBe(true);
+    }
     const invalidRegex = await client.callTool({
       name: 'failtrace_run', arguments: { command: 'exit 0', predicate: { kind: 'stdout_regex', pattern: '[' } },
     });
@@ -199,20 +227,21 @@ describe('official SDK stdio MCP adapter', () => {
 
   it('propagates request cancellation to Core and preserves valid partial results', async () => {
     const { client, cwd } = await startClient();
-    await copyFile(join(fixtures, 'command.mjs'), join(cwd, 'hang.mjs'));
-    const marker = join(cwd, 'child.pid');
+    await copyFile(join(fixtures, 'adapter-concurrency.mjs'), join(cwd, 'hang.mjs'));
     const controller = new AbortController();
     const outcome = client.callTool({
-      name: 'failtrace_run', arguments: { command: `${node} hang.mjs hang ${quoteShellArgument(marker)}`, repeat: 5, timeoutMs: 10_000 },
+      name: 'failtrace_run', arguments: { command: `${node} hang.mjs hang`, repeat: 5, concurrency: 2, timeoutMs: 10_000 },
     }, { signal: controller.signal, timeout: 20_000 }).then((value) => ({ value }), (error: unknown) => ({ error }));
-    const pid = Number(await waitForFile(marker));
+    const pids = await Promise.all([1, 2].map(async (index) => Number(await waitForFile(join(cwd, `child-${index}.pid`)))));
     controller.abort();
     expect(await outcome).toHaveProperty('error');
     const run = await completedRun(cwd);
     expect(run.status).toBe('interrupted');
-    expect(run.trials).toHaveLength(1);
-    expect(run.trials[0]!.status).toBe('interrupted');
-    await waitForProcessExit(pid);
+    expect(run.concurrency).toBe(2);
+    expect(run.trials.map((trial) => ({ index: trial.index, status: trial.status }))).toEqual([
+      { index: 1, status: 'interrupted' }, { index: 2, status: 'interrupted' },
+    ]);
+    await Promise.all(pids.map((pid) => waitForProcessExit(pid)));
   });
 
   it('aborts active commands and finishes metadata when the SDK client disconnects', async () => {

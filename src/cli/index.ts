@@ -58,7 +58,7 @@ async function main(): Promise<number> {
         break;
       }
       case 'run': {
-        print(formatHeader(invocation.command, invocation.repeat, invocation.timeoutMs));
+        print(formatHeader(invocation.command, invocation.repeat, invocation.timeoutMs, invocation.concurrency));
         const summary = await runTrials({
           ...invocation, signal: controller.signal,
           onTrialComplete: (trial) => print(formatTrial(trial, invocation.repeat)),
@@ -79,7 +79,10 @@ async function main(): Promise<number> {
         print(`FailTrace - regression isolation\n\nGood      ${invocation.good}\nBad       ${invocation.bad}\nCommand   ${invocation.command}\n`);
         const search = await bisectRegression({
           ...invocation, signal: controller.signal,
-          onCandidate: (candidate) => print(`  ${candidate.commit.slice(0, 12)}  ${candidate.role.padEnd(9)} ${candidate.assessment}  (${candidate.run.statistics.failed}/${candidate.run.statistics.total})`),
+          onCandidate: (candidate) => {
+            const matched = candidate.run.trials.filter((trial) => trial.failureMatched ?? trial.status === 'failed').length;
+            print(`  ${candidate.commit.slice(0, 12)}  ${candidate.role.padEnd(9)} ${candidate.assessment}  (${candidate.run.statistics.total}/${candidate.run.requestedTrials} trials, ${matched} matches${candidate.run.decision ? '; threshold decided' : ''})`);
+          },
         });
         print(`\nResult       ${search.status}\nFirst bad    ${search.firstBad ?? '-'}\nLast good    ${search.lastGood ?? '-'}${search.reason ? `\nReason       ${search.reason}` : ''}${search.cleanupError ? `\nCleanup      ${search.cleanupError}` : ''}\n\nArtifacts:\n${search.artifactDirectory}`);
         result(search);

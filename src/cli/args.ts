@@ -6,7 +6,7 @@ export type CliInvocation =
   | { kind: 'help' }
   | { kind: 'version' }
   | ({ kind: 'demo' } & Common)
-  | ({ kind: 'run'; captureEnv?: string[] } & Common & Experiment)
+  | ({ kind: 'run'; captureEnv?: string[]; concurrency?: number } & Common & Experiment)
   | ({ kind: 'compare' } & Common & CompareOptions)
   | ({ kind: 'bisect'; good: string; bad: string; minFailures: number } & Common & Experiment)
   | ({ kind: 'minimize'; input: string; format: MinimizeFormat; minFailures: number; maxEvaluations: number } & Common & Experiment)
@@ -39,7 +39,7 @@ const predicateFlags = ['exit-code', 'stdout-contains', 'stderr-contains', 'stdo
 const experiments = ['command', 'repeat', 'timeout', ...predicateFlags, 'regex-flags'];
 const allowed: Record<string, string[]> = {
   demo: ['cwd', 'json'],
-  run: ['repeat', 'timeout', ...predicateFlags, 'regex-flags', 'capture-env', 'cwd', 'json'],
+  run: ['repeat', 'timeout', 'concurrency', ...predicateFlags, 'regex-flags', 'capture-env', 'cwd', 'json'],
   compare: ['trial-a', 'trial-b', 'max-lines', 'max-bytes', 'cwd', 'json'],
   bisect: [...experiments, 'good', 'bad', 'min-failures', 'cwd', 'json'],
   minimize: [...experiments, 'input', 'format', 'min-failures', 'max-evaluations', 'cwd', 'json'],
@@ -134,7 +134,11 @@ export function parseArgs(argv: string[]): CliInvocation {
   if (kind === 'run') {
     const captureEnv = get('capture-env')?.split(',').map((key) => key.trim());
     if (captureEnv?.some((key) => !key || key.includes('=') || key.includes('\0'))) throw new Error('Capture environment names must be non-empty and comma-separated.');
-    return { kind, ...experiment, ...common, ...(captureEnv === undefined ? {} : { captureEnv: [...new Set(captureEnv)] }) };
+    return {
+      kind, ...experiment, ...common,
+      ...(captureEnv === undefined ? {} : { captureEnv: [...new Set(captureEnv)] }),
+      ...(get('concurrency') === undefined ? {} : { concurrency: integer(get('concurrency')!, 'Concurrency') }),
+    };
   }
   const minFailures = integer(get('min-failures') ?? '1', 'Minimum failures', 1, repeat);
   if (kind === 'bisect') return { kind, ...experiment, ...common, good: required('good'), bad: required('bad'), minFailures };

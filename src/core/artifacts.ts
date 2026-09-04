@@ -13,11 +13,16 @@ export async function createRunDirectory(artifactsDir: string): Promise<{ id: st
 
 /** Replace metadata only after a complete JSON file is flushed beside it. */
 export async function writeJsonAtomic(path: string, value: unknown): Promise<void> {
+  await writeTextAtomic(path, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+/** Write already encoded metadata without serializing the same summary twice. */
+export async function writeTextAtomic(path: string, text: string): Promise<void> {
   const temporaryPath = `${path}.${randomUUID()}.tmp`;
   try {
     const file = await open(temporaryPath, 'wx');
     try {
-      await file.writeFile(`${JSON.stringify(value, null, 2)}\n`, 'utf8');
+      await file.writeFile(text, 'utf8');
       await file.sync();
     } finally {
       await file.close();

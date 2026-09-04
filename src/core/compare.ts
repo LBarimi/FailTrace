@@ -32,6 +32,7 @@ export interface ComparisonResult {
   trialA: number;
   trialB: number;
   commandChanged: boolean;
+  concurrencyChanged: boolean;
   predicateChanged: boolean;
   statisticsA: RunStatistics;
   statisticsB: RunStatistics;
@@ -132,6 +133,7 @@ export async function compareRuns(options: CompareOptions): Promise<ComparisonRe
   return {
     runA: first.id, runB: second.id, trialA: trialA.index, trialB: trialB.index,
     commandChanged: first.command !== second.command,
+    concurrencyChanged: (first.concurrency ?? 1) !== (second.concurrency ?? 1),
     predicateChanged: JSON.stringify(first.predicate ?? { kind: 'nonzero_exit' }) !== JSON.stringify(second.predicate ?? { kind: 'nonzero_exit' }),
     statisticsA, statisticsB, failureRateDelta: statisticsB.failureRate - statisticsA.failureRate,
     environmentChanges, stdout, stderr,

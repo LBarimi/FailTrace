@@ -56,6 +56,7 @@ function runProjection(run: RunSummary): Record<string, unknown> {
     artifactDirectory: run.artifactDirectory,
     metadataPath: join(run.artifactDirectory, 'run.json'),
     requestedTrials: run.requestedTrials,
+    concurrency: run.concurrency ?? 1,
     statistics: run.statistics,
     matchedTrials: run.trials.filter((trial) => trial.failureMatched === true).length,
     predicate: run.predicate,
@@ -68,6 +69,7 @@ function runProjection(run: RunSummary): Record<string, unknown> {
       ...(trial.error === undefined ? {} : { error: trial.error }),
     })),
     trialsOmitted: Math.max(0, run.trials.length - 40),
+    ...(run.decision === undefined ? {} : { decision: run.decision }),
     ...(run.error === undefined ? {} : { error: run.error }),
   };
 }
@@ -104,10 +106,11 @@ function createServer(cwd: string, shutdown: AbortSignal, pending: Set<Promise<C
 
   server.registerTool('failtrace_run', {
     title: 'Repeat a command',
-    description: 'Run sequential command trials and preserve failure statistics, metadata, stdout and stderr. Target failure is returned as data.',
+    description: 'Repeat command trials and preserve failure statistics, metadata, stdout and stderr. Concurrency defaults to 1; opting into overlap can change failure behavior through shared resources. Returned trials are index-sorted. Target failure is data.',
     inputSchema: commandSchema.extend({
       artifactsDir: z.string().min(1).optional(),
       captureEnv: z.array(z.string().min(1)).optional().describe('Only these selected environment variables are recorded in metadata.'),
+      concurrency: positiveInteger.optional().describe('Maximum active run trials; default 1. Shared ports, files, databases and resource contention can change failure probability.'),
     }),
     annotations: executesCommand,
   }, (input, context) => invoke(context, async (signal) => {
@@ -115,6 +118,7 @@ function createServer(cwd: string, shutdown: AbortSignal, pending: Set<Promise<C
       ...commandOptions(input, cwd, signal),
       ...(input.artifactsDir === undefined ? {} : { artifactsDir: input.artifactsDir }),
       ...(input.captureEnv === undefined ? {} : { captureEnv: input.captureEnv }),
+      ...(input.concurrency === undefined ? {} : { concurrency: input.concurrency }),
     });
     return toolResult(runProjection(run), run.status === 'error');
   }));
@@ -139,7 +143,7 @@ function createServer(cwd: string, shutdown: AbortSignal, pending: Set<Promise<C
 
   server.registerTool('failtrace_bisect', {
     title: 'Isolate a regression',
-    description: 'Validate good/bad commits and bisect first-parent history in an isolated Git worktree using repeated trials and a failure threshold. Assumes a monotonic failure boundary.',
+    description: 'Validate good/bad commits and bisect first-parent history in an isolated Git worktree. Sequential candidate trials stop when the failure threshold is decided. Assumes a monotonic failure boundary; observed rates are not full-budget estimates.',
     inputSchema: commandSchema.extend({ good: z.string().min(1), bad: z.string().min(1), minFailures: positiveInteger.optional() }),
     annotations: executesCommand,
   }, (input, context) => invoke(context, async (signal) => {
@@ -153,6 +157,8 @@ function createServer(cwd: string, shutdown: AbortSignal, pending: Set<Promise<C
       candidates: sample(candidates).map((candidate) => ({
         commit: candidate.commit, role: candidate.role, assessment: candidate.assessment,
         statistics: candidate.run.statistics, runDirectory: candidate.run.artifactDirectory,
+        requestedTrials: candidate.run.requestedTrials,
+        ...(candidate.run.decision === undefined ? {} : { decision: candidate.run.decision }),
       })),
       candidatesOmitted: Math.max(0, candidates.length - 40),
     }, result.status === 'error');
@@ -160,7 +166,7 @@ function createServer(cwd: string, shutdown: AbortSignal, pending: Set<Promise<C
 
   server.registerTool('failtrace_minimize', {
     title: 'Minimize a reproducing input',
-    description: 'Deterministically reduce text, JSON, file sets or environment selections. Accept reductions only when repeated trials still reproduce the selected failure; preserve originals and candidate evidence.',
+    description: 'Deterministically reduce text, JSON, file sets or environment selections. Sequential baseline, candidate and final trials stop when the failure threshold is decided. Accept only reproducing reductions; preserve originals and candidate evidence.',
     inputSchema: commandSchema.extend({
       input: z.string().min(1), format: z.enum(['text', 'json', 'files', 'env']),
       minFailures: positiveInteger.optional(), maxEvaluations: positiveInteger.min(2).optional(),

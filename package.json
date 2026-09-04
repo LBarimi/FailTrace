@@ -38,6 +38,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:package": "node scripts/package-smoke.mjs",
+    "bench": "npm run build && node scripts/bench.mjs",
+    "bench:ci": "npm run build && node scripts/bench.mjs --suite ci --check",
     "demo": "node dist/cli/index.js demo",
     "prepack": "npm run build"
   },

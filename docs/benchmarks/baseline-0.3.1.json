@@ -1,0 +1,468 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-09-04T16:39:17.280Z",
+  "label": "baseline-0.3.1",
+  "suite": "ci",
+  "host": {
+    "platform": "win32",
+    "arch": "x64",
+    "osRelease": "10.0.19045",
+    "node": "v24.19.0"
+  },
+  "methodology": {
+    "wall": "Measured inside an isolated worker after module import and fixture setup; includes target startup/execution, evidence, predicates and final metadata. Worker startup is separately recorded.",
+    "cpu": "process.cpuUsage delta for the FailTrace/direct runner process, including its worker threads, excluding target and shell subprocesses.",
+    "peakRss": "process.resourceUsage().maxRSS converted from KiB to bytes; process lifetime peak includes startup/import. Null means unavailable. Does not include target/shell RSS.",
+    "io": "Instrumented node:fs/promises and FileHandle API calls in the runner process, not OS syscalls. Successful logical write bytes and attempted/completed fsync/datasync calls. Excludes child direct-FD writes, callback/synchronous fs APIs, recursive internal calls, regex worker I/O and kernel caching/physical device writes.",
+    "artifact": "Final on-disk file lengths, measured after timing; includes output and metadata, excludes fixture/report. Logical file size, not allocated filesystem blocks.",
+    "baselines": "Identical Node fixture/environment/trial indices with file-descriptor stdout/stderr, sequential spawn via shell or executable+argv. No FailTrace predicates or durable metadata.",
+    "target": "Every trial exits 1; writes exactly outputBytes to stdout and none to stderr. Positive outputs contain the matching sentinel; zero-byte text/regex predicates intentionally do not match. Delay excludes Node startup.",
+    "privacy": "Reports omit command paths, working directories, environment values and usernames. Raw local artifacts remain private under the output directory."
+  },
+  "results": [
+    {
+      "id": "direct-argv-0ms-10x-0b-nonzero_exit",
+      "mode": "direct-argv",
+      "case": {
+        "durationMs": 0,
+        "repeat": 10,
+        "outputBytes": 0,
+        "predicate": "nonzero_exit"
+      },
+      "wallMs": 694.8845,
+      "cpuUserMs": 0,
+      "cpuSystemMs": 78,
+      "peakRssBytes": 58208256,
+      "throughputTrialsPerSecond": 14.390880786663107,
+      "io": {
+        "promiseCalls": {
+          "mkdir": 10,
+          "open": 20
+        },
+        "fileHandleCalls": {
+          "close": 20
+        },
+        "metadataBytesWritten": 0,
+        "parentBytesWritten": 0,
+        "unmeasuredWriteCalls": 0,
+        "fsyncCalls": 0,
+        "fsyncCompleted": 0
+      },
+      "artifact": {
+        "bytes": 0,
+        "files": 20
+      },
+      "matchedTrials": null,
+      "workerWallMs": 802.9352
+    },
+    {
+      "id": "direct-shell-0ms-10x-0b-nonzero_exit",
+      "mode": "direct-shell",
+      "case": {
+        "durationMs": 0,
+        "repeat": 10,
+        "outputBytes": 0,
+        "predicate": "nonzero_exit"
+      },
+      "wallMs": 1013.1716000000001,
+      "cpuUserMs": 16,
+      "cpuSystemMs": 31,
+      "peakRssBytes": 58302464,
+      "throughputTrialsPerSecond": 9.869996355997344,
+      "io": {
+        "promiseCalls": {
+          "mkdir": 10,
+          "open": 20
+        },
+        "fileHandleCalls": {
+          "close": 20
+        },
+        "metadataBytesWritten": 0,
+        "parentBytesWritten": 0,
+        "unmeasuredWriteCalls": 0,
+        "fsyncCalls": 0,
+        "fsyncCompleted": 0
+      },
+      "artifact": {
+        "bytes": 0,
+        "files": 20
+      },
+      "matchedTrials": null,
+      "workerWallMs": 1130.9212
+    },
+    {
+      "id": "failtrace-0ms-10x-0b-nonzero_exit",
+      "mode": "failtrace",
+      "case": {
+        "durationMs": 0,
+        "repeat": 10,
+        "outputBytes": 0,
+        "predicate": "nonzero_exit"
+      },
+      "wallMs": 1327.8347999999999,
+      "cpuUserMs": 79,
+      "cpuSystemMs": 79,
+      "peakRssBytes": 61808640,
+      "throughputTrialsPerSecond": 7.531057327312103,
+      "io": {
+        "promiseCalls": {
+          "stat": 1,
+          "mkdir": 22,
+          "open": 42,
+          "rename": 22,
+          "rm": 22
+        },
+        "fileHandleCalls": {
+          "writeFile": 22,
+          "sync": 22,
+          "close": 42
+        },
+        "metadataBytesWritten": 56562,
+        "parentBytesWritten": 56562,
+        "unmeasuredWriteCalls": 0,
+        "fsyncCalls": 22,
+        "fsyncCompleted": 22
+      },
+      "artifact": {
+        "bytes": 12029,
+        "files": 31
+      },
+      "matchedTrials": 10,
+      "workerWallMs": 1489.6
+    },
+    {
+      "id": "direct-argv-0ms-100x-0b-nonzero_exit",
+      "mode": "direct-argv",
+      "case": {
+        "durationMs": 0,
+        "repeat": 100,
+        "outputBytes": 0,
+        "predicate": "nonzero_exit"
+      },
+      "wallMs": 7327.3877,
+      "cpuUserMs": 32,
+      "cpuSystemMs": 469,
+      "peakRssBytes": 61128704,
+      "throughputTrialsPerSecond": 13.647428537185224,
+      "io": {
+        "promiseCalls": {
+          "mkdir": 100,
+          "open": 200
+        },
+        "fileHandleCalls": {
+          "close": 200
+        },
+        "metadataBytesWritten": 0,
+        "parentBytesWritten": 0,
+        "unmeasuredWriteCalls": 0,
+        "fsyncCalls": 0,
+        "fsyncCompleted": 0
+      },
+      "artifact": {
+        "bytes": 0,
+        "files": 200
+      },
+      "matchedTrials": null,
+      "workerWallMs": 7516.3089
+    },
+    {
+      "id": "direct-shell-0ms-100x-0b-nonzero_exit",
+      "mode": "direct-shell",
+      "case": {
+        "durationMs": 0,
+        "repeat": 100,
+        "outputBytes": 0,
+        "predicate": "nonzero_exit"
+      },
+      "wallMs": 8633.759699999999,
+      "cpuUserMs": 141,
+      "cpuSystemMs": 390,
+      "peakRssBytes": 62226432,
+      "throughputTrialsPerSecond": 11.582439571488191,
+      "io": {
+        "promiseCalls": {
+          "mkdir": 100,
+          "open": 200
+        },
+        "fileHandleCalls": {
+          "close": 200
+        },
+        "metadataBytesWritten": 0,
+        "parentBytesWritten": 0,
+        "unmeasuredWriteCalls": 0,
+        "fsyncCalls": 0,
+        "fsyncCompleted": 0
+      },
+      "artifact": {
+        "bytes": 0,
+        "files": 200
+      },
+      "matchedTrials": null,
+      "workerWallMs": 8777.4938
+    },
+    {
+      "id": "failtrace-0ms-100x-0b-nonzero_exit",
+      "mode": "failtrace",
+      "case": {
+        "durationMs": 0,
+        "repeat": 100,
+        "outputBytes": 0,
+        "predicate": "nonzero_exit"
+      },
+      "wallMs": 9572.049599999998,
+      "cpuUserMs": 282,
+      "cpuSystemMs": 859,
+      "peakRssBytes": 67874816,
+      "throughputTrialsPerSecond": 10.447083349839726,
+      "io": {
+        "promiseCalls": {
+          "stat": 1,
+          "mkdir": 202,
+          "open": 402,
+          "rename": 202,
+          "rm": 202
+        },
+        "fileHandleCalls": {
+          "writeFile": 202,
+          "sync": 202,
+          "close": 402
+        },
+        "metadataBytesWritten": 3132662,
+        "parentBytesWritten": 3132662,
+        "unmeasuredWriteCalls": 0,
+        "fsyncCalls": 202,
+        "fsyncCompleted": 202
+      },
+      "artifact": {
+        "bytes": 109767,
+        "files": 301
+      },
+      "matchedTrials": 100,
+      "workerWallMs": 9748.012300000002
+    },
+    {
+      "id": "direct-argv-0ms-10x-10240b-substring",
+      "mode": "direct-argv",
+      "case": {
+        "durationMs": 0,
+        "repeat": 10,
+        "outputBytes": 10240,
+        "predicate": "substring"
+      },
+      "wallMs": 661.8441,
+      "cpuUserMs": 31,
+      "cpuSystemMs": 0,
+      "peakRssBytes": 58114048,
+      "throughputTrialsPerSecond": 15.109298398217948,
+      "io": {
+        "promiseCalls": {
+          "mkdir": 10,
+          "open": 20
+        },
+        "fileHandleCalls": {
+          "close": 20
+        },
+        "metadataBytesWritten": 0,
+        "parentBytesWritten": 0,
+        "unmeasuredWriteCalls": 0,
+        "fsyncCalls": 0,
+        "fsyncCompleted": 0
+      },
+      "artifact": {
+        "bytes": 102400,
+        "files": 20
+      },
+      "matchedTrials": null,
+      "workerWallMs": 773.4615000000013
+    },
+    {
+      "id": "direct-shell-0ms-10x-10240b-substring",
+      "mode": "direct-shell",
+      "case": {
+        "durationMs": 0,
+        "repeat": 10,
+        "outputBytes": 10240,
+        "predicate": "substring"
+      },
+      "wallMs": 833.6786,
+      "cpuUserMs": 31,
+      "cpuSystemMs": 0,
+      "peakRssBytes": 57823232,
+      "throughputTrialsPerSecond": 11.99503021907963,
+      "io": {
+        "promiseCalls": {
+          "mkdir": 10,
+          "open": 20
+        },
+        "fileHandleCalls": {
+          "close": 20
+        },
+        "metadataBytesWritten": 0,
+        "parentBytesWritten": 0,
+        "unmeasuredWriteCalls": 0,
+        "fsyncCalls": 0,
+        "fsyncCompleted": 0
+      },
+      "artifact": {
+        "bytes": 102400,
+        "files": 20
+      },
+      "matchedTrials": null,
+      "workerWallMs": 935.2026000000005
+    },
+    {
+      "id": "failtrace-0ms-10x-10240b-substring",
+      "mode": "failtrace",
+      "case": {
+        "durationMs": 0,
+        "repeat": 10,
+        "outputBytes": 10240,
+        "predicate": "substring"
+      },
+      "wallMs": 1005.308,
+      "cpuUserMs": 109,
+      "cpuSystemMs": 62,
+      "peakRssBytes": 61906944,
+      "throughputTrialsPerSecond": 9.947200261014535,
+      "io": {
+        "promiseCalls": {
+          "stat": 1,
+          "mkdir": 22,
+          "open": 42,
+          "rename": 22,
+          "rm": 22
+        },
+        "fileHandleCalls": {
+          "writeFile": 22,
+          "sync": 22,
+          "close": 42
+        },
+        "metadataBytesWritten": 57150,
+        "parentBytesWritten": 57150,
+        "unmeasuredWriteCalls": 0,
+        "fsyncCalls": 22,
+        "fsyncCompleted": 22
+      },
+      "artifact": {
+        "bytes": 114494,
+        "files": 31
+      },
+      "matchedTrials": 10,
+      "workerWallMs": 1115.6407
+    },
+    {
+      "id": "direct-argv-0ms-10x-1048576b-regex",
+      "mode": "direct-argv",
+      "case": {
+        "durationMs": 0,
+        "repeat": 10,
+        "outputBytes": 1048576,
+        "predicate": "regex"
+      },
+      "wallMs": 636.5904,
+      "cpuUserMs": 0,
+      "cpuSystemMs": 94,
+      "peakRssBytes": 58134528,
+      "throughputTrialsPerSecond": 15.708688035509175,
+      "io": {
+        "promiseCalls": {
+          "mkdir": 10,
+          "open": 20
+        },
+        "fileHandleCalls": {
+          "close": 20
+        },
+        "metadataBytesWritten": 0,
+        "parentBytesWritten": 0,
+        "unmeasuredWriteCalls": 0,
+        "fsyncCalls": 0,
+        "fsyncCompleted": 0
+      },
+      "artifact": {
+        "bytes": 10485760,
+        "files": 20
+      },
+      "matchedTrials": null,
+      "workerWallMs": 738.9293000000034
+    },
+    {
+      "id": "direct-shell-0ms-10x-1048576b-regex",
+      "mode": "direct-shell",
+      "case": {
+        "durationMs": 0,
+        "repeat": 10,
+        "outputBytes": 1048576,
+        "predicate": "regex"
+      },
+      "wallMs": 834.1874,
+      "cpuUserMs": 0,
+      "cpuSystemMs": 47,
+      "peakRssBytes": 58163200,
+      "throughputTrialsPerSecond": 11.987714031643248,
+      "io": {
+        "promiseCalls": {
+          "mkdir": 10,
+          "open": 20
+        },
+        "fileHandleCalls": {
+          "close": 20
+        },
+        "metadataBytesWritten": 0,
+        "parentBytesWritten": 0,
+        "unmeasuredWriteCalls": 0,
+        "fsyncCalls": 0,
+        "fsyncCompleted": 0
+      },
+      "artifact": {
+        "bytes": 10485760,
+        "files": 20
+      },
+      "matchedTrials": null,
+      "workerWallMs": 933.8579000000027
+    },
+    {
+      "id": "failtrace-0ms-10x-1048576b-regex",
+      "mode": "failtrace",
+      "case": {
+        "durationMs": 0,
+        "repeat": 10,
+        "outputBytes": 1048576,
+        "predicate": "regex"
+      },
+      "wallMs": 1322.8090000000002,
+      "cpuUserMs": 266,
+      "cpuSystemMs": 187,
+      "peakRssBytes": 79892480,
+      "throughputTrialsPerSecond": 7.559670368133267,
+      "io": {
+        "promiseCalls": {
+          "stat": 11,
+          "mkdir": 22,
+          "open": 42,
+          "rename": 22,
+          "rm": 22
+        },
+        "fileHandleCalls": {
+          "writeFile": 22,
+          "sync": 22,
+          "close": 42
+        },
+        "metadataBytesWritten": 56898,
+        "parentBytesWritten": 56898,
+        "unmeasuredWriteCalls": 0,
+        "fsyncCalls": 22,
+        "fsyncCompleted": 22
+      },
+      "artifact": {
+        "bytes": 10497809,
+        "files": 31
+      },
+      "matchedTrials": 10,
+      "workerWallMs": 1446.1010999999999
+    }
+  ],
+  "budget": {
+    "checked": false,
+    "failures": []
+  }
+}

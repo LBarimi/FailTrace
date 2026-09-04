@@ -83,15 +83,37 @@ export async function matchesFailure(
   }
 }
 
-/** Only complete, cleanly executed observations can justify a search decision. */
+/** Require clean evidence and verify any early decision against the original budget. */
 export function assessRun(summary: RunSummary, minFailures = 1): 'reproduced' | 'not_reproduced' | 'inconclusive' {
   if (!Number.isSafeInteger(minFailures) || minFailures < 1 || minFailures > summary.requestedTrials) {
     throw new Error('minFailures must be between 1 and the requested trial count.');
   }
-  if (summary.status !== 'completed' || summary.trials.length !== summary.requestedTrials
-    || summary.trials.some((trial) => trial.terminationReason !== 'exit' || trial.spawningFailed || trial.error)) {
+  const completed = summary.trials.length;
+  if (!Number.isSafeInteger(summary.requestedTrials) || summary.requestedTrials < 1
+    || summary.status !== 'completed' || summary.error !== undefined
+    || completed === 0 || completed > summary.requestedTrials) {
     return 'inconclusive';
   }
-  const matches = summary.trials.filter((trial) => trial.failureMatched ?? trial.status === 'failed').length;
-  return matches >= minFailures ? 'reproduced' : 'not_reproduced';
+  let matches = 0;
+  for (const [offset, trial] of summary.trials.entries()) {
+    if (trial.index !== offset + 1 || trial.terminationReason !== 'exit'
+      || trial.spawningFailed || trial.timedOut || trial.signal !== null || trial.error !== undefined
+      || trial.exitCode === null || !Number.isSafeInteger(trial.exitCode) || trial.exitCode < 0
+      || !['passed', 'failed'].includes(trial.status)
+      || (trial.failureMatched !== undefined && trial.failureMatched !== (trial.status === 'failed'))) {
+      return 'inconclusive';
+    }
+    if (trial.failureMatched ?? trial.status === 'failed') matches++;
+  }
+  const outcome = matches >= minFailures ? 'reproduced' : 'not_reproduced';
+  // A full run supports any valid threshold, independently of its original one.
+  if (completed === summary.requestedTrials) return outcome;
+  const decision = summary.decision;
+  const remaining = summary.requestedTrials - completed;
+  if (!decision || typeof decision !== 'object' || decision.minFailures !== minFailures
+    || decision.completedTrials !== completed || decision.outcome !== outcome
+    || (outcome === 'not_reproduced' && matches + remaining >= minFailures)) {
+    return 'inconclusive';
+  }
+  return outcome;
 }

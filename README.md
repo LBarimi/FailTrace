@@ -72,6 +72,8 @@ Paths in angle brackets come from the preceding result. If a failed outcome is a
 
 [Full command reference](docs/CLI.md) · [Runnable examples](examples) · [Implementation and verification](docs/IMPLEMENTATION.md)
 
+**Unreleased performance improvements in the source checkout:** `run --concurrency N` opts into overlapping trials while the default stays `1`. Shared ports, files, databases, and resource contention can change failure probability. Bisect/minimize keep sequential trials and stop when their classification threshold is decided. Ordinary runs still attempt the full requested count. See [performance measurements and operational guidance](docs/PERFORMANCE.md) for metadata recovery, external dependency caches, and remaining tradeoffs. These changes are not included in the published 0.3.1 package.
+
 **[Real bug case: reduce a Prettier formatting failure from 464 to 11 characters →](https://github.com/LBarimi/FailTrace/tree/main/examples/cases/prettier-chain)** The runnable investigation uses pinned affected/fixed releases, rejects unrelated parser errors, and produces a replayable bundle. The case includes authored surrounding code and links to the original upstream report.
 
 ## For coding agents
@@ -94,7 +96,7 @@ The guide includes client configuration, bounded experiments, result interpretat
 
 ## What the results establish
 
-- Repetition measures observed outcomes. Bisect uses repeated trials and a failure threshold, assuming a monotonic boundary on first-parent history. It does not provide statistical confidence.
+- Repetition measures observed outcomes under the chosen execution settings. Bisect uses repeated trials and a failure threshold, assuming a monotonic boundary on first-parent history. Early-stopped classification samples are not full-run failure-rate estimates and do not provide statistical confidence.
 - Minimization accepts only reproducing candidates and independently rechecks the result. Check `status` and `finalVerified`; limits and inconclusive runs are reported. Reductions are local to the supported removal operations.
 - Bundles include selected files and the Node Core engine. Target dependencies, services, uncaptured environment state, and shell portability still need attention. Creation never executes the bundle.
 - Commands run with your local permissions. Process cleanup is best effort. Logs can contain private output and grow without a size cap; `.failtrace/` is ignored by this repository.

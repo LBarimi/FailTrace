@@ -5,7 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createBundle } from '../src/core/bundle.js';
 import { runTrials } from '../src/core/run-trials.js';
-import type { RunSummary } from '../src/core/types.js';
+import { loadRun } from '../src/core/run-reader.js';
+import type { RunOptions, RunSummary } from '../src/core/types.js';
 import { cleanupDirectories, temporaryDirectory } from './helpers.js';
 
 const directories: string[] = [];
@@ -31,7 +32,7 @@ async function runNode(args: string[], cwd: string, env = nodeEnvironment()): Pr
   });
 }
 
-async function setup(mode = 'mixed'): Promise<{ root: string; source: string; run: RunSummary }> {
+async function setup(mode = 'mixed', options: Pick<RunOptions, 'concurrency' | 'repeat' | 'stopWhenDecided'> = {}): Promise<{ root: string; source: string; run: RunSummary }> {
   const root = await temporaryDirectory();
   directories.push(root);
   const source = join(root, 'original project');
@@ -44,6 +45,7 @@ async function setup(mode = 'mixed'): Promise<{ root: string; source: string; ru
     timeoutMs: 5_000,
     env: nodeEnvironment(),
     predicate: { kind: 'stderr_contains', value: 'EXPECTED_BUNDLE_FAILURE' },
+    ...options,
   });
   return { root, source, run };
 }
@@ -55,7 +57,7 @@ describe('self-contained reproduction bundles', () => {
     const configText = await readFile(result.configPath, 'utf8');
     expect(configText).not.toContain(source);
     expect(configText).not.toContain(run.artifactDirectory);
-    expect(JSON.parse(configText)).toMatchObject({ command: run.command, repeat: 2, timeoutMs: 5_000, predicate: run.predicate });
+    expect(JSON.parse(configText)).toMatchObject({ command: run.command, repeat: 2, concurrency: 1, timeoutMs: 5_000, predicate: run.predicate });
     const evidence = await readFile(join(result.directory, 'logs', run.trials[1]!.stderrPath), 'utf8');
     expect(evidence).toContain('EXPECTED_BUNDLE_FAILURE');
     expect(await readFile(join(result.directory, 'repro.sh'), 'utf8')).toContain('repro.mjs');
@@ -82,6 +84,36 @@ describe('self-contained reproduction bundles', () => {
     const imported = await runNode([importer], root);
     expect(imported).toMatchObject({ code: 0, stdout: 'imported\n', stderr: '' });
     expect(await readdir(bundle.directory)).not.toContain('replay-artifacts');
+  });
+
+  it('preserves opted-in concurrency when executing the bundled engine', async () => {
+    const { root, run } = await setup('mixed', { concurrency: 2 });
+    const bundle = await createBundle({ run: run.artifactDirectory, cwd: root, files: ['nested/target.mjs'] });
+    expect(JSON.parse(await readFile(bundle.configPath, 'utf8')).concurrency).toBe(2);
+    expect(await readFile(join(bundle.directory, 'README.md'), 'utf8')).toContain('contention');
+    const replay = await runNode([join(bundle.directory, 'repro.mjs')], root);
+    expect(replay).toMatchObject({ code: 1, stderr: '' });
+    const runs = join(bundle.directory, 'replay-artifacts', 'runs');
+    const [id] = await readdir(runs);
+    const replayRun = await loadRun(join(runs, id!));
+    expect(replayRun.concurrency).toBe(2);
+    expect(replayRun.trials.map((trial) => trial.failureMatched)).toEqual([false, true]);
+  });
+
+  it('replays the original trial budget after a threshold-stopped source run', async () => {
+    const { root, run } = await setup('mixed', { repeat: 5, stopWhenDecided: { minFailures: 1 } });
+    expect(run.trials).toHaveLength(2);
+    expect(run.decision?.outcome).toBe('reproduced');
+    const bundle = await createBundle({ run: run.artifactDirectory, cwd: root, files: ['nested/target.mjs'] });
+    expect(JSON.parse(await readFile(bundle.configPath, 'utf8'))).toMatchObject({ repeat: 5, concurrency: 1 });
+    const replay = await runNode([join(bundle.directory, 'repro.mjs')], root);
+    expect(replay).toMatchObject({ code: 1, stderr: '' });
+    const runs = join(bundle.directory, 'replay-artifacts', 'runs');
+    const [id] = await readdir(runs);
+    const replayRun = await loadRun(join(runs, id!));
+    expect(replayRun.requestedTrials).toBe(5);
+    expect(replayRun.trials).toHaveLength(5);
+    expect(replayRun.decision).toBeUndefined();
   });
 
   it('executes replay when launched through a symbolic directory alias', async () => {

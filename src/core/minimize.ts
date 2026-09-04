@@ -132,7 +132,7 @@ export async function minimizeFailure(options: MinimizeOptions): Promise<Minimiz
   if (initial.format === 'files') await writeCandidate(initial, originalPath, inputPath);
   else {
     await mkdir(dirname(originalPath));
-    await copyFile(inputPath, originalPath, constants.COPYFILE_EXCL);
+    await copyFile(inputPath, originalPath, constants.COPYFILE_EXCL | constants.COPYFILE_FICLONE);
   }
   const result: MinimizeResult = {
     schemaVersion: 1, failtraceVersion: VERSION, id, status: 'inconclusive',
@@ -163,6 +163,7 @@ export async function minimizeFailure(options: MinimizeOptions): Promise<Minimiz
     environment.FAILTRACE_INPUT_DIR = options.format === 'files' ? candidatePath : undefined;
     const run = await runTrials({
       command: options.command, repeat, timeoutMs, cwd, artifactsDir: directory,
+      stopWhenDecided: { minFailures },
       env: environment, predicate: result.predicate,
       ...(options.signal === undefined ? {} : { signal: options.signal }),
     });

@@ -4,6 +4,7 @@ import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { writeJsonAtomic } from './artifacts.js';
 import { runGit } from './git.js';
 import { assessRun, validatePredicate } from './predicates.js';
+import { writeRunSummary } from './run-metadata.js';
 import { DEFAULT_TIMEOUT_MS, runTrials, validateRunOptions, VERSION } from './run-trials.js';
 import type { FailurePredicate, RunSummary } from './types.js';
 
@@ -141,6 +142,7 @@ export async function bisectRegression(options: BisectOptions): Promise<BisectRe
       command: result.command,
       cwd: join(worktree, subdirectory),
       repeat: result.repeat,
+      stopWhenDecided: { minFailures: result.minFailures },
       timeoutMs: result.timeoutMs,
       artifactsDir: join(artifactDirectory, 'evidence'),
       ...(options.predicate === undefined ? {} : { predicate: options.predicate }),
@@ -148,7 +150,7 @@ export async function bisectRegression(options: BisectOptions): Promise<BisectRe
       ...(options.signal === undefined ? {} : { signal: options.signal }),
     });
     run.source = { kind: 'git', repository, commit, subdirectory: subdirectory.replaceAll('\\', '/') };
-    await writeJsonAtomic(join(run.artifactDirectory, 'run.json'), run);
+    await writeRunSummary(run);
     const candidate: BisectCandidate = { commit, role, assessment: assessRun(run, result.minFailures), run };
     result.candidates.push(candidate);
     await writeJsonAtomic(metadataPath, result);
@@ -187,7 +189,7 @@ export async function bisectRegression(options: BisectOptions): Promise<BisectRe
       result.status = 'inconclusive';
       result.reason = good.assessment === 'reproduced'
         ? 'The supplied good commit reproduces the failure at the configured threshold.'
-        : 'The supplied good commit could not be classified from complete valid trials.';
+        : 'The supplied good commit could not be classified from valid trial evidence.';
       return result;
     }
     result.lastGood = result.good;
@@ -197,7 +199,7 @@ export async function bisectRegression(options: BisectOptions): Promise<BisectRe
       result.status = 'inconclusive';
       result.reason = bad.assessment === 'not_reproduced'
         ? 'The supplied bad commit does not reproduce the failure at the configured threshold.'
-        : 'The supplied bad commit could not be classified from complete valid trials.';
+        : 'The supplied bad commit could not be classified from valid trial evidence.';
       return result;
     }
 
@@ -212,7 +214,7 @@ export async function bisectRegression(options: BisectOptions): Promise<BisectRe
       if (interrupted()) return result;
       if (candidate.assessment === 'inconclusive') {
         result.status = 'inconclusive';
-        result.reason = `Commit ${commit} could not be classified from complete valid trials; no culprit is claimed.`;
+        result.reason = `Commit ${commit} could not be classified from valid trial evidence; no culprit is claimed.`;
         return result;
       }
       if (candidate.assessment === 'reproduced') high = middle;

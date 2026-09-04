@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { minimizeFailure, type MinimizeEvaluation, type MinimizeResult } from '../src/core/minimize.js';
-import type { RunSummary } from '../src/core/types.js';
+import { loadRun } from '../src/core/run-reader.js';
 import { cleanupDirectories, quoteShellArgument, readJson, temporaryDirectory } from './helpers.js';
 
 const fixture = fileURLToPath(new URL('./fixtures/minimize-command.mjs', import.meta.url));
@@ -33,7 +33,7 @@ async function checkEvidence(result: MinimizeResult): Promise<void> {
   expect(result.evaluations.at(-1)?.phase).toBe('final');
   expect(result.evaluations.length).toBeLessThanOrEqual(result.maxEvaluations);
   for (const evaluation of result.evaluations) {
-    const run = await readJson(join(evaluation.runDirectory, 'run.json')) as RunSummary;
+    const run = await loadRun(evaluation.runDirectory);
     expect(run.command).toBe(result.command);
     if (evaluation.accepted) {
       expect(evaluation.phase).toBe('candidate');
@@ -105,7 +105,7 @@ describe('minimizeFailure', () => {
     expect(await readJson(result.minimizedPath)).toEqual({ FAILTRACE_MINIMIZE_KEEP: 'yes' });
     expect(await readFile(input, 'utf8')).toBe(original);
     expect(await readFile(result.originalPath, 'utf8')).toBe(original);
-    const finalRun = await readJson(join(result.final!.runDirectory, 'run.json')) as RunSummary;
+    const finalRun = await loadRun(result.final!.runDirectory);
     expect(await readJson(join(finalRun.artifactDirectory, finalRun.trials[0]!.stdoutPath))).toEqual({ keepPresent: true, noisePresent: false });
     expect(JSON.stringify(result)).not.toContain('private value');
     await checkEvidence(result);
@@ -133,6 +133,24 @@ describe('minimizeFailure', () => {
     await checkEvidence(result);
   });
 
+  it('stops reproducing evaluations at the threshold and independently rechecks the final input', async () => {
+    const cwd = await workspace();
+    const input = await inputFile(cwd, 'BUGx');
+    const result = await minimizeFailure({ command: command('text'), input, format: 'text', cwd,
+      repeat: 5, minFailures: 2 });
+    expect(result).toMatchObject({ status: 'completed', finalVerified: true });
+    expect(await readFile(result.minimizedPath, 'utf8')).toBe('BUG');
+    expect(result.final!.runDirectory).not.toBe(result.baseline!.runDirectory);
+    for (const evaluation of result.evaluations) {
+      const run = await loadRun(evaluation.runDirectory);
+      expect(run.requestedTrials).toBe(5);
+      expect(run.trials).toHaveLength(evaluation.assessment === 'reproduced' ? 2 : 4);
+      expect(run.decision).toEqual({ minFailures: 2, outcome: evaluation.assessment,
+        completedTrials: run.trials.length });
+    }
+    await checkEvidence(result);
+  }, 30_000);
+
   it('reserves the last evaluation for verification when the budget is exhausted', async () => {
     const cwd = await workspace();
     const input = await inputFile(cwd, 'noise BUG');
@@ -147,11 +165,14 @@ describe('minimizeFailure', () => {
   it('does not claim verification if an independent final check no longer reproduces', async () => {
     const cwd = await workspace();
     const input = await inputFile(cwd, 'BUG');
-    const result = await minimizeFailure({ command: command('baseline-only'), input, format: 'text', cwd });
+    const result = await minimizeFailure({ command: command('baseline-only'), input, format: 'text', cwd,
+      repeat: 5, minFailures: 2 });
     expect(result).toMatchObject({ status: 'inconclusive', finalVerified: false });
     expect(result.baseline!.assessment).toBe('reproduced');
     expect(result.final!.assessment).toBe('not_reproduced');
     expect(result.evaluations.every(({ accepted }) => !accepted)).toBe(true);
+    expect((await loadRun(result.baseline!.runDirectory)).trials).toHaveLength(2);
+    expect((await loadRun(result.final!.runDirectory)).trials).toHaveLength(4);
     await checkEvidence(result);
   });
 
@@ -201,7 +222,7 @@ describe('minimizeFailure', () => {
     expect(result.status).toBe('interrupted');
     expect(result.finalVerified).toBe(false);
     for (const evaluation of result.evaluations) {
-      const run = await readJson(join(evaluation.runDirectory, 'run.json')) as RunSummary;
+      const run = await loadRun(evaluation.runDirectory);
       expect(run.trials).toHaveLength(0);
     }
     await checkEvidence(result);

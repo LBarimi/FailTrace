@@ -1,6 +1,8 @@
-import { lstat, readFile, realpath, stat } from 'node:fs/promises';
+import { lstat, opendir, readFile, realpath, stat } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { validatePredicate } from './predicates.js';
+import { MAX_METADATA_BYTES, type StoredRunSummary } from './run-metadata.js';
+import { aggregateStatistics } from './statistics.js';
 import type { RunSummary, TrialResult } from './types.js';
 
 /** Resolve a referenced artifact without accepting escapes or symbolic links. */
@@ -48,25 +50,68 @@ export async function loadRun(reference: string, cwd = process.cwd()): Promise<R
   }
   if (info.isDirectory()) path = join(path, 'run.json');
   path = await realpath(path);
-  if ((await stat(path)).size > 32 * 1024 * 1024) throw new Error('Run metadata exceeds the 32 MiB reader limit.');
+  if ((await stat(path)).size > MAX_METADATA_BYTES) throw new Error('Run metadata exceeds the 32 MiB reader limit.');
   const value: unknown = JSON.parse(await readFile(path, 'utf8'));
   if (!value || typeof value !== 'object') throw new Error('Invalid run metadata.');
-  const run = value as RunSummary;
-  if (run.schemaVersion !== 1 || typeof run.id !== 'string' || typeof run.command !== 'string'
+  const run = value as StoredRunSummary;
+  if (![1, 2].includes(run.schemaVersion) || (run.schemaVersion === 2 && run.trialStorage !== 'individual')
+    || (run.schemaVersion === 1 && run.trialStorage !== undefined)
+    || typeof run.id !== 'string' || typeof run.command !== 'string'
     || typeof run.cwd !== 'string' || !Array.isArray(run.trials)
     || !Number.isSafeInteger(run.requestedTrials) || run.requestedTrials < 1
+    || (run.concurrency !== undefined && (!Number.isSafeInteger(run.concurrency) || run.concurrency < 1))
     || !Number.isSafeInteger(run.timeoutMs) || run.timeoutMs < 1 || run.timeoutMs > 2_147_483_647
     || !['running', 'completed', 'interrupted', 'error'].includes(run.status)
     || !run.statistics || !Number.isFinite(run.statistics.failureRate)) {
     throw new Error('Invalid or unsupported run metadata.');
   }
   validatePredicate(run.predicate);
+  run.artifactDirectory = dirname(path);
+  if (run.trialStorage !== undefined) {
+    if (run.trialStorage !== 'individual' || run.trials.length !== 0
+      || ((run.status === 'completed' || run.status === 'interrupted' || run.trialCount !== undefined)
+        && (!Number.isSafeInteger(run.trialCount) || run.trialCount! < 0 || run.trialCount! > run.requestedTrials))) {
+      throw new Error('Invalid individual trial metadata.');
+    }
+    let trialsDirectory: string | undefined;
+    try { trialsDirectory = await safeArtifactPath(run.artifactDirectory, 'trials'); } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
+    if (trialsDirectory) {
+      for await (const entry of await opendir(trialsDirectory)) {
+        if (!/^\d+$/.test(entry.name)) continue;
+        const index = Number(entry.name);
+        if (!Number.isSafeInteger(index) || index < 1 || index > run.requestedTrials
+          || entry.name !== String(index).padStart(3, '0') || !entry.isDirectory()) {
+          throw new Error('Invalid or redirected trial directory.');
+        }
+        let trialPath: string;
+        try { trialPath = await safeArtifactPath(run.artifactDirectory, `trials/${entry.name}/result.json`); } catch (error) {
+          // An active/crashed process may have logs but no atomic result yet.
+          if ((error as NodeJS.ErrnoException).code === 'ENOENT' && run.status !== 'completed') continue;
+          throw error;
+        }
+        const trialInfo = await stat(trialPath);
+        if (!trialInfo.isFile() || trialInfo.size > MAX_METADATA_BYTES) throw new Error('Invalid or oversized trial metadata.');
+        const trial: unknown = JSON.parse(await readFile(trialPath, 'utf8'));
+        validateTrial(trial);
+        if (trial.index !== index || trial.stdoutPath !== `trials/${entry.name}/stdout.txt`
+          || trial.stderrPath !== `trials/${entry.name}/stderr.txt`) throw new Error('Trial record does not match its directory.');
+        run.trials.push(trial);
+      }
+    }
+    run.trials.sort((a, b) => a.index - b.index);
+    if (run.trialCount !== undefined && run.trials.length !== run.trialCount) throw new Error('Run is missing committed trial records.');
+    delete run.trialStorage;
+    delete run.trialCount;
+    run.statistics = aggregateStatistics(run.trials);
+  }
   const indices = new Set<number>();
   for (const trial of run.trials) {
     validateTrial(trial);
     if (indices.has(trial.index)) throw new Error('Run contains duplicate trial indices.');
+    if (trial.index > run.requestedTrials) throw new Error('Trial index exceeds the requested budget.');
     indices.add(trial.index);
   }
-  run.artifactDirectory = dirname(path);
-  return run;
+  return { ...run, schemaVersion: 1 };
 }

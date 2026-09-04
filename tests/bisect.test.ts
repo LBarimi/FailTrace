@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { afterEach, describe, expect, it } from 'vitest';
 import { bisectRegression } from '../src/core/bisect.js';
+import { loadRun } from '../src/core/run-reader.js';
 import { cleanupDirectories, quoteShellArgument, temporaryDirectory, waitForFile } from './helpers.js';
 
 const exec = promisify(execFile);
@@ -57,9 +58,13 @@ describe('bisectRegression', () => {
     expect(result.lastGood).toBe(commits[1]);
     expect(result.scope).toBe('first-parent');
     expect(result.cleanupError).toBeUndefined();
-    expect(result.candidates.map((candidate) => candidate.run.statistics.failed)).toEqual([0, 5, 1, 3]);
+    expect(result.candidates.map((candidate) => candidate.run.statistics.failed)).toEqual([0, 3, 1, 3]);
+    expect(result.candidates.map((candidate) => candidate.run.trials.length)).toEqual([3, 3, 4, 3]);
     for (const candidate of result.candidates) {
-      expect(candidate.run.trials).toHaveLength(5);
+      expect(candidate.run.requestedTrials).toBe(5);
+      expect(candidate.run.decision).toEqual({ minFailures: 3, outcome: candidate.assessment,
+        completedTrials: candidate.run.trials.length });
+      expect(await loadRun(candidate.run.artifactDirectory)).toEqual(candidate.run);
       expect(candidate.run.cwd).toBe(join(result.artifactDirectory, 'worktree', 'suite'));
       await expect(readFile(join(candidate.run.artifactDirectory, 'run.json'), 'utf8')).resolves.toContain(candidate.run.id);
       await expect(readFile(join(candidate.run.artifactDirectory, candidate.run.trials[0]!.stdoutPath), 'utf8'))

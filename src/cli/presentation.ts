@@ -8,7 +8,7 @@ Reproduce failures, compare evidence, isolate regressions, and reduce inputs.
 
 Usage:
   failtrace demo [--cwd DIRECTORY] [--json]
-  failtrace run "<command>" [--repeat N] [--timeout DURATION]
+  failtrace run "<command>" [--repeat N] [--timeout DURATION] [--concurrency N]
   failtrace compare <run-a> [run-b] [--trial-a N] [--trial-b N]
   failtrace bisect --good REF --bad REF --command "<command>"
   failtrace minimize --input PATH --command "<command>" [--format text]
@@ -18,7 +18,8 @@ Usage:
   failtrace --version
 
 Experiment options (run, bisect, minimize):
-  --repeat N          Sequential trials (run: 10, bisect: 5, minimize: 1)
+  --repeat N          Trial count (run: 10, bisect: 5, minimize: 1)
+                     Bisect/minimize stop once the threshold is decided.
   --timeout DURATION  Per-trial limit (default: 30s); ms, s, or m
                      Bare numbers are milliseconds; fractional units are
                      accepted when they resolve to whole milliseconds.
@@ -30,6 +31,7 @@ Experiment options (run, bisect, minimize):
 
 Command-specific options:
   run       --capture-env KEY1,KEY2 (selected values only)
+            --concurrency N (default: 1; run only)
   compare   --max-lines N (200), --max-bytes N (65536)
   minimize  --format text|json|files|env, --max-evaluations N (200)
   bundle    --file PATH (repeatable), --input PATH, --command COMMAND,
@@ -49,6 +51,8 @@ Examples:
   failtrace minimize --input examples/advanced-input.json --format json --command "node examples/advanced-demo.js" --stderr-contains "BUG reproduced"
 
 The command runs in the current directory using the platform shell.
+Concurrent run trials can change failure behavior through shared resources.
+Progress uses completion order with trial indices; JSON trials use index order.
 Artifacts: .failtrace/ (runs, bisects, minimizations, reproduction, demos).
 Demo works from any directory and exits 0 when its expected failures are shown.
 Minimize exposes FAILTRACE_INPUT or FAILTRACE_INPUT_DIR to the command.
@@ -61,15 +65,16 @@ export function formatDuration(durationMs: number): string {
   return `${(durationMs / 1_000).toFixed(2)}s`;
 }
 
-export function formatHeader(command: string, repeat: number, timeoutMs: number): string {
+export function formatHeader(command: string, repeat: number, timeoutMs: number, concurrency = 1): string {
   return [
     'FailTrace',
     '',
     `Command   ${command}`,
     `Trials    ${repeat}`,
     `Timeout   ${formatDuration(timeoutMs)}`,
+    `Concurrency ${concurrency}`,
     '',
-    'Running',
+    concurrency > 1 ? 'Running (completion order; labels are trial indices)' : 'Running (trial index)',
     '',
   ].join('\n');
 }
@@ -86,7 +91,7 @@ export function formatTrial(trial: TrialResult, requestedTrials: number): string
   const detail = trial.status === 'failed'
     ? trial.signal ? `  signal ${trial.signal}` : `  exit ${trial.exitCode}`
     : '';
-  return `  ${index}  ${labels[trial.status].padEnd(11)} ${formatDuration(trial.durationMs)}${detail}`;
+  return `  Trial ${index}  ${labels[trial.status].padEnd(11)} ${formatDuration(trial.durationMs)}${detail}`;
 }
 
 export function formatSummary(summary: RunSummary): string {
@@ -111,7 +116,7 @@ export function formatSummary(summary: RunSummary): string {
     `  Max            ${formatDuration(statistics.durationMs.max)}`,
     '',
     interrupted
-      ? 'Run interrupted. Saved trials include the interrupted trial when one was active.'
+      ? 'Run interrupted. Saved trials include interrupted trials that were active.'
       : matched > 0 ? 'Failure reproduced.' : statistics.failed > 0
         ? 'Target failure not reproduced; inspect execution failure evidence.' : 'No failure reproduced in this run.',
     '',
@@ -127,6 +132,7 @@ export function formatComparison(result: ComparisonResult): string {
     `B  ${result.runB}  trial ${result.trialB}`, '',
     `Failure rate  ${(result.statisticsA.failureRate * 100).toFixed(1)}% -> ${(result.statisticsB.failureRate * 100).toFixed(1)}%`,
     `Command changed    ${result.commandChanged ? 'yes' : 'no'}`,
+    `Concurrency changed ${result.concurrencyChanged ? 'yes' : 'no'}`,
     `Predicate changed  ${result.predicateChanged ? 'yes' : 'no'}`,
   ];
   for (const stream of ['stdout', 'stderr'] as const) {

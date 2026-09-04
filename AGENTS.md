@@ -13,6 +13,7 @@
 - Before adding a major feature, identify the recognizable debugging problem, the evidence it matters to users, and how it improves adoption. Prefer a faster first success, reliable integration, and useful demos over speculative capabilities.
 - Keep install instructions executable against an actually available package or source revision. Verify the installed artifact outside this checkout, not just the source build. Do not present stars, downloads, or green tests as proof of active use.
 - Publish npm releases from the verified public GitHub release HTTPS tarball URL, never a local archive path; preserve the reviewed archive and digests, keep the existing CI gates, and verify public registry metadata after publication as described in `docs/RELEASING.md`.
+- Before every commit or push, inspect the staged diff and new artifacts for personal data, local machine paths, credentials, and tokens. Only nicknames and email addresses are permitted personal identifiers; use generic placeholder paths in documentation and keep host-specific benchmark output private.
 - Do not add SaaS, cloud, database, authentication, telemetry, AI API, or LLM SDK functionality.
 
 ## Layout

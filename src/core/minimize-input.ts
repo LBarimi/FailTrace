@@ -103,6 +103,7 @@ export async function writeCandidate(candidate: Candidate, path: string, origina
     if (!contains(originalDirectory, source) || !contains(path, destination)) throw new Error('Input file escaped its directory.');
     if (!(await lstat(source)).isFile()) throw new Error(`Input file changed or became a symbolic link: ${source}`);
     await mkdir(dirname(destination), { recursive: true });
-    await copyFile(source, destination, constants.COPYFILE_EXCL);
+    // Reflinks preserve mutation isolation; Node falls back to copying when unavailable.
+    await copyFile(source, destination, constants.COPYFILE_EXCL | constants.COPYFILE_FICLONE);
   }
 }

@@ -2,6 +2,8 @@
 
 FailTrace 0.2.0 implements all six milestones. CLI and MCP delegate to the reusable Core; only MCP imports the official SDK.
 
+The current source also contains unreleased performance changes: optional run concurrency, sequential threshold stopping for bisect/minimize, incremental run statistics, and reconstruction from authoritative per-trial records. See [performance guidance and benchmarks](PERFORMANCE.md). These changes are separate from the historical 0.2.0/0.3.0 verification results below.
+
 ## Required outcomes
 
 - M2: explicit exit-code, stdout/stderr substring and regex predicates; inspectable selected environment snapshots; compare saved runs and successful/failed trial outputs with bounded text diffs and stream hashes.

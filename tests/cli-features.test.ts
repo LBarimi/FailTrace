@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { parseArgs } from '../src/cli/args.js';
 import type { BundleResult, ComparisonResult, MinimizeResult, RunSummary } from '../src/core/index.js';
-import { cleanupDirectories, cliPath, fixtureCommand, temporaryDirectory } from './helpers.js';
+import { cleanupDirectories, cliPath, fixtureCommand, quoteShellArgument, temporaryDirectory } from './helpers.js';
 
 const directories: string[] = [];
 afterEach(async () => cleanupDirectories(directories));
@@ -32,6 +32,21 @@ function invoke(args: string[], cwd: string): Promise<{ code: number | null; std
 }
 
 describe('advanced CLI parsing', () => {
+  it('accepts concurrency only as an explicit run option', () => {
+    expect(parseArgs(['run', 'test'])).not.toHaveProperty('concurrency');
+    expect(parseArgs(['run', 'test', '--concurrency', '1'])).toMatchObject({ concurrency: 1 });
+    expect(parseArgs(['run', 'test', '--concurrency=4'])).toMatchObject({ concurrency: 4 });
+    expect(parseArgs(['run', 'test', '--concurrency', '9007199254740991'])).toMatchObject({ concurrency: Number.MAX_SAFE_INTEGER });
+    for (const value of ['0', '-1', '1.5', 'NaN', 'Infinity', '9007199254740992']) {
+      expect(() => parseArgs(['run', 'test', '--concurrency', value])).toThrow(/concurrency/i);
+    }
+    expect(() => parseArgs(['run', 'test', '--concurrency'])).toThrow(/requires a value/);
+    expect(() => parseArgs(['run', 'test', '--concurrency', '2', '--concurrency', '3'])).toThrow(/once/);
+    for (const command of ['demo', 'compare', 'bisect', 'minimize', 'bundle', 'mcp']) {
+      expect(() => parseArgs([command, '--concurrency', '2'])).toThrow(/Unexpected option/);
+    }
+  });
+
   it('parses run predicates, selected environment names, cwd and JSON', () => {
     expect(parseArgs(['run', 'test', '--exit-code', '0', '--capture-env', 'LANG,TZ', '--cwd', 'project', '--json'])).toEqual({
       kind: 'run', command: 'test', repeat: 10, timeoutMs: 30_000,
@@ -68,12 +83,32 @@ describe('advanced CLI parsing', () => {
 });
 
 describe('advanced built CLI workflows', () => {
+  it('reports concurrent completion order with stable trial labels and saved index order', async () => {
+    const cwd = await workspace();
+    await cp(fileURLToPath(new URL('./fixtures/adapter-concurrency.mjs', import.meta.url)), join(cwd, 'target.mjs'));
+    const output = await invoke(['run', `${quoteShellArgument(process.execPath)} target.mjs`, '--repeat', '2', '--concurrency', '2'], cwd);
+    expect(output.code).toBe(1);
+    expect(output.stderr).toBe('');
+    expect(output.stdout).toContain('completion order; labels are trial indices');
+    expect(output.stdout).toMatch(/Concurrency\s+2/);
+    expect(output.stdout.indexOf('Trial 02')).toBeLessThan(output.stdout.indexOf('Trial 01'));
+    const [id] = await readdir(join(cwd, '.failtrace', 'runs'));
+    const run = JSON.parse(await readFile(join(cwd, '.failtrace', 'runs', id!, 'run.json'), 'utf8')) as RunSummary;
+    expect(run.concurrency).toBe(2);
+    expect(run.trials.map((trial) => trial.index)).toEqual([1, 2]);
+    expect(run.statistics).toMatchObject({ passed: 1, failed: 1 });
+    expect(await readFile(join(run.artifactDirectory, run.trials[0]!.stdoutPath), 'utf8')).toBe('trial=1\n');
+    expect(await readFile(join(run.artifactDirectory, run.trials[1]!.stdoutPath), 'utf8')).toBe('trial=2\n');
+  }, 20_000);
+
   it('emits clean run/comparison JSON and bounded output differences', async () => {
     const cwd = await workspace();
-    const runOutput = await invoke(['run', fixtureCommand('alternate'), '--repeat', '4', '--exit-code', '7', '--json'], cwd);
+    const runOutput = await invoke(['run', fixtureCommand('alternate'), '--repeat', '4', '--concurrency', '2', '--exit-code', '7', '--json'], cwd);
     expect(runOutput.stderr).toBe('');
     expect(runOutput.code).toBe(1);
     const run = JSON.parse(runOutput.stdout) as RunSummary;
+    expect(run.concurrency).toBe(2);
+    expect(run.trials.map((trial) => trial.index)).toEqual([1, 2, 3, 4]);
     expect(run.statistics).toMatchObject({ passed: 2, failed: 2 });
     const output = await invoke(['compare', run.id, '--trial-a', '1', '--trial-b', '2', '--max-lines', '4', '--json'], cwd);
     expect(output.code).toBe(0);
@@ -83,6 +118,12 @@ describe('advanced built CLI workflows', () => {
     expect(comparison.trialB).toBe(2);
     expect(comparison.stdout.diff.length).toBeLessThanOrEqual(4);
     expect(comparison.stdout.sha256A).toMatch(/^[a-f0-9]{64}$/);
+    expect(comparison.concurrencyChanged).toBe(false);
+    const sequentialOutput = await invoke(['run', fixtureCommand('alternate'), '--repeat', '2', '--json'], cwd);
+    const sequential = JSON.parse(sequentialOutput.stdout) as RunSummary;
+    const changed = await invoke(['compare', run.id, sequential.id], cwd);
+    expect(changed.code).toBe(0);
+    expect(changed.stdout).toMatch(/Concurrency changed\s+yes/);
   });
 
   it('reduces the documented JSON demo and bundles the final verified run', async () => {
