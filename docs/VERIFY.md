@@ -74,7 +74,7 @@ Compare an actual matching baseline trial with an actual clean candidate trial. 
 failtrace compare <baseline-run> <candidate-run> --trial-a <matching-baseline-index> --trial-b <clean-candidate-index> --json
 ```
 
-The two-run default selects the first trial of each run, which may not show the relevant failure. Comparison reports output differences, aggregate rates and recorded setting differences; it does not validate the whole experiment, compare every setting, or decide whether the fix worked. Inspect full trial evidence through Core `loadRun`, or the returned JSON and individual result files; a sampled MCP trial list is not a complete denominator. Selected environment snapshots do not capture all runtime state.
+The two-run default selects the first trial of each run, which may not show the relevant failure. Comparison reports output differences, aggregate rates and recorded setting differences; it does not validate the whole experiment, compare every setting, or decide whether the fix worked. In 0.6.0 and later, use Core `inspectRunEvidence` or MCP `failtrace_inspect_run` to page complete saved trials and bounded output; Core `loadRun`, returned JSON and individual result files remain available. A sampled MCP trial list is not a complete denominator. Selected environment snapshots do not capture all runtime state.
 
 For agents using a version through 0.4.0, call `failtrace_run` twice and `failtrace_compare` with `runA`, `runB`, `trialA` and `trialB`. Reuse the exact predicate object and time budget; the caller must perform the checks above.
 
