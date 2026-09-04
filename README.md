@@ -15,26 +15,34 @@ failtrace run "npm test -- checkout" --repeat 20 --stderr-contains "checkout fai
 
 ## Quick start
 
-Requires **Node.js 22.12+ and npm**. Run the guided demo from any directory using the prebuilt GitHub release:
+Requires **Node.js 22.12+ and npm**. Run the guided demo from any directory:
 
 ```sh
-npm exec --yes --allow-remote=root --package=https://github.com/LBarimi/FailTrace/releases/download/v0.3.0/failtrace-0.3.0.tgz -- failtrace demo
+npx --yes failtrace demo
 ```
 
 The demo runs real experiments: **7 passes / 3 failures**, a six-element JSON input reduced to **`["BUG"]`**, and a bundle ready to replay. It preserves evidence under `.failtrace/demos/<id>/` and prints the replay command. The demo exits `0` when those expected results are verified. Replaying its intentionally failing example exits `1`.
 
 ![A real FailTrace demo: 7 passes, 3 failures, input reduced to BUG, and a replayable bundle](docs/assets/demo.svg)
 
-Install the same built package for everyday use:
+Install the command for everyday use:
 
 ```sh
-npm install --global --allow-remote=root https://github.com/LBarimi/FailTrace/releases/download/v0.3.0/failtrace-0.3.0.tgz
+npm install --global failtrace
 failtrace demo
 ```
 
-Prefer a project dependency? Use `npm install --save-dev --allow-remote=root` with the same URL and run `npx failtrace`. The npm registry package is not published yet; these commands install the versioned GitHub asset. Neither a source checkout nor a TypeScript build is required. See [release assets and checksums](https://github.com/LBarimi/FailTrace/releases/tag/v0.3.0).
+Prefer a project dependency? Use `npm install --save-dev failtrace` and run `npx failtrace`. Neither a source checkout nor a TypeScript build is required.
 
-The command-scoped `--allow-remote=root` option permits the explicitly requested archive on npm 12, which blocks URL installs by default. It does not change your npm configuration. Older npm versions that do not recognize this option can omit it. See [npm's URL install policy](https://docs.npmjs.com/using-npm/config/#allow-remote).
+### GitHub release alternative
+
+The verified [v0.3.0 release archive and checksum](https://github.com/LBarimi/FailTrace/releases/tag/v0.3.0) remain available. To run that exact GitHub package:
+
+```sh
+npm exec --yes --allow-remote=root --package=https://github.com/LBarimi/FailTrace/releases/download/v0.3.0/failtrace-0.3.0.tgz -- failtrace demo
+```
+
+For this archive alternative, the command-scoped `--allow-remote=root` option permits the explicitly requested URL on npm 12. It is unnecessary for the registry commands above and does not change your npm configuration. Older npm versions that do not recognize it can omit it. See [npm's URL install policy](https://docs.npmjs.com/using-npm/config/#allow-remote).
 
 ## Use it on your own failure
 

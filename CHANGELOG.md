@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.1 — 2026-09-05
+
+- Installation guides use the public npm package for the demo, regular CLI use, and agent setup. The versioned GitHub archive remains an alternative.
+- Added a reproducible historical Prettier case using pinned affected and fixed releases, a specific failure predicate, text minimization, and a replayable bundle. CI checks this workflow on Windows, macOS, and Linux with Node.js 22 and 24.
+- Restricted packaged examples to the built-in demo files so locally installed case dependencies and investigation evidence cannot enter release archives. Installed-package checks enforce that boundary.
+
+The Core investigation behavior is unchanged; this patch updates distribution, documentation, and examples.
+
 ## 0.3.0 — 2026-09-04
 
 First prebuilt GitHub release, focused on getting from installation to useful evidence.

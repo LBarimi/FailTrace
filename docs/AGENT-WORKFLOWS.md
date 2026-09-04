@@ -4,19 +4,19 @@ Ask your agent to measure a flaky command, compare the saved evidence, or reduce
 
 > Use FailTrace to run `npm test -- checkout` 20 times with a 30-second timeout. Match the known stderr message `checkout failed`. Report actual predicate matches separately from timeouts or command setup errors, then compare one clean passing trial with one matching trial. Use the returned artifact paths.
 
-Install the prebuilt GitHub release, connect the local server, and try an experiment in any project. No source checkout or build is needed for this path. Installing the server makes its tools available; choosing a tool remains the agent's decision. The optional project instructions below help it recognize suitable tasks.
+Install FailTrace from the npm registry, connect the local server, and try an experiment in any project. No source checkout or build is needed for this path. Installing the server makes its tools available; choosing a tool remains the agent's decision. The optional project instructions below help it recognize suitable tasks.
 
 ## Install the local server
 
-With Node.js **22.12 or newer**, install the versioned GitHub release archive:
+With Node.js **22.12 or newer**, install the command from the npm registry:
 
 ```sh
-npm install --global --allow-remote=root https://github.com/LBarimi/FailTrace/releases/download/v0.3.0/failtrace-0.3.0.tgz
+npm install --global failtrace
 failtrace --version
 npm root --global
 ```
 
-The command-scoped `--allow-remote=root` option enables this explicit archive install on npm 12; older npm versions that do not recognize it can omit it. It does not change global npm settings. See [npm's URL install policy](https://docs.npmjs.com/using-npm/config/#allow-remote).
+To try the guided demo before installing globally, run `npx --yes failtrace demo` in any directory. The verified [GitHub release alternative](../README.md#github-release-alternative) is also available.
 
 Append `/failtrace/dist/cli/index.js` to the directory printed by `npm root --global`. That is your **server entry point**. For example, a Windows npm root of `C:\Users\you\AppData\Roaming\npm\node_modules` gives `C:/Users/you/AppData/Roaming/npm/node_modules/failtrace/dist/cli/index.js`.
 

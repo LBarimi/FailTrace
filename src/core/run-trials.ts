@@ -7,7 +7,7 @@ import { captureEnvironment } from './environment.js';
 import { DEFAULT_PREDICATE, matchesFailure, validatePredicate } from './predicates.js';
 import type { RunOptions, RunSummary } from './types.js';
 
-export const VERSION = '0.3.0';
+export const VERSION = '0.3.1';
 export const DEFAULT_REPEAT = 10;
 export const DEFAULT_TIMEOUT_MS = 30_000;
 
