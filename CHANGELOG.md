@@ -5,6 +5,7 @@
 - Installation guides use the public npm package for the demo, regular CLI use, and agent setup. The versioned GitHub archive remains an alternative.
 - Added a reproducible historical Prettier case using pinned affected and fixed releases, a specific failure predicate, text minimization, and a replayable bundle. CI checks this workflow on Windows, macOS, and Linux with Node.js 22 and 24.
 - Restricted packaged examples to the built-in demo files so locally installed case dependencies and investigation evidence cannot enter release archives. Installed-package checks enforce that boundary.
+- Included MCP Registry identity and server metadata for discovery of the existing stdio tools.
 
 The Core investigation behavior is unchanged; this patch updates distribution, documentation, and examples.
 

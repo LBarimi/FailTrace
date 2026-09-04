@@ -121,6 +121,12 @@ try {
   const installed = JSON.parse(await readFile(join(installedDirectory, 'package.json'), 'utf8'));
   assert.equal(installed.version, manifest.version);
   assert.equal(installed.name, manifest.name);
+  assert.equal(installed.mcpName, manifest.mcpName, 'Preserve the verified MCP Registry identity');
+  const server = JSON.parse(await readFile(join(installedDirectory, 'server.json'), 'utf8'));
+  assert.equal(server.name, installed.mcpName);
+  assert.equal(server.version, installed.version);
+  assert(server.packages.some(entry => entry.registryType === 'npm' && entry.identifier === installed.name
+    && entry.version === installed.version && entry.transport.type === 'stdio'), 'MCP metadata must identify this installed npm version');
   assert.equal((await lstat(installedDirectory)).isSymbolicLink(), false, 'Tarball install must not link back to the source checkout');
   for (const entry of await readdir(join(installedDirectory, 'examples'), { recursive: true })) {
     assert(!entry.split(/[\\/]/).some(part => ['node_modules', '.failtrace', '.cache'].includes(part)),

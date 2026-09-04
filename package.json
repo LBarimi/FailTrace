@@ -1,6 +1,7 @@
 {
   "name": "failtrace",
   "version": "0.3.1",
+  "mcpName": "io.github.LBarimi/failtrace",
   "description": "Reproduce, isolate, and minimize software failures. Built for humans and coding agents.",
   "type": "module",
   "license": "MIT",
@@ -26,6 +27,7 @@
     "README.md",
     "CONTRIBUTING.md",
     "CHANGELOG.md",
+    "server.json",
     "docs",
     "LICENSE"
   ],
