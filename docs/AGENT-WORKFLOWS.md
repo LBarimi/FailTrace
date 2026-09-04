@@ -11,10 +11,12 @@ Install the prebuilt GitHub release, connect the local server, and try an experi
 With Node.js **22.12 or newer**, install the versioned GitHub release archive:
 
 ```sh
-npm install --global https://github.com/LBarimi/FailTrace/releases/download/v0.3.0/failtrace-0.3.0.tgz
+npm install --global --allow-remote=root https://github.com/LBarimi/FailTrace/releases/download/v0.3.0/failtrace-0.3.0.tgz
 failtrace --version
 npm root --global
 ```
+
+The command-scoped `--allow-remote=root` option enables this explicit archive install on npm 12; older npm versions that do not recognize it can omit it. It does not change global npm settings. See [npm's URL install policy](https://docs.npmjs.com/using-npm/config/#allow-remote).
 
 Append `/failtrace/dist/cli/index.js` to the directory printed by `npm root --global`. That is your **server entry point**. For example, a Windows npm root of `C:\Users\you\AppData\Roaming\npm\node_modules` gives `C:/Users/you/AppData/Roaming/npm/node_modules/failtrace/dist/cli/index.js`.
 

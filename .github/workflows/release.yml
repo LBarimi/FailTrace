@@ -81,7 +81,7 @@ jobs:
           const version = process.env.RELEASE_VERSION;
           const filename = `failtrace-${version}.tgz`;
           const sha256 = createHash('sha256').update(readFileSync(`.failtrace/release/${filename}`)).digest('hex');
-          const installCommand = `npm install --global https://github.com/${process.env.GITHUB_REPOSITORY}/releases/download/v${version}/${filename}`;
+          const installCommand = `npm install --global --allow-remote=root https://github.com/${process.env.GITHUB_REPOSITORY}/releases/download/v${version}/${filename}`;
           writeFileSync('.failtrace/release/SHA256SUMS', `${sha256}  ${filename}\n`);
           writeFileSync('.failtrace/release/release.json', JSON.stringify({
             name: 'failtrace', version, tag: `v${version}`, commit: process.env.RELEASE_COMMIT,

@@ -18,7 +18,7 @@ failtrace run "npm test -- checkout" --repeat 20 --stderr-contains "checkout fai
 Requires **Node.js 22.12+ and npm**. Run the guided demo from any directory using the prebuilt GitHub release:
 
 ```sh
-npm exec --yes --package=https://github.com/LBarimi/FailTrace/releases/download/v0.3.0/failtrace-0.3.0.tgz -- failtrace demo
+npm exec --yes --allow-remote=root --package=https://github.com/LBarimi/FailTrace/releases/download/v0.3.0/failtrace-0.3.0.tgz -- failtrace demo
 ```
 
 The demo runs real experiments: **7 passes / 3 failures**, a six-element JSON input reduced to **`["BUG"]`**, and a bundle ready to replay. It preserves evidence under `.failtrace/demos/<id>/` and prints the replay command. The demo exits `0` when those expected results are verified. Replaying its intentionally failing example exits `1`.
@@ -28,11 +28,13 @@ The demo runs real experiments: **7 passes / 3 failures**, a six-element JSON in
 Install the same built package for everyday use:
 
 ```sh
-npm install --global https://github.com/LBarimi/FailTrace/releases/download/v0.3.0/failtrace-0.3.0.tgz
+npm install --global --allow-remote=root https://github.com/LBarimi/FailTrace/releases/download/v0.3.0/failtrace-0.3.0.tgz
 failtrace demo
 ```
 
-Prefer a project dependency? Use `npm install --save-dev` with the same URL and run `npx failtrace`. The npm registry package is not published yet; these commands install the versioned GitHub asset. Neither a source checkout nor a TypeScript build is required. See [release assets and checksums](https://github.com/LBarimi/FailTrace/releases/tag/v0.3.0).
+Prefer a project dependency? Use `npm install --save-dev --allow-remote=root` with the same URL and run `npx failtrace`. The npm registry package is not published yet; these commands install the versioned GitHub asset. Neither a source checkout nor a TypeScript build is required. See [release assets and checksums](https://github.com/LBarimi/FailTrace/releases/tag/v0.3.0).
+
+The command-scoped `--allow-remote=root` option permits the explicitly requested archive on npm 12, which blocks URL installs by default. It does not change your npm configuration. Older npm versions that do not recognize this option can omit it. See [npm's URL install policy](https://docs.npmjs.com/using-npm/config/#allow-remote).
 
 ## Use it on your own failure
 

@@ -14,6 +14,12 @@ The initial public-state inspection found 0 GitHub stars, 0 forks, no releases, 
 
 Source revision `d0e2164` implemented the six initial milestones, but first use required cloning, installing, building, linking, and running the example from the source directory. MCP setup documented a generic configuration without client-specific workflows. There was no contributor guide or structured way to report a real use case.
 
+## Distribution evidence — 2026-09-04
+
+[v0.3.0](https://github.com/LBarimi/FailTrace/releases/tag/v0.3.0) provides a compiled package and checksum from commit `823163a`. Its [CI run](https://github.com/LBarimi/FailTrace/actions/runs/33883716383) passed 191 tests and installed-package checks across six OS/Node combinations. Maintainer verification downloaded the public asset without authentication, installed it with a fresh npm cache outside the source checkout, ran the demo, and replayed the resulting failure bundle. The installed MCP server exposed all five tools and reproduced a predicate-matching failure.
+
+That public-install check caught npm 12's default restriction on URL packages; the instructions now include a command-scoped `--allow-remote=root` option. These results establish distribution and compatibility. They do not establish independent adoption. Registry publication and real-project usage evidence remain priorities.
+
 ## Current priorities
 
 1. **Reach a first useful result quickly.** Provide a prebuilt, versioned package and a demo that runs from a fresh directory, records real failures, minimizes real input, and creates a replayable bundle. Verify the advertised installation command against the published artifact.
