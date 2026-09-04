@@ -22,17 +22,18 @@ This expresses product emphasis, not a requirement to execute every operation in
 
 The six original milestones are implemented in 0.3.1. Version 0.4.0 adds opt-in concurrency, threshold stopping for bisect/minimize, efficient metadata, recovery, file-copy optimization and benchmarks; see [performance scope and remaining limits](PERFORMANCE.md).
 
-## Why Verify is the current priority
+## Why Verify was added
 
-An agent can already run commands again and compare two saved runs. That requires the caller to keep the original predicate and input, recognize incomplete or contaminated experiments, and avoid calling a different failure a successful fix. A dedicated operation earns its place by enforcing those requirements and linking the evidence, rather than just shortening two commands.
+Before 0.5.0, an agent could run commands again and compare two saved runs, but the caller had to keep the original predicate and input, recognize incomplete or contaminated experiments, and avoid calling a different failure a successful fix. The dedicated Verify operation enforces those requirements and links the evidence rather than merely shortening two commands.
 
-The [verification contract and workflow](VERIFY.md) define the implemented scope and its limits. The release and adoption sequence is:
+The [verification contract and workflow](VERIFY.md) define the released scope and its limits. The 0.5.0 release validation covered:
 
-1. Validate the workflow using an affected/fixed control and negative controls: an unrelated error, an unchanged defect, and an interrupted experiment.
-2. Keep baseline eligibility, explicit experiment settings, healthy completion checks, fixed-budget sampling and the linked report in Core. These checks separate observed target failures, absent observations and inconclusive evidence.
-3. Exercise the Core contract on a recognizable real bug. The existing [Prettier case](../examples/cases/prettier-chain/README.md) supplies an affected/fixed example, not a generic verification API or proof of independent use.
-4. Validate CLI/JSON and MCP wrappers against the same operation, including an independently installed package and unrelated-error controls.
-5. Seek voluntary evidence that developers or agents used the workflow on their own fixes and returned to it. Adjust priorities if that reveals a more important obstacle.
+1. Affected/fixed controls and negative controls for an unrelated error, an unchanged defect and an interrupted experiment.
+2. Core baseline eligibility, explicit experiment settings, healthy completion checks, fixed-budget sampling and a linked durable report.
+3. A historical [Prettier defect](../examples/cases/prettier-chain/README.md) and a controlled [p-memoize race](../examples/cases/p-memoize-race/README.md), each with affected, fixed and negative-control evidence.
+4. CLI/JSON and MCP wrappers against the same operation, including a fresh installation of the public package and an unrelated-error guard.
+
+The next adoption step is voluntary evidence that developers or agents used the released workflow on their own fixes and returned to it. Observed setup or interpretation friction should determine the next improvement.
 
 ## Positioning and market evidence
 

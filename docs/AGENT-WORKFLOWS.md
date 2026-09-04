@@ -137,9 +137,9 @@ Ask the agent:
 
 > List the available FailTrace tools, then run the inline Node experiment below with `failtrace_run`. Use five trials and a 5-second timeout. The fifth trial prints `FAILTRACE_DEMO` on stderr and exits with code 7. Report the actual `matchedTrials`, pass/fail counts, and artifact directory; inspect the matching trial's stderr before calling the setup successful.
 
-The server exposes `failtrace_run`, `failtrace_compare`, `failtrace_bisect`, `failtrace_minimize`, and `failtrace_bundle`. A client may add a server prefix to their displayed names.
+The current server exposes `failtrace_run`, `failtrace_compare`, `failtrace_bisect`, `failtrace_minimize`, `failtrace_verify`, and `failtrace_bundle`. A client may add a server prefix to their displayed names.
 
-Version 0.5.0 adds **`failtrace_verify`** and `captureContext` on `failtrace_run`. List the installed server's tools before assuming the selected package provides them.
+`failtrace_verify` and `captureContext` on `failtrace_run` require version 0.5.0 or later. List the installed server's tools before assuming the selected package provides them.
 
 Version 0.4.0 adds optional `concurrency` to `failtrace_run`; it defaults to `1` and is not accepted by bisect/minimize. Overlapping commands can change failure probability through shared resources. Returned trials stay sorted by index. Versions through 0.3.1 predate this option; see [performance guidance](PERFORMANCE.md).
 
@@ -175,7 +175,7 @@ That command should report five passes and exit `0`. In investigations that reco
 | Passing and failing logs need comparison | `failtrace_compare`: selected trial indices, stream hashes, bounded diffs, and truncation. |
 | A known good revision became bad | `failtrace_bisect`: verified endpoint assessments, `status`, `firstBad`, and cleanup diagnostics. |
 | An input reproduces but is too large | `failtrace_minimize`: accepted candidates, `status`, `finalVerified`, and `minimizedPath`. |
-| Code was changed and the original failure needs rechecking | `failtrace_verify` in source: captured baseline, explicit candidate authority, full sample, context changes and healthy completion. Older packages use the [manual after-fix workflow](VERIFY.md). |
+| Code was changed and the original failure needs rechecking | `failtrace_verify` in 0.5.0 or later: captured baseline, explicit candidate authority, full sample, context changes and healthy completion. Older packages use the [manual after-fix workflow](VERIFY.md). |
 | Someone else needs the evidence and input | `failtrace_bundle`: selected source/input files, `configPath`, and returned bundle directory. |
 
 ### Repeat, then compare
