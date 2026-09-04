@@ -15,7 +15,7 @@ npm ci --ignore-scripts --allow-remote=root
 npm run investigate
 ```
 
-This installs two exact Prettier versions and the **published FailTrace 0.3.0 package**. A TypeScript build or global installation is unnecessary. The case is supplied in the repository; the main FailTrace package contains only its built-in demos. npm 12 needs the command-scoped URL permission for the FailTrace archive; older npm versions that do not recognize the option can omit it.
+This historical investigation intentionally installs two exact Prettier versions and the **published FailTrace 0.3.0 package**. Its script asserts that original engine version so the recorded minimization and bundle workflow remains repeatable; 0.3.0 is not the current release for new projects. A TypeScript build or global installation is unnecessary. The case is supplied in the repository; the main FailTrace package contains only its built-in demos. npm 12 needs the command-scoped URL permission for the pinned FailTrace archive; older npm versions that do not recognize the option can omit it.
 
 The investigation records three affected-version trials and three fixed-version trials, compares their output, minimizes the input, independently verifies the final failure, checks the reduced input against the fixed version, and creates a bundle. It exits `0` only when those checks succeed. The original fixture remains intact; evidence stays under this directory's `.failtrace/`.
 
@@ -53,13 +53,13 @@ Deleting input can create invalid TypeScript. Such candidates exit `2` with a se
 
 FailTrace's `passed` count with a custom predicate means the predicate did not match. The investigation additionally checks actual exit codes and normal process termination for the fixed control; a missing dependency or parser error is insufficient evidence of a fix.
 
-## Verify the fixed control with the current Core
+## Verify the fixed control with FailTrace 0.5.0
 
-The original `npm run investigate` remains pinned to the published 0.3.0 workflow above. A separate `npm run verify` exercises the new Verify API, targeted for 0.5.0, without repeating minimization. On a source branch containing Verify, build the repository root first with `npm ci` and `npm run build`, install this case's dependencies as above, then run `npm run verify` from this directory.
+The original `npm run investigate` remains pinned to the published 0.3.0 workflow above. A separate `npm run verify` exercises the Verify API released in 0.5.0 without repeating minimization. From a current source checkout, build the repository root first with `npm ci` and `npm run build`, install this case's dependencies as above, then run `npm run verify` from this directory.
 
 Verify creates a fresh workspace under `.failtrace/`, records three affected trials with input/setup/source identities, changes only a copied `release.mjs` selector to the fixed release, and executes three full-budget candidate trials. The command, working directory, checker, input and dependency manifests stay the same. The selector edit is an explicitly declared source intervention. All three candidate commands must exit normally with code zero; no target match alone is insufficient. The expected observation is `target_not_observed`, not proof that every input is fixed.
 
-The shared case loader uses the checkout's built Core, checks its version against the root manifest, and requires its Verify export. To validate an installed package instead, explicitly set `FAILTRACE_PACKAGE` to its `dist/core/index.js` file and `FAILTRACE_EXPECT_VERSION` to the intended version; an invalid explicit path fails rather than falling back. The [race case](../p-memoize-race/README.md#verify-the-pinned-fix) shows platform-specific setup. The original input and checker remain unchanged. The script prints a separate `case-report.json` containing Verify and Compare results. That report contains local evidence paths and stays ignored.
+The shared case loader uses the checkout's built Core, checks its version against the root manifest, and requires its Verify export. To validate the public `failtrace@0.5.0` package instead, install that exact version separately, set `FAILTRACE_PACKAGE` to its `dist/core/index.js` file, and set `FAILTRACE_EXPECT_VERSION` to `0.5.0`; an invalid explicit path fails rather than falling back. The [race case](../p-memoize-race/README.md#verify-the-pinned-fix) shows platform-specific environment-variable examples. The original input and checker remain unchanged. The script prints a separate `case-report.json` containing Verify and Compare results. That report contains local evidence paths and stays ignored.
 
 ## Run the steps yourself
 
@@ -88,7 +88,7 @@ node repro.mjs
 
 The included engine needs Node.js. The target additionally needs the two pinned Prettier packages, installed in the bundle's `source/` directory. `--omit=dev` avoids reinstalling the FailTrace development tool; the bundle already contains its engine. Installation needs registry access or cached dependencies. Replay itself runs locally and exits `1` when it reports `Target failure reproduced: 1 / 1`.
 
-The original published package and these old Prettier versions remain pinned to make this historical experiment repeatable. Use the appropriate supported formatter version in your own project.
+The `npm run investigate` dependency on FailTrace 0.3.0 and the old Prettier versions remain pinned solely to make that historical experiment repeatable. The separate Verify workflow uses the current checkout or an explicitly selected public 0.5.0 engine. Use current FailTrace and the appropriate supported formatter version in your own project.
 
 ## Ask an agent to investigate
 

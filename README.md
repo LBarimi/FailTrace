@@ -36,10 +36,10 @@ Prefer a project dependency? Use `npm install --save-dev failtrace` and run `npx
 
 ### GitHub release alternative
 
-The verified [v0.3.0 release archive and checksum](https://github.com/LBarimi/FailTrace/releases/tag/v0.3.0) remain available. To run that exact GitHub package:
+The verified [v0.5.0 release archive and checksum](https://github.com/LBarimi/FailTrace/releases/tag/v0.5.0) are also available. To run that exact GitHub package:
 
 ```sh
-npm exec --yes --allow-remote=root --package=https://github.com/LBarimi/FailTrace/releases/download/v0.3.0/failtrace-0.3.0.tgz -- failtrace demo
+npm exec --yes --allow-remote=root --package=https://github.com/LBarimi/FailTrace/releases/download/v0.5.0/failtrace-0.5.0.tgz -- failtrace demo
 ```
 
 For this archive alternative, the command-scoped `--allow-remote=root` option permits the explicitly requested URL on npm 12. It is unnecessary for the registry commands above and does not change your npm configuration. Older npm versions that do not recognize it can omit it. See [npm's URL install policy](https://docs.npmjs.com/using-npm/config/#allow-remote).
@@ -91,9 +91,9 @@ FailTrace handles the repeated experiments; the agent investigates the resulting
 failtrace mcp --cwd /absolute/path/to/your/project
 ```
 
-It exposes `failtrace_run`, `failtrace_compare`, `failtrace_bisect`, `failtrace_minimize`, and `failtrace_bundle`, with typed inputs, structured results, artifact paths, and cancellation. Target failures are ordinary evidence. Large responses retain full metadata on disk; `matchedTrials` reports the complete predicate-match count.
+It exposes `failtrace_run`, `failtrace_compare`, `failtrace_bisect`, `failtrace_minimize`, `failtrace_verify`, and `failtrace_bundle`, with typed inputs, structured results, artifact paths, and cancellation. Target failures are ordinary evidence. Large responses retain full metadata on disk; `matchedTrials` reports the complete predicate-match count.
 
-Version 0.5.0 also exposes `failtrace_verify`. Capture context with the baseline run before editing code, then supply an explicit candidate command and working directory. An unrelated syntax/setup error is inconclusive even if it no longer prints the target message. See [agent verification](docs/AGENT-WORKFLOWS.md#recheck-after-a-code-change).
+For verification, capture context with the baseline run before editing code, then supply an explicit candidate command and working directory. An unrelated syntax/setup error is inconclusive even if it no longer prints the target message. See [agent verification](docs/AGENT-WORKFLOWS.md#recheck-after-a-code-change).
 
 **[Connect Codex, Claude Code, Cursor, or another MCP client →](docs/AGENT-WORKFLOWS.md)**
 

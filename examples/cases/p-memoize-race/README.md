@@ -20,7 +20,7 @@ The final command runs the first, overlapping schedule against the affected rele
 
 ## Verify the pinned fix
 
-The Verify investigation uses the new Verify Core API, targeted for FailTrace 0.5.0. On a source branch containing that API, build from the repository root first:
+The Verify investigation uses the Core API published in FailTrace 0.5.0. To exercise the current checkout as CI and contributors do, build from the repository root first:
 
 ```sh
 npm ci
@@ -30,7 +30,7 @@ npm ci --ignore-scripts
 npm run verify
 ```
 
-The shared loader selects the checkout's built Core, checks its version against the root manifest, and requires its `verifyFix` export. It does not accidentally load an older globally installed package. For validation against an installed release archive, set `FAILTRACE_PACKAGE` to that installation's `dist/core/index.js` and `FAILTRACE_EXPECT_VERSION` to the intended release before running the command. An explicit path is canonicalized and must work; there is no fallback. For example, after installing the Verify release:
+The shared loader selects the checkout's built Core, checks its version against the root manifest, and requires its `verifyFix` export. It does not accidentally load an older globally installed package. To validate the public `failtrace@0.5.0` package instead, install that exact version separately, set `FAILTRACE_PACKAGE` to its `dist/core/index.js`, and set `FAILTRACE_EXPECT_VERSION` to `0.5.0` before running the command. An explicit path is canonicalized and must work; there is no fallback. For example, after installing the exact public package:
 
 ```powershell
 $env:FAILTRACE_PACKAGE = 'C:\path\to\package\dist\core\index.js'
