@@ -66,11 +66,11 @@ afterEach(async () => {
 });
 
 describe('official SDK stdio MCP adapter', () => {
-  it('lists typed tools and invokes the original five Core workflows over a real SDK connection', async () => {
+  it('lists typed tools and invokes the Core workflows over a real SDK connection', async () => {
     const { client, cwd, errors, stderr } = await startClient();
     const listing = await client.listTools();
     expect(listing.tools.map((tool) => tool.name).sort()).toEqual([
-      'failtrace_bisect', 'failtrace_bundle', 'failtrace_compare', 'failtrace_minimize', 'failtrace_run', 'failtrace_verify',
+      'failtrace_bisect', 'failtrace_bundle', 'failtrace_compare', 'failtrace_inspect_run', 'failtrace_minimize', 'failtrace_run', 'failtrace_verify',
     ]);
     for (const tool of listing.tools) expect(tool.inputSchema.type).toBe('object');
     expect(listing.tools.find((tool) => tool.name === 'failtrace_run')!.inputSchema.properties).toHaveProperty('concurrency');
@@ -81,6 +81,9 @@ describe('official SDK stdio MCP adapter', () => {
       expect(listing.tools.find((tool) => tool.name === name)!.annotations?.destructiveHint).toBe(true);
     }
     expect(listing.tools.find((tool) => tool.name === 'failtrace_compare')!.annotations?.readOnlyHint).toBe(true);
+    expect(listing.tools.find((tool) => tool.name === 'failtrace_inspect_run')!.annotations).toMatchObject({
+      readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false,
+    });
 
     await copyFile(join(fixtures, 'bundle-target.mjs'), join(cwd, 'target.mjs'));
     const runCall = await client.callTool({ name: 'failtrace_run', arguments: { command: `${node} target.mjs mixed`, repeat: 2 } });
@@ -142,7 +145,7 @@ describe('official SDK stdio MCP adapter', () => {
 
   it('supports the modern protocol with the same typed tools', async () => {
     const { client, errors, stderr } = await startClient(true);
-    expect((await client.listTools()).tools).toHaveLength(6);
+    expect((await client.listTools()).tools).toHaveLength(7);
     const call = await client.callTool({
       name: 'failtrace_run', arguments: { command: process.platform === 'win32' ? 'exit /b 7' : 'exit 7', repeat: 1 },
     });
@@ -186,10 +189,19 @@ describe('official SDK stdio MCP adapter', () => {
     });
     expect(invalidRegex.isError).toBe(true);
     expect(structured(invalidRegex).error).toMatch(/Invalid failure regex/);
+    const arbitraryOutputPath = await client.callTool({
+      name: 'failtrace_inspect_run', arguments: {
+        view: 'output', run: 'missing-run', trial: 1, stream: 'stdout', path: 'other.txt',
+      },
+    });
+    expect(arbitraryOutputPath.isError).toBe(true);
+    expect(arbitraryOutputPath.content).toEqual([
+      expect.objectContaining({ type: 'text', text: expect.stringContaining('Input validation error') }),
+    ]);
     const missing = await client.callTool({ name: 'failtrace_compare', arguments: { runA: 'missing-run' } });
     expect(missing.isError).toBe(true);
     expect(structured(missing).error).toBeTypeOf('string');
-    expect((await client.listTools()).tools).toHaveLength(6);
+    expect((await client.listTools()).tools).toHaveLength(7);
   });
 
   it('maps null environment values to unset and captures selected environment evidence', async () => {
@@ -223,6 +235,30 @@ describe('official SDK stdio MCP adapter', () => {
       ...Array.from({ length: 20 }, (_, index) => index + 1), ...Array.from({ length: 20 }, (_, index) => index + 26),
     ]);
     expect(JSON.parse(await readFile(data.metadataPath as string, 'utf8')).trials).toHaveLength(45);
+
+    const page = await client.callTool({
+      name: 'failtrace_inspect_run', arguments: {
+        view: 'trials', run: data.artifactDirectory, afterTrial: 20, limit: 20, filter: 'matched',
+      },
+    });
+    expect(page.isError).toBe(false);
+    const pageData = structured(page);
+    expect(pageData).toMatchObject({
+      recordedTrials: 45, matchedTrials: 45, statistics: { total: 45 }, nextAfterTrial: 40,
+    });
+    expect((pageData.trials as Array<{ index: number }>).map(({ index }) => index))
+      .toEqual(Array.from({ length: 20 }, (_, index) => index + 21));
+
+    await writeFile(join(data.artifactDirectory as string, 'trials', '023', 'stdout.txt'), 'trial=23 evidence\n');
+    const output = await client.callTool({
+      name: 'failtrace_inspect_run', arguments: {
+        view: 'output', run: data.artifactDirectory, trial: 23, stream: 'stdout', maxBytes: 64,
+      },
+    });
+    expect(output.isError).toBe(false);
+    expect(structured(output)).toMatchObject({
+      trial: 23, stream: 'stdout', text: 'trial=23 evidence\n', nextOffsetBytes: null, truncated: false,
+    });
   }, 30_000);
 
   it('propagates request cancellation to Core and preserves valid partial results', async () => {

@@ -2,6 +2,11 @@ export { runTrials, validateRunOptions, VERSION, DEFAULT_REPEAT, DEFAULT_TIMEOUT
 export { aggregateStatistics } from './statistics.js';
 export { assessRun, validatePredicate, DEFAULT_PREDICATE } from './predicates.js';
 export { loadRun } from './run-reader.js';
+export { inspectRunEvidence } from './inspect.js';
+export type {
+  InspectRunEvidenceOptions, InspectRunEvidenceResult, InspectRunOutputOptions, InspectRunTrialsOptions,
+  InspectedTrial, RunEvidenceFilter, RunOutputChunk, RunOutputStream, RunTrialPage,
+} from './inspect.js';
 export { compareRuns } from './compare.js';
 export type { CompareOptions, ComparisonResult, OutputComparison } from './compare.js';
 export { bisectRegression } from './bisect.js';
