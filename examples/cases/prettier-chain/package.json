@@ -1,0 +1,18 @@
+{
+  "name": "failtrace-case-prettier-chain",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test check.test.mjs",
+    "investigate": "node investigate.mjs",
+    "check:affected": "node check.mjs affected",
+    "check:fixed": "node check.mjs fixed"
+  },
+  "dependencies": {
+    "prettier-affected": "npm:prettier@3.0.3",
+    "prettier-fixed": "npm:prettier@3.2.0"
+  },
+  "devDependencies": {
+    "failtrace": "https://github.com/LBarimi/FailTrace/releases/download/v0.3.0/failtrace-0.3.0.tgz"
+  }
+}

@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
-import { lstat, mkdir, mkdtemp, readFile, realpath, rm, stat, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, mkdtemp, readFile, readdir, realpath, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, delimiter, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -122,6 +122,10 @@ try {
   assert.equal(installed.version, manifest.version);
   assert.equal(installed.name, manifest.name);
   assert.equal((await lstat(installedDirectory)).isSymbolicLink(), false, 'Tarball install must not link back to the source checkout');
+  for (const entry of await readdir(join(installedDirectory, 'examples'), { recursive: true })) {
+    assert(!entry.split(/[\\/]/).some(part => ['node_modules', '.failtrace', '.cache'].includes(part)),
+      `Packaged examples must not contain installed dependencies or local evidence: ${entry}`);
+  }
   for (const dependency of ['typescript', 'vitest', '@modelcontextprotocol/client']) {
     await assert.rejects(stat(join(consumer, 'node_modules', dependency)), { code: 'ENOENT' }, `Unexpected development dependency: ${dependency}`);
     await assert.rejects(stat(join(installedDirectory, 'node_modules', dependency)), { code: 'ENOENT' }, `Unexpected nested development dependency: ${dependency}`);

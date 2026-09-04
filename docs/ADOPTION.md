@@ -20,6 +20,8 @@ Source revision `d0e2164` implemented the six initial milestones, but first use 
 
 That public-install check caught npm 12's default restriction on URL packages; the instructions now include a command-scoped `--allow-remote=root` option. These results establish distribution and compatibility. They do not establish independent adoption. Registry publication and real-project usage evidence remain priorities.
 
+The [Prettier case](../examples/cases/prettier-chain/README.md) applies the published FailTrace package to an upstream historical formatting defect. A maintainer run reduced authored surrounding context from 464 to 11 characters, verified the affected release still failed, and verified the fixed release actually exited successfully. The case supplies pinned dependencies, an explicit predicate, a replay recipe, and an agent investigation prompt. This is evidence that the workflow applies to a real package, not evidence of external adoption.
+
 ## Current priorities
 
 1. **Reach a first useful result quickly.** Provide a prebuilt, versioned package and a demo that runs from a fresh directory, records real failures, minimizes real input, and creates a replayable bundle. Verify the advertised installation command against the published artifact.

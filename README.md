@@ -64,6 +64,8 @@ Paths in angle brackets come from the preceding result. If a failed outcome is a
 
 [Full command reference](docs/CLI.md) · [Runnable examples](examples) · [Implementation and verification](docs/IMPLEMENTATION.md)
 
+**[Real bug case: reduce a Prettier formatting failure from 464 to 11 characters →](https://github.com/LBarimi/FailTrace/tree/main/examples/cases/prettier-chain)** The runnable investigation uses pinned affected/fixed releases, rejects unrelated parser errors, and produces a replayable bundle. The case includes authored surrounding code and links to the original upstream report.
+
 ## For coding agents
 
 FailTrace handles the repeated experiments; the agent investigates the resulting evidence. Use it through the CLI with `--json`, or connect its official-SDK stdio MCP server:

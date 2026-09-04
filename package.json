@@ -20,7 +20,9 @@
   },
   "files": [
     "dist",
-    "examples",
+    "examples/flaky-demo.js",
+    "examples/advanced-demo.js",
+    "examples/advanced-input.json",
     "README.md",
     "CONTRIBUTING.md",
     "CHANGELOG.md",
