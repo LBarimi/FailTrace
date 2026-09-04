@@ -43,7 +43,7 @@ async function main(): Promise<number> {
     switch (invocation.kind) {
       case 'demo': {
         const { runDemo } = await import('../demo/index.js');
-        print('FailTrace demo\n\nReproduce a flaky failure, minimize its input, and keep a replayable example.');
+        print('FailTrace demo\n\nMeasure a flaky failure, minimize its input, reject a false fix, and keep a replayable example.');
         const demo = await runDemo({
           ...(invocation.cwd === undefined ? {} : { cwd: invocation.cwd }),
           signal: controller.signal,

@@ -112,7 +112,7 @@ Check both `status` and `finalVerified`. A budget-limited result may still have 
 
 ```sh
 failtrace bundle <run-id> --file examples/flaky-demo.js
-failtrace bundle <final-run-directory> --file examples/advanced-demo.js --file package.json --input <minimized-input-path>
+failtrace bundle <final-run-directory> --file examples/advanced-demo.js --file examples/advanced-demo-implementation.js --file package.json --input <minimized-input-path>
 ```
 
 For the second command, use the printed final run and minimized input paths, or `final.runDirectory` and `minimizedPath` from the JSON result. The bundle replays the final command with the minimized input.

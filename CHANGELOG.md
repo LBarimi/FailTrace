@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Extended the guided demo into one measurement-to-replay flow without removing its 7/3 repetition, `["BUG"]` reduction or replay bundle. The minimized input becomes a captured baseline; the demo observes the unchanged target, rejects an unrelated crash as inconclusive, reports a healthy fixed candidate sample without claiming elimination, then restores the affected implementation for replay.
+
 ## 0.5.0 — 2026-09-05
 
 - Added fixed-budget code-fix verification through Core `verifyFix`, `failtrace verify`, and the `failtrace_verify` MCP tool. Results distinguish a remaining target, a healthy sample with no target observed, unrelated failures, infrastructure failures and inconclusive evidence without claiming elimination or statistical improvement.

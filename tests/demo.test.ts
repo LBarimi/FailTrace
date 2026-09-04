@@ -64,6 +64,27 @@ describe('guided demo onboarding', () => {
     const demo = JSON.parse(output.stdout) as DemoResult;
     expect(demo.status).toBe('completed');
     expect(demo.repetition?.statistics).toMatchObject({ total: 10, passed: 7, failed: 3, failureRate: 0.3 });
+    expect(demo.verification?.baselineControl).toMatchObject({
+      status: 'target_observed', completedTrials: 2, matchedTrials: 2, healthyTrials: 2, unhealthyTrials: 0,
+      infrastructureTrials: 0, unrelatedFailureTrials: 0, invalidEvidenceTrials: 0,
+    });
+    expect(demo.verification?.unrelatedCandidate).toMatchObject({
+      status: 'inconclusive', completedTrials: 2, matchedTrials: 0, healthyTrials: 0, unhealthyTrials: 2,
+      infrastructureTrials: 0, unrelatedFailureTrials: 2, invalidEvidenceTrials: 0,
+    });
+    expect(demo.verification?.fixedCandidate).toMatchObject({
+      status: 'target_not_observed', completedTrials: 2, matchedTrials: 0, healthyTrials: 2, unhealthyTrials: 0,
+      infrastructureTrials: 0, unrelatedFailureTrials: 0, invalidEvidenceTrials: 0,
+    });
+    expect(demo.verification?.baselineRunDirectory).toBeTruthy();
+    const baselineMetadata = JSON.parse(await readFile(join(demo.verification!.baselineRunDirectory, 'run.json'), 'utf8')) as {
+      environment: { variables: Record<string, string | null> };
+    };
+    expect(baselineMetadata.environment.variables.FAILTRACE_INPUT).toBe('verification-input.json');
+    for (const observation of [demo.verification?.baselineControl, demo.verification?.unrelatedCandidate, demo.verification?.fixedCandidate]) {
+      expect(observation?.candidateRunDirectory).toBeTruthy();
+      expect((await readFile(observation!.reportPath, 'utf8')).length).toBeGreaterThan(0);
+    }
     expect(demo.reduction).toMatchObject({ finalVerified: true, minimizedInput: ['BUG'] });
     expect(demo.reduction?.originalInput).toHaveLength(6);
     const [canonicalCwd, canonicalArtifacts] = await Promise.all([realpath(cwd), realpath(demo.artifactDirectory)]);
@@ -89,6 +110,10 @@ describe('guided demo onboarding', () => {
     expect(output.stderr).toBe('');
     expect(output.stdout).toContain('Demo complete.');
     expect(output.stdout).toContain('7 passed, 3 failed out of 10 trials (30.0%).');
+    expect(output.stdout).toContain('Baseline control   target observed — 2/2 target matches.');
+    expect(output.stdout).toContain('Unrelated crash    inconclusive — 0 matches, 2 unrelated failures.');
+    expect(output.stdout).toContain('Intended fix       target not observed — 0/2 matches, 2 healthy.');
+    expect(output.stdout).toContain('this does not prove elimination');
     expect(output.stdout).toContain('-> ["BUG"]');
     expect(output.stdout).toContain('Replay the reduced failure:');
     expect(output.stdout).toContain('Replay exits 1');
@@ -112,10 +137,28 @@ describe('guided demo onboarding', () => {
     expect(demo.repetition?.statistics.total).toBe(1);
     expect(new Set(stages)).toEqual(new Set(['repetition']));
     expect(demo.reduction).toBeUndefined();
+    expect(demo.verification).toBeUndefined();
     expect(demo.bundle).toBeUndefined();
     const run = JSON.parse(await readFile(join(demo.repetition!.artifactDirectory, 'run.json'), 'utf8')) as { status: string; trials: unknown[] };
     expect(run.status).toBe('interrupted');
     expect(run.trials).toHaveLength(1);
+    expect(JSON.parse(await readFile(join(demo.artifactDirectory, 'demo.json'), 'utf8'))).toEqual(demo);
+  });
+
+  it('persists completed verification evidence and stops before later candidates when cancelled', async () => {
+    const cwd = await workspace();
+    const controller = new AbortController();
+    const demo = await runDemo({ cwd, signal: controller.signal, onProgress: (progress) => {
+      if (progress.verification?.candidate === 'baseline_control') controller.abort();
+    } });
+    expect(demo.status).toBe('interrupted');
+    expect(demo.repetition?.statistics).toMatchObject({ total: 10, passed: 7, failed: 3 });
+    expect(demo.verification?.baselineControl).toMatchObject({ status: 'target_observed', matchedTrials: 2 });
+    expect(demo.verification?.unrelatedCandidate).toBeUndefined();
+    expect(demo.verification?.fixedCandidate).toBeUndefined();
+    expect((await readFile(demo.verification!.baselineControl!.reportPath, 'utf8')).length).toBeGreaterThan(0);
+    expect(demo.reduction).toMatchObject({ finalVerified: true, minimizedInput: ['BUG'] });
+    expect(demo.bundle).toBeUndefined();
     expect(JSON.parse(await readFile(join(demo.artifactDirectory, 'demo.json'), 'utf8'))).toEqual(demo);
   });
 
