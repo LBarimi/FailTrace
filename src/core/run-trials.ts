@@ -1,15 +1,16 @@
-import { stat } from 'node:fs/promises';
+import { realpath, stat } from 'node:fs/promises';
 import { setMaxListeners } from 'node:events';
 import { dirname, join, resolve } from 'node:path';
 import { createRunDirectory, writeJsonAtomic } from './artifacts.js';
 import { runTrial } from './runner.js';
 import { aggregateStatistics, createStatisticsAccumulator } from './statistics.js';
 import { writeRunSummary } from './run-metadata.js';
-import { captureEnvironment } from './environment.js';
+import { captureEnvironment, effectiveEnvironment } from './environment.js';
 import { DEFAULT_PREDICATE, matchesFailure, validatePredicate } from './predicates.js';
+import { captureContext, contextDeclaration, snapshotsEqual } from './verify-context.js';
 import type { RunOptions, RunSummary } from './types.js';
 
-export const VERSION = '0.4.0';
+export const VERSION = '0.5.0';
 export const DEFAULT_REPEAT = 10;
 export const DEFAULT_TIMEOUT_MS = 30_000;
 
@@ -38,11 +39,29 @@ export function validateRunOptions(options: RunOptions): void {
   }
   validatePredicate(options.predicate);
   captureEnvironment(options.captureEnv, options.env);
+  if (options.captureContext !== undefined) contextDeclaration(options.captureContext);
 }
 
 /** Sequential by default; bounded parallelism is explicit and evidence remains index ordered. */
 export async function runTrials(options: RunOptions): Promise<RunSummary> {
   validateRunOptions(options);
+  options = { ...options,
+    ...(options.predicate === undefined ? {} : { predicate: structuredClone(options.predicate) }),
+    ...(options.captureContext === undefined ? {} : { captureContext: contextDeclaration(options.captureContext) }),
+    ...(options.captureEnv === undefined ? {} : { captureEnv: [...options.captureEnv] }),
+    ...(options.stopWhenDecided === undefined ? {} : { stopWhenDecided: { ...options.stopWhenDecided } }),
+  };
+  // Context-enabled experiments pin the effective environment before any await.
+  // Keep ordinary run behavior unchanged and never persist this ambient snapshot.
+  const executionEnv = options.captureContext === undefined ? options.env : effectiveEnvironment(options.env);
+  const capturedKeys = [...(options.captureEnv ?? [])];
+  if (executionEnv && options.captureContext !== undefined) {
+    for (const key of capturedKeys) {
+      const actual = Object.keys(executionEnv).find((entry) => process.platform === 'win32' ? entry.toUpperCase() === key.toUpperCase() : entry === key);
+      if (actual === undefined) executionEnv[key] = undefined;
+    }
+  }
+  const declaration = options.captureContext === undefined ? undefined : contextDeclaration(options.captureContext);
   const cwd = resolve(options.cwd ?? process.cwd());
   if (!(await stat(cwd)).isDirectory()) throw new Error(`Working directory is not a directory: ${cwd}`);
   const artifactsDir = resolve(cwd, options.artifactsDir ?? '.failtrace');
@@ -62,8 +81,8 @@ export async function runTrials(options: RunOptions): Promise<RunSummary> {
     artifactDirectory: directory,
     trials: [],
     statistics: aggregateStatistics([]),
-    predicate: options.predicate ?? DEFAULT_PREDICATE,
-    environment: captureEnvironment(options.captureEnv, options.env),
+    predicate: structuredClone(options.predicate ?? DEFAULT_PREDICATE),
+    environment: captureEnvironment(capturedKeys, executionEnv),
   };
   await writeRunSummary(summary);
   const controller = new AbortController();
@@ -88,7 +107,7 @@ export async function runTrials(options: RunOptions): Promise<RunSummary> {
           cwd,
           timeoutMs: summary.timeoutMs,
           runDirectory: directory,
-          ...(options.env === undefined ? {} : { env: options.env }),
+          ...(executionEnv === undefined ? {} : { env: executionEnv }),
           signal: controller.signal,
         });
         summary.trials.push(trial);
@@ -131,6 +150,13 @@ export async function runTrials(options: RunOptions): Promise<RunSummary> {
     }
   };
   try {
+    if (declaration !== undefined) {
+      summary.context = {
+        schemaVersion: 1, workingDirectory: await realpath(cwd), declaration,
+        before: await captureContext(cwd, declaration, directory, controller.signal), stable: false,
+      };
+      await writeRunSummary(summary);
+    }
     // Workers absorb errors so all active trials finish cleanup and durable
     // persistence before the terminal summary (or caller rejection) is exposed.
     await Promise.all(Array.from({ length: Math.min(summary.concurrency!, summary.requestedTrials) }, worker));
@@ -144,9 +170,15 @@ export async function runTrials(options: RunOptions): Promise<RunSummary> {
     summary.error = error instanceof Error ? error.message : String(error);
     throw new Error(`Run failed: ${summary.error}\nArtifacts: ${directory}`, { cause: error });
   } finally {
-    options.signal?.removeEventListener('abort', interrupt);
     summary.trials.sort((a, b) => a.index - b.index);
     summary.statistics = aggregateStatistics(summary.trials);
+    if (summary.context && !controller.signal.aborted) {
+      summary.context.after = await captureContext(cwd, summary.context.declaration, directory, controller.signal);
+      summary.context.stable = summary.context.before.issues.length === 0 && summary.context.after.issues.length === 0
+        && snapshotsEqual(summary.context.before, summary.context.after);
+    }
+    if (options.signal?.aborted && summary.status !== 'error') summary.status = 'interrupted';
+    options.signal?.removeEventListener('abort', interrupt);
     summary.endedAt = new Date().toISOString();
     await writeRunSummary(summary);
   }

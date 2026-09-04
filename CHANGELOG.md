@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0 — 2026-09-05
+
+- Added fixed-budget code-fix verification through Core `verifyFix`, `failtrace verify`, and the `failtrace_verify` MCP tool. Results distinguish a remaining target, a healthy sample with no target observed, unrelated failures, infrastructure failures and inconclusive evidence without claiming elimination or statistical improvement.
+- Added opt-in baseline context capture with explicit input, setup and source file hashes or bounded Git identity. Verify requires the caller's current command and canonical working directory, records intentional changes and refuses missing, unstable or unsupported evidence.
+- Hardened Git context against hidden index flags, clean-filter normalization, submodules, symlinks and unresolved index entries by hashing tracked working-tree bytes and failing closed when identity is incomplete.
+- Added installed Core/CLI/MCP verification checks and cancellation coverage. Package smoke verifies that an unrelated error cannot become a successful fix result.
+- Added affected/fixed Verify workflows for a historical Prettier defect and a real `p-memoize` pending-call race. The race case uses six controlled interleavings and does not present them as a naturally sampled failure rate.
+
 ## 0.4.0 — 2026-09-05
 
 - Added opt-in `run --concurrency N` and the equivalent Core/MCP run option, keeping sequential execution as the default. Progress follows completion order with explicit trial indices; results remain index-sorted.

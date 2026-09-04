@@ -4,7 +4,7 @@ FailTrace 0.2.0 implements all six milestones. CLI and MCP delegate to the reusa
 
 Version 0.4.0 adds optional run concurrency, sequential threshold stopping for bisect/minimize, incremental run statistics, and reconstruction from authoritative per-trial records. See [performance guidance and benchmarks](PERFORMANCE.md). These changes are separate from the historical 0.2.0/0.3.0 verification results below.
 
-Dedicated code-fix verification is planned as the next Core priority; no `verify` CLI command or MCP tool exists. The current [run/compare workflow](VERIFY.md) can record and compare outcomes before and after a code change. Minimization's `finalVerified` means the reduced input reproduced the chosen failure in an independent final evaluation; it does not mean a code fix was verified. The [roadmap](ROADMAP.md) keeps this distinction explicit while retaining the already implemented MCP adapter.
+Version 0.5.0 implements dedicated code-fix verification in Core, CLI and MCP. It requires eligible full-budget baseline evidence with captured context, an explicit current command and working directory, healthy candidate execution and declared interventions. It returns observed outcomes and a durable report; it does not claim that a defect was eliminated or statistically improved. Minimization's `finalVerified` still means only that the reduced input reproduced the selected failure. See the [Verify workflow and limits](VERIFY.md).
 
 ## Required outcomes
 
@@ -12,7 +12,7 @@ Dedicated code-fix verification is planned as the next Core priority; no `verify
 - M3: Git regression isolation in a separate temporary worktree; verify good/bad endpoints using repeated trials and a failure threshold; preserve candidate evidence, handle inconclusive/interrupted searches, never change the user's checkout.
 - M4: deterministic delta debugging of text, structured JSON/arrays, file sets and environment selections; accept only candidates that still reproduce under the chosen predicate and trial threshold; preserve originals, baseline/final validation and candidate evidence, cancellation and evaluation limits.
 - M5: self-contained local reproduction directories with metadata, selected source/input files, logs, README, Node replay and sh/cmd wrappers; portable relative paths, no implicit execution on import, no unrelated files overwritten, replay verification.
-- M6: current official MCP SDK over stdio; five tools (`failtrace_run`, `failtrace_compare`, `failtrace_bisect`, `failtrace_minimize`, `failtrace_bundle`); thin Core calls, typed schemas, cancellation, structured results and clean protocol output; real SDK client integration tests.
+- M6 and Verify adapter: current official MCP SDK over stdio; six tools (`failtrace_run`, `failtrace_compare`, `failtrace_bisect`, `failtrace_minimize`, `failtrace_verify`, `failtrace_bundle`); thin Core calls, typed schemas, cancellation, structured results and clean protocol output; real SDK client integration tests.
 - CLI/API coverage for each feature; help, deterministic examples and current README match implemented behavior.
 - Unit/integration tests, typecheck, build, packaging, manual workflow checks, and six Windows/macOS/Linux × Node 22/24 CI jobs pass on the final commit.
 

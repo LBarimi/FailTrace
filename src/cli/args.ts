@@ -1,4 +1,4 @@
-import type { BundleOptions, CompareOptions, FailurePredicate, MinimizeFormat } from '../core/index.js';
+import type { BundleOptions, CompareOptions, FailurePredicate, MinimizeFormat, RunOptions, VerifyOptions } from '../core/index.js';
 
 type Common = { cwd?: string; json?: boolean };
 type Experiment = { command: string; repeat: number; timeoutMs: number; predicate?: FailurePredicate };
@@ -6,7 +6,8 @@ export type CliInvocation =
   | { kind: 'help' }
   | { kind: 'version' }
   | ({ kind: 'demo' } & Common)
-  | ({ kind: 'run'; captureEnv?: string[]; concurrency?: number } & Common & Experiment)
+  | ({ kind: 'run'; captureEnv?: string[]; concurrency?: number; captureContext?: NonNullable<RunOptions['captureContext']> } & Common & Experiment)
+  | ({ kind: 'verify'; json?: boolean } & Omit<VerifyOptions, 'signal' | 'onTrialComplete' | 'env'>)
   | ({ kind: 'compare' } & Common & CompareOptions)
   | ({ kind: 'bisect'; good: string; bad: string; minFailures: number } & Common & Experiment)
   | ({ kind: 'minimize'; input: string; format: MinimizeFormat; minFailures: number; maxEvaluations: number } & Common & Experiment)
@@ -39,7 +40,8 @@ const predicateFlags = ['exit-code', 'stdout-contains', 'stderr-contains', 'stdo
 const experiments = ['command', 'repeat', 'timeout', ...predicateFlags, 'regex-flags'];
 const allowed: Record<string, string[]> = {
   demo: ['cwd', 'json'],
-  run: ['repeat', 'timeout', 'concurrency', ...predicateFlags, 'regex-flags', 'capture-env', 'cwd', 'json'],
+  run: ['repeat', 'timeout', 'concurrency', ...predicateFlags, 'regex-flags', 'capture-env', 'capture-context', 'context-input', 'context-setup', 'context-source', 'cwd', 'json'],
+  verify: ['command', 'cwd', 'repeat', 'timeout', 'concurrency', 'healthy-exit-code', 'allow-change', 'json'],
   compare: ['trial-a', 'trial-b', 'max-lines', 'max-bytes', 'cwd', 'json'],
   bisect: [...experiments, 'good', 'bad', 'min-failures', 'cwd', 'json'],
   minimize: [...experiments, 'input', 'format', 'min-failures', 'max-evaluations', 'cwd', 'json'],
@@ -81,9 +83,9 @@ export function parseArgs(argv: string[]): CliInvocation {
     const equals = argument.indexOf('=');
     const flag = argument.slice(2, equals === -1 ? undefined : equals);
     if (!flags.includes(flag)) throw new Error(`Unexpected option: --${flag}.`);
-    if (values.has(flag) && flag !== 'file') throw new Error(`Option --${flag} may only be provided once.`);
-    if (flag === 'json') {
-      if (equals !== -1) throw new Error('--json does not take a value.');
+    if (values.has(flag) && !['file', 'context-input', 'context-setup', 'context-source', 'healthy-exit-code', 'allow-change'].includes(flag)) throw new Error(`Option --${flag} may only be provided once.`);
+    if (flag === 'json' || flag === 'capture-context') {
+      if (equals !== -1) throw new Error(`--${flag} does not take a value.`);
       values.set(flag, ['true']);
       continue;
     }
@@ -99,10 +101,38 @@ export function parseArgs(argv: string[]): CliInvocation {
   };
   const cwd = get('cwd');
   const common: Common = { ...(cwd === undefined ? {} : { cwd }), ...(values.has('json') ? { json: true } : {}) };
-  const maximum = kind === 'compare' ? 2 : kind === 'run' || kind === 'bundle' ? 1 : 0;
+  const maximum = kind === 'compare' ? 2 : ['run', 'bundle', 'verify'].includes(kind) ? 1 : 0;
   if (positional.length > maximum) throw new Error('Unexpected argument. Quote the entire target command.');
   if (kind === 'mcp') return { kind, ...(cwd === undefined ? {} : { cwd }) };
   if (kind === 'demo') return { kind, ...common };
+  if (kind === 'verify') {
+    const baseline = positional[0];
+    if (!baseline?.trim()) throw new Error('Provide a baseline run ID or path to verify.');
+    const command = required('command');
+    if (!command.trim() || command.includes('\0')) throw new Error('Provide an explicit non-empty verification command.');
+    const directory = required('cwd');
+    if (!directory.trim() || directory.includes('\0')) throw new Error('Provide an explicit verification working directory.');
+    const allowChanges = values.get('allow-change')?.map((value) => {
+      const separator = value.indexOf(':');
+      const field = value.slice(0, separator);
+      const reason = value.slice(separator + 1).trim();
+      if (separator === -1 || !['command', 'source', 'inputs', 'setup', 'environment', 'timeout', 'concurrency'].includes(field) || !reason) {
+        throw new Error('--allow-change must be field:reason; fields are command, source, inputs, setup, environment, timeout, concurrency.');
+      }
+      return { field: field as NonNullable<VerifyOptions['allowChanges']>[number]['field'], reason };
+    });
+    if (allowChanges && new Set(allowChanges.map(({ field }) => field)).size !== allowChanges.length) {
+      throw new Error('Each --allow-change field may only be provided once.');
+    }
+    return {
+      kind, baseline, command, cwd: directory, ...(values.has('json') ? { json: true } : {}),
+      ...(get('repeat') === undefined ? {} : { repeat: integer(get('repeat')!, 'Repeat') }),
+      ...(get('timeout') === undefined ? {} : { timeoutMs: parseTimeout(get('timeout')!) }),
+      ...(get('concurrency') === undefined ? {} : { concurrency: integer(get('concurrency')!, 'Concurrency') }),
+      ...(values.has('healthy-exit-code') ? { healthyExitCodes: [...new Set(values.get('healthy-exit-code')!.map((value) => integer(value, 'Healthy exit code', 0, 0xffff_ffff)))] } : {}),
+      ...(allowChanges === undefined ? {} : { allowChanges }),
+    };
+  }
   if (kind === 'compare') {
     if (!positional[0]?.trim()) throw new Error('Provide a run ID or path to compare.');
     return {
@@ -138,6 +168,13 @@ export function parseArgs(argv: string[]): CliInvocation {
       kind, ...experiment, ...common,
       ...(captureEnv === undefined ? {} : { captureEnv: [...new Set(captureEnv)] }),
       ...(get('concurrency') === undefined ? {} : { concurrency: integer(get('concurrency')!, 'Concurrency') }),
+      ...(['capture-context', 'context-input', 'context-setup', 'context-source'].some((flag) => values.has(flag)) ? {
+        captureContext: {
+          ...(values.has('context-input') ? { inputFiles: values.get('context-input')! } : {}),
+          ...(values.has('context-setup') ? { setupFiles: values.get('context-setup')! } : {}),
+          ...(values.has('context-source') ? { sourceFiles: values.get('context-source')! } : {}),
+        },
+      } : {}),
     };
   }
   const minFailures = integer(get('min-failures') ?? '1', 'Minimum failures', 1, repeat);

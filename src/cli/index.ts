@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import { readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { bisectRegression, compareRuns, createBundle, minimizeFailure, runTrials, VERSION } from '../core/index.js';
+import { bisectRegression, compareRuns, createBundle, minimizeFailure, runTrials, verifyFix, VERSION } from '../core/index.js';
 import { parseArgs } from './args.js';
-import { formatComparison, formatDemoProgress, formatDemoResult, formatHeader, formatSummary, formatTrial, HELP } from './presentation.js';
+import { formatComparison, formatDemoProgress, formatDemoResult, formatHeader, formatSummary, formatTrial, formatVerification, HELP } from './presentation.js';
 
 async function environmentFile(path: string): Promise<Record<string, string | null>> {
   const value: unknown = JSON.parse(await readFile(path, 'utf8'));
@@ -73,6 +73,17 @@ async function main(): Promise<number> {
         print(formatComparison(comparison));
         result(comparison);
         exitCode = 0;
+        break;
+      }
+      case 'verify': {
+        print(`FailTrace - fix verification\n\nBaseline  ${invocation.baseline}\nCommand   ${invocation.command}\nDirectory ${invocation.cwd}\n\nChecking baseline and context. Eligible candidate trials follow in completion order.\n`);
+        const verification = await verifyFix({
+          ...invocation, signal: controller.signal,
+          onTrialComplete: (trial) => print(formatTrial(trial, invocation.repeat)),
+        });
+        print(formatVerification(verification));
+        result(verification);
+        exitCode = verification.status === 'target_not_observed' ? 0 : verification.status === 'target_observed' ? 1 : 2;
         break;
       }
       case 'bisect': {

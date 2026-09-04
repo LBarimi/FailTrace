@@ -53,6 +53,14 @@ Deleting input can create invalid TypeScript. Such candidates exit `2` with a se
 
 FailTrace's `passed` count with a custom predicate means the predicate did not match. The investigation additionally checks actual exit codes and normal process termination for the fixed control; a missing dependency or parser error is insufficient evidence of a fix.
 
+## Verify the fixed control with the current Core
+
+The original `npm run investigate` remains pinned to the published 0.3.0 workflow above. A separate `npm run verify` exercises the new Verify API, targeted for 0.5.0, without repeating minimization. On a source branch containing Verify, build the repository root first with `npm ci` and `npm run build`, install this case's dependencies as above, then run `npm run verify` from this directory.
+
+Verify creates a fresh workspace under `.failtrace/`, records three affected trials with input/setup/source identities, changes only a copied `release.mjs` selector to the fixed release, and executes three full-budget candidate trials. The command, working directory, checker, input and dependency manifests stay the same. The selector edit is an explicitly declared source intervention. All three candidate commands must exit normally with code zero; no target match alone is insufficient. The expected observation is `target_not_observed`, not proof that every input is fixed.
+
+The shared case loader uses the checkout's built Core, checks its version against the root manifest, and requires its Verify export. To validate an installed package instead, explicitly set `FAILTRACE_PACKAGE` to its `dist/core/index.js` file and `FAILTRACE_EXPECT_VERSION` to the intended version; an invalid explicit path fails rather than falling back. The [race case](../p-memoize-race/README.md#verify-the-pinned-fix) shows platform-specific setup. The original input and checker remain unchanged. The script prints a separate `case-report.json` containing Verify and Compare results. That report contains local evidence paths and stays ignored.
+
 ## Run the steps yourself
 
 From this case directory after installation:
