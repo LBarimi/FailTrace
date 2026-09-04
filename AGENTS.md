@@ -12,6 +12,7 @@
 - Prioritize adoption over feature count. The six initial milestones are implemented; current work should help real developers and coding agents install, try, integrate, and repeatedly use them.
 - Before adding a major feature, identify the recognizable debugging problem, the evidence it matters to users, and how it improves adoption. Prefer a faster first success, reliable integration, and useful demos over speculative capabilities.
 - Keep install instructions executable against an actually available package or source revision. Verify the installed artifact outside this checkout, not just the source build. Do not present stars, downloads, or green tests as proof of active use.
+- Publish npm releases from the verified public GitHub release HTTPS tarball URL, never a local archive path; preserve the reviewed archive and digests, keep the existing CI gates, and verify public registry metadata after publication as described in `docs/RELEASING.md`.
 - Do not add SaaS, cloud, database, authentication, telemetry, AI API, or LLM SDK functionality.
 
 ## Layout
