@@ -180,13 +180,18 @@ export function formatVerification(result: VerifyResult): string {
 
 export function formatDemoProgress(progress: DemoProgress): string | undefined {
   if (progress.trial) return formatTrial(progress.trial, 10);
+  if (progress.verification) {
+    const labels = { baseline_control: 'Baseline control', unrelated_candidate: 'Unrelated crash', fixed_candidate: 'Intended fix' };
+    return `  ${labels[progress.verification.candidate]}: ${progress.verification.observation.status.replaceAll('_', ' ')}.`;
+  }
   if (progress.evaluation) {
     return progress.evaluation.accepted ? `  Kept a smaller input: ${progress.evaluation.units} JSON nodes; failure still reproduced.` : undefined;
   }
   return {
-    repetition: '\n1/3  Measure a flaky command\n',
-    minimization: '\n2/3  Remove input while keeping the same failure\n',
-    bundle: '\n3/3  Save a portable reproduction',
+    repetition: '\n1/4  Measure a flaky command\n',
+    minimization: '\n2/4  Remove input while keeping the same failure\n',
+    verification: '\n3/4  Check the minimized failure after a proposed fix\n',
+    bundle: '\n4/4  Save a portable reproduction',
   }[progress.stage];
 }
 
@@ -197,6 +202,16 @@ export function formatDemoResult(result: DemoResult): string {
     lines.push(`  ${passed} passed, ${failed} failed out of ${total} trials (${(failureRate * 100).toFixed(1)}%).`);
   }
   if (result.reduction) lines.push(`  Input: ${JSON.stringify(result.reduction.originalInput)} -> ${JSON.stringify(result.reduction.minimizedInput)}`, `  Final failure verified: ${result.reduction.finalVerified ? 'yes' : 'no'}.`);
+  if (result.verification) {
+    const { baselineControl, unrelatedCandidate, fixedCandidate } = result.verification;
+    lines.push('', '  Fix verification:');
+    if (baselineControl) lines.push(`  Baseline control   target observed — ${baselineControl.matchedTrials}/${baselineControl.completedTrials} target matches.`);
+    if (unrelatedCandidate) lines.push(`  Unrelated crash    inconclusive — ${unrelatedCandidate.matchedTrials} matches, ${unrelatedCandidate.unrelatedFailureTrials} unrelated failures.`);
+    if (fixedCandidate) lines.push(`  Intended fix       target not observed — ${fixedCandidate.matchedTrials}/${fixedCandidate.completedTrials} matches, ${fixedCandidate.healthyTrials} healthy.`);
+    if (fixedCandidate?.status === 'target_not_observed') {
+      lines.push('  No target match was observed in this finite sample; this does not prove elimination.');
+    }
+  }
   if (result.error) lines.push('', result.error);
   if (result.replayCommand) lines.push('', 'Replay the reduced failure:', result.replayCommand, 'Replay exits 1 when the expected failure is reproduced.');
   lines.push('', 'Evidence:', result.artifactDirectory);

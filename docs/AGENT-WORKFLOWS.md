@@ -247,7 +247,7 @@ The corresponding minimization arguments are:
 
 The shipped demo can reduce to `["BUG"]`. Use the observed `minimizedPath` and `final.runDirectory` for the next step; evaluation IDs and artifact directories change on every invocation.
 
-> If final verification reproduced the intended failure, create a local bundle from the returned `final.runDirectory`, selecting `examples/advanced-demo.js` and `package.json` as source files and the returned `minimizedPath` as input. Use `failtrace_bundle`; inspect its `repro.json`. Then run `node repro.mjs` from the returned bundle directory and report the actual predicate matches. Creating the bundle alone does not verify replay.
+> If final verification reproduced the intended failure, create a local bundle from the returned `final.runDirectory`, selecting `examples/advanced-demo.js`, `examples/advanced-demo-implementation.js`, and `package.json` as source files and the returned `minimizedPath` as input. Use `failtrace_bundle`; inspect its `repro.json`. Then run `node repro.mjs` from the returned bundle directory and report the actual predicate matches. Creating the bundle alone does not verify replay.
 
 The bundle tool takes `run`, `files`, and `input` for this workflow. `files` is an array of paths relative to the original run's working directory. `input` is the returned input path. Other optional fields are `cwd`, `command`, `env`, and `destination`; the destination must be new. Do not substitute made-up run IDs into a follow-up call.
 

@@ -1,6 +1,6 @@
 # FailTrace
 
-**Reproduce. Isolate. Minimize.**
+**Reproduce. Isolate. Minimize. Verify.**
 
 Turn a flaky command into measured failures, a smaller reproducer, and evidence someone else can replay. Built for developers and coding agents. Local execution, inspectable files, no AI API or telemetry.
 
@@ -21,9 +21,9 @@ Requires **Node.js 22.12+ and npm**. Run the guided demo from any directory:
 npx --yes failtrace demo
 ```
 
-The demo runs real experiments: **7 passes / 3 failures**, a six-element JSON input reduced to **`["BUG"]`**, and a bundle ready to replay. It preserves evidence under `.failtrace/demos/<id>/` and prints the replay command. The demo exits `0` when those expected results are verified. Replaying its intentionally failing example exits `1`.
+The demo runs one evidence flow: **7 passes / 3 failures**, a six-element JSON input reduced to **`["BUG"]`**, the minimized failure observed twice, an unrelated crash rejected as inconclusive, a proposed fix with **2 healthy / 0 matching** observations, and the affected implementation restored in a bundle ready to replay. It preserves evidence under `.failtrace/demos/<id>/` and prints the replay command. The target-free result describes that finite sample; it does not prove elimination. The demo exits `0` when all expected controls are verified. Replaying its intentionally failing bundle exits `1`.
 
-![A real FailTrace demo: 7 passes, 3 failures, input reduced to BUG, and a replayable bundle](docs/assets/demo.svg)
+![A real FailTrace demo: 7 passes, 3 failures, input reduced to BUG, an unrelated crash rejected, a healthy fixed sample, and a replayable bundle](docs/assets/demo.svg)
 
 Install the command for everyday use:
 

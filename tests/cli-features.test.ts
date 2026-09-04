@@ -130,6 +130,7 @@ describe('advanced built CLI workflows', () => {
     const cwd = await workspace();
     await mkdir(join(cwd, 'examples'));
     await cp(fileURLToPath(new URL('../examples/advanced-demo.js', import.meta.url)), join(cwd, 'examples', 'advanced-demo.js'));
+    await cp(fileURLToPath(new URL('../examples/advanced-demo-implementation.js', import.meta.url)), join(cwd, 'examples', 'advanced-demo-implementation.js'));
     await writeFile(join(cwd, 'package.json'), '{"type":"module"}');
     await writeFile(join(cwd, 'input.json'), '["a","BUG","b"]');
     const minimized = await invoke(['minimize', '--input', 'input.json', '--format', 'json', '--command', 'node examples/advanced-demo.js', '--stderr-contains', 'BUG reproduced', '--json'], cwd);
@@ -139,7 +140,7 @@ describe('advanced built CLI workflows', () => {
     expect(reduction.finalVerified).toBe(true);
     expect(JSON.parse(await readFile(reduction.minimizedPath, 'utf8'))).toEqual(['BUG']);
     expect(await readFile(join(cwd, 'input.json'), 'utf8')).toBe('["a","BUG","b"]');
-    const bundled = await invoke(['bundle', reduction.final!.runDirectory, '--file', 'examples/advanced-demo.js', '--file', 'package.json', '--input', reduction.minimizedPath, '--json'], cwd);
+    const bundled = await invoke(['bundle', reduction.final!.runDirectory, '--file', 'examples/advanced-demo.js', '--file', 'examples/advanced-demo-implementation.js', '--file', 'package.json', '--input', reduction.minimizedPath, '--json'], cwd);
     expect(bundled.code).toBe(0);
     expect(bundled.stderr).toBe('');
     const bundle = JSON.parse(bundled.stdout) as BundleResult;
