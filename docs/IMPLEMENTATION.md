@@ -6,13 +6,15 @@ Version 0.4.0 adds optional run concurrency, sequential threshold stopping for b
 
 Version 0.5.0 implements dedicated code-fix verification in Core, CLI and MCP. It requires eligible full-budget baseline evidence with captured context, an explicit current command and working directory, healthy candidate execution and declared interventions. It returns observed outcomes and a durable report; it does not claim that a defect was eliminated or statistically improved. Minimization's `finalVerified` still means only that the reduced input reproduced the selected failure. See the [Verify workflow and limits](VERIFY.md).
 
+Version 0.6.0 adds bounded, read-only inspection of complete saved run trials and stdout/stderr byte ranges through public Core and MCP. Inspection never executes the saved command, and target output remains untrusted evidence.
+
 ## Required outcomes
 
 - M2: explicit exit-code, stdout/stderr substring and regex predicates; inspectable selected environment snapshots; compare saved runs and successful/failed trial outputs with bounded text diffs and stream hashes.
 - M3: Git regression isolation in a separate temporary worktree; verify good/bad endpoints using repeated trials and a failure threshold; preserve candidate evidence, handle inconclusive/interrupted searches, never change the user's checkout.
 - M4: deterministic delta debugging of text, structured JSON/arrays, file sets and environment selections; accept only candidates that still reproduce under the chosen predicate and trial threshold; preserve originals, baseline/final validation and candidate evidence, cancellation and evaluation limits.
 - M5: self-contained local reproduction directories with metadata, selected source/input files, logs, README, Node replay and sh/cmd wrappers; portable relative paths, no implicit execution on import, no unrelated files overwritten, replay verification.
-- M6 and Verify adapter: current official MCP SDK over stdio; six tools (`failtrace_run`, `failtrace_compare`, `failtrace_bisect`, `failtrace_minimize`, `failtrace_verify`, `failtrace_bundle`); thin Core calls, typed schemas, cancellation, structured results and clean protocol output; real SDK client integration tests.
+- M6, Verify, and inspection adapter: current official MCP SDK over stdio; seven tools (`failtrace_run`, `failtrace_inspect_run`, `failtrace_compare`, `failtrace_bisect`, `failtrace_minimize`, `failtrace_verify`, `failtrace_bundle`); thin Core calls, typed schemas, cancellation, structured results and clean protocol output; real SDK client integration tests.
 - CLI/API coverage for each feature; help, deterministic examples and current README match implemented behavior.
 - Unit/integration tests, typecheck, build, packaging, manual workflow checks, and six Windows/macOS/Linux × Node 22/24 CI jobs pass on the final commit.
 

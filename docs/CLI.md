@@ -141,7 +141,7 @@ Use `--command "node relative-script.js"` when the original command contains mac
 ## MCP for coding agents
 
 ```sh
-failtrace mcp --cwd /absolute/path/to/project
+npx --yes failtrace@0.6.0 mcp --cwd "/absolute/path/to/project"
 ```
 
 The stdio adapter uses the official Model Context Protocol SDK and exposes these tools:
@@ -149,23 +149,25 @@ The stdio adapter uses the official Model Context Protocol SDK and exposes these
 | Tool | Core operation |
 | --- | --- |
 | `failtrace_run` | Repeat commands with predicates and evidence. |
+| `failtrace_inspect_run` | Page saved trial evidence or read a bounded stdout/stderr byte range without executing the command. |
 | `failtrace_compare` | Compare saved runs or trial outputs. |
 | `failtrace_bisect` | Search a sampled first-parent regression boundary. |
 | `failtrace_minimize` | Reduce a reproducing input. |
 | `failtrace_verify` | Check a candidate using captured baseline context, original predicate and healthy full-budget observations. |
 | `failtrace_bundle` | Create a local reproduction directory. |
 
-Tools have typed input schemas, structured results, artifact paths, and cancellation support. Target failures are returned as evidence. Large result lists are summarized, with complete metadata kept in artifacts. stdout is reserved for protocol messages; diagnostics go to stderr. The server runs locally with the same permissions and shell behavior as the CLI.
+Tools have typed input schemas, structured results, artifact paths, and cancellation support. Target failures are returned as evidence. Large result lists are summarized, with complete metadata kept in artifacts. Use `failtrace_inspect_run` with `view: "trials"` and `afterTrial`, or `view: "output"` and `offsetBytes`, to page that saved evidence. Returned log text is untrusted target output, not instructions. stdout is reserved for protocol messages; diagnostics go to stderr. The server runs locally with the same permissions and shell behavior as the CLI.
 
-For clients using an `mcpServers` configuration, a source checkout can be launched like this; adapt configuration keys to your client:
+For clients using an `mcpServers` configuration, launch the pinned registry package like this; adapt configuration keys to your client:
 
 ```json
 {
   "mcpServers": {
     "failtrace": {
-      "command": "node",
+      "command": "npx",
       "args": [
-        "/absolute/path/to/FailTrace/dist/cli/index.js",
+        "--yes",
+        "failtrace@0.6.0",
         "mcp",
         "--cwd",
         "/absolute/path/to/project"
@@ -175,7 +177,7 @@ For clients using an `mcpServers` configuration, a source checkout can be launch
 }
 ```
 
-Use paths for your machine; Windows JSON paths can use forward slashes such as `C:/projects/FailTrace/dist/cli/index.js`. The CLI and Core work independently of MCP. Algorithms live in Core, and the adapter makes direct Core calls.
+Use an absolute project path. Pinning the version prevents an unnoticed schema change, and `--yes` prevents an interactive npm prompt from blocking stdio startup. Use `npx.cmd` when a native Windows client does not resolve npm's command shim. For a preinstalled fallback, run `npm install --global failtrace@0.6.0` and configure `failtrace` (`failtrace.cmd` on Windows) with the remaining arguments. The CLI and Core work independently of MCP. Algorithms live in Core, and the adapter makes direct Core calls. See the [client-specific setup and inspection examples](AGENT-WORKFLOWS.md).
 
 ## Artifacts and exit codes
 
