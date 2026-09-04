@@ -139,7 +139,7 @@ Ask the agent:
 
 The server exposes `failtrace_run`, `failtrace_compare`, `failtrace_bisect`, `failtrace_minimize`, and `failtrace_bundle`. A client may add a server prefix to their displayed names.
 
-The unreleased source version adds optional `concurrency` to `failtrace_run`; it defaults to `1` and is not accepted by bisect/minimize. Overlapping commands can change failure probability through shared resources. Returned trials stay sorted by index. The public 0.3.1 package predates this option; see [performance guidance](PERFORMANCE.md).
+Version 0.4.0 adds optional `concurrency` to `failtrace_run`; it defaults to `1` and is not accepted by bisect/minimize. Overlapping commands can change failure probability through shared resources. Returned trials stay sorted by index. Versions through 0.3.1 predate this option; see [performance guidance](PERFORMANCE.md).
 
 The `failtrace_run` arguments are:
 
@@ -224,7 +224,7 @@ For your own minimization command, read candidate files through `FAILTRACE_INPUT
 
 Provide `good`, `bad`, `command`, `repeat`, and `minFailures`, plus an explicit `predicate` when available. Git is required. Ignored dependencies are absent from the isolated worktree, so account for the target's setup before launching a lengthy investigation. Preserve reset/clean isolation and keep any package-manager download cache outside the temporary worktree; see the [cache guide](PERFORMANCE.md#dependency-setup-during-bisect).
 
-In the unreleased source version, bisect/minimize trials remain sequential but stop once matches reach `minFailures`, or matches plus remaining trials cannot reach it. `repeat` is the maximum budget for each baseline/candidate/final check. A decided run can contain fewer trials without being interrupted. Check its `decision` and the operation's assessment; the observed rate is not an unbiased estimate from the full budget. Minimization still executes an independent final check.
+In 0.4.0 and later, bisect/minimize trials remain sequential but stop once matches reach `minFailures`, or matches plus remaining trials cannot reach it. `repeat` is the maximum budget for each baseline/candidate/final check. A decided run can contain fewer trials without being interrupted. Check its `decision` and the operation's assessment; the observed rate is not an unbiased estimate from the full budget. Minimization still executes an independent final check.
 
 ## Read tool results correctly
 
@@ -237,7 +237,7 @@ MCP calls return an envelope containing `structuredContent` and a JSON text repr
 - For bisect, inspect `status`, `reason`, and `cleanupError`. An error or inconclusive search does not establish a culprit.
 - For comparison, inspect `stdout.truncated` and `stderr.truncated`; a displayed prefix is not the complete log. SHA-256 comparisons cover the complete streams.
 
-Long MCP lists are sampled. When `trialsOmitted`, `evaluationsOmitted`, or `candidatesOmitted` is non-zero, follow the operation's `metadataPath` and candidate run paths for complete evidence. In the unreleased source version, a run with `trialStorage: "individual"` stores its authoritative trial records in `trials/<index>/result.json`; use the public Core `loadRun` API to reconstruct the full run, or inspect those individual records. Raw running/compact `run.json` need not embed all trials. Use `matchedTrials` for the full target-match count; counting only sampled `failureMatched` entries is not a valid total. Trial stdout/stderr paths are relative to the containing run's `artifactDirectory`; combine them before opening a log with the agent's file tools.
+Long MCP lists are sampled. When `trialsOmitted`, `evaluationsOmitted`, or `candidatesOmitted` is non-zero, follow the operation's `metadataPath` and candidate run paths for complete evidence. In 0.4.0 and later, a run with `trialStorage: "individual"` stores its authoritative trial records in `trials/<index>/result.json`; use the public Core `loadRun` API to reconstruct the full run, or inspect those individual records. Raw running/compact `run.json` need not embed all trials. Use `matchedTrials` for the full target-match count; counting only sampled `failureMatched` entries is not a valid total. Trial stdout/stderr paths are relative to the containing run's `artifactDirectory`; combine them before opening a log with the agent's file tools.
 
 Choose a bounded experiment that fits the client's tool-call timeout. The per-trial `timeoutMs` does not bound the whole operation: repetition, minimization evaluations, setup, and cleanup add time. Client cancellation can leave partial evidence; inspect saved metadata rather than assuming nothing ran.
 

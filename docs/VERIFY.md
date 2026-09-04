@@ -18,7 +18,7 @@ Keep the returned run ID/directory and original input. Confirm that this baselin
 failtrace run "npm test -- checkout" --repeat 50 --timeout 30s --stderr-contains "checkout failed" --json
 ```
 
-Each invocation creates separate evidence. A recorded failure makes `run` exit 1 while still producing JSON; do not chain the baseline and the rest of the investigation with `&&`. These commands use sequential defaults on both published and source versions. If deliberately using source-only concurrency, keep the same setting in both runs and record it.
+Each invocation creates separate evidence. A recorded failure makes `run` exit 1 while still producing JSON; do not chain the baseline and the rest of the investigation with `&&`. These commands use sequential defaults on both published and source versions. If deliberately using concurrency in 0.4.0 or later, keep the same setting in both runs and record it.
 
 Inspect both complete runs before drawing conclusions:
 

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 — 2026-09-05
 
 - Added opt-in `run --concurrency N` and the equivalent Core/MCP run option, keeping sequential execution as the default. Progress follows completion order with explicit trial indices; results remain index-sorted.
 - Bisect/minimize use sequential threshold decisions to avoid unnecessary trials while retaining independent final minimization verification. Regular runs still attempt the full requested count.

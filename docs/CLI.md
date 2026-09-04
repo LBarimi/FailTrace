@@ -2,7 +2,7 @@
 
 See the [README](../README.md) for installation and the guided demo, and [agent workflows](AGENT-WORKFLOWS.md) for client setup.
 
-Concurrency, classification early stopping, and metadata reconstruction below describe unreleased source changes. The published 0.3.1 package predates these optimizations. See [performance guidance](PERFORMANCE.md).
+Concurrency, classification early stopping, and metadata reconstruction below require 0.4.0 or later. See [performance guidance](PERFORMANCE.md).
 
 ## Repeat and identify a failure
 
