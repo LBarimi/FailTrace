@@ -1,4 +1,4 @@
-import { access, readdir, writeFile } from 'node:fs/promises';
+import { access, readdir, realpath, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -40,7 +40,9 @@ describe('concurrent trials', () => {
     expect(run.concurrency).toBe(2);
     expect(run.trials.map(({ index }) => index)).toEqual([1, 2, 3, 4]);
     expect(run.statistics).toMatchObject({ total: 4, passed: 4 });
-    expect(await loadRun(run.artifactDirectory)).toEqual(run);
+    expect(await loadRun(run.artifactDirectory)).toEqual({
+      ...run, artifactDirectory: await realpath(run.artifactDirectory),
+    });
   });
 
   it('cancels every active process and schedules no replacement trials', async () => {

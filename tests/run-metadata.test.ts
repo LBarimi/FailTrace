@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { mkdir, readFile, readdir, rm, stat, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, realpath, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -54,7 +54,9 @@ await runTrials({ command: ${JSON.stringify(fixtureCommand('pass'))}, repeat: 10
     expect((await stat(join(run.artifactDirectory, 'run.json'))).size).toBeLessThan(10_000);
     const raw = JSON.parse(await readFile(join(run.artifactDirectory, 'run.json'), 'utf8'));
     expect(raw).toMatchObject({ schemaVersion: 2, trialStorage: 'individual', trialCount: 3, trials: [] });
-    expect(await loadRun(run.artifactDirectory)).toEqual(run);
+    expect(await loadRun(run.artifactDirectory)).toEqual({
+      ...run, artifactDirectory: await realpath(run.artifactDirectory),
+    });
     await rm(join(run.artifactDirectory, 'trials', '002', 'result.json'));
     await expect(loadRun(run.artifactDirectory)).rejects.toThrow();
     // A metadata write error must not prevent access to other durable records.
