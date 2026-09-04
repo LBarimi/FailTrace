@@ -1,0 +1,22 @@
+# Dependencies and build output
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+*.tgz
+
+# Local failure evidence, caches, and temporary output
+.failtrace/
+.cache/
+.tmp/
+*.log
+
+# Local secrets and editor/OS state
+.env
+.env.*
+!.env.example
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
