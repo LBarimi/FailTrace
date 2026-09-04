@@ -3,9 +3,11 @@ import { dirname, join, resolve } from 'node:path';
 import { createRunDirectory, writeJsonAtomic } from './artifacts.js';
 import { runTrial } from './runner.js';
 import { aggregateStatistics } from './statistics.js';
+import { captureEnvironment } from './environment.js';
+import { DEFAULT_PREDICATE, matchesFailure, validatePredicate } from './predicates.js';
 import type { RunOptions, RunSummary } from './types.js';
 
-export const VERSION = '0.1.0';
+export const VERSION = '0.2.0';
 export const DEFAULT_REPEAT = 10;
 export const DEFAULT_TIMEOUT_MS = 30_000;
 
@@ -21,6 +23,8 @@ export function validateRunOptions(options: RunOptions): void {
   if (!Number.isSafeInteger(timeout) || timeout < 1 || timeout > 2_147_483_647) {
     throw new Error('Timeout must be a positive integer from 1 to 2147483647 milliseconds.');
   }
+  validatePredicate(options.predicate);
+  captureEnvironment(options.captureEnv, options.env);
 }
 
 /** Run sequential trials; target failures are results, infrastructure failures reject. */
@@ -44,6 +48,8 @@ export async function runTrials(options: RunOptions): Promise<RunSummary> {
     artifactDirectory: directory,
     trials: [],
     statistics: aggregateStatistics([]),
+    predicate: options.predicate ?? DEFAULT_PREDICATE,
+    environment: captureEnvironment(options.captureEnv, options.env),
   };
   const metadataPath = join(directory, 'run.json');
   await writeJsonAtomic(metadataPath, summary);
@@ -60,10 +66,21 @@ export async function runTrials(options: RunOptions): Promise<RunSummary> {
         ...(options.signal === undefined ? {} : { signal: options.signal }),
       });
       summary.trials.push(trial);
+      let predicateError: unknown;
+      try {
+        trial.failureMatched = await matchesFailure(trial, directory, summary.predicate);
+        if (trial.terminationReason === 'exit' && !trial.spawningFailed) {
+          trial.status = trial.failureMatched ? 'failed' : 'passed';
+        }
+      } catch (error) {
+        predicateError = error;
+        trial.error = `Failure predicate evaluation failed: ${String(error)}`;
+      }
       summary.statistics = aggregateStatistics(summary.trials);
       await writeJsonAtomic(join(directory, dirname(trial.stdoutPath), 'result.json'), trial);
       await writeJsonAtomic(metadataPath, summary);
-      options.onTrialComplete?.(trial);
+      if (predicateError) throw predicateError;
+      options.onTrialComplete?.({ ...trial });
       if (trial.status === 'interrupted') break;
     }
     summary.status = options.signal?.aborted || summary.trials.some((trial) => trial.status === 'interrupted')

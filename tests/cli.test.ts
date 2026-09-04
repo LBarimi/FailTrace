@@ -46,7 +46,7 @@ describe('CLI argument parsing', () => {
   });
 
   it.each([
-    ['run'], ['run', ''], ['run', 'node', 'example.mjs'], ['compare', 'a', 'b'],
+    ['run'], ['run', ''], ['run', 'node', 'example.mjs'],
     ['run', 'node example.mjs', '--unknown'], ['run', 'node example.mjs', '--repeat'],
     ['run', 'node example.mjs', '--timeout'],
   ])('rejects malformed invocation %j', (...args) => {

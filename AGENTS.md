@@ -9,13 +9,14 @@
 - Preserve Windows, macOS, and Linux compatibility, especially shell quoting, paths, signals, and process-tree cleanup.
 - Update README.md when user-visible behavior changes. Never advertise planned features as implemented.
 - Keep generated FailTrace artifacts inside `.failtrace/` by default. Never overwrite unrelated project files.
-- Do not add roadmap features unless explicitly requested. Milestone 1 is command repetition, evidence, and statistics.
+- Work only on requested milestones. Milestones 1–6 are currently authorized: repetition, failure predicates/comparison, regression isolation, minimization, reproduction bundles, and a thin MCP adapter.
 - Do not add SaaS, cloud, database, authentication, telemetry, AI API, or LLM SDK functionality.
 
 ## Layout
 
 - `src/core`: execution, orchestration, statistics, artifacts, and public types.
 - `src/cli`: argument parsing and terminal presentation only.
+- `src/mcp`: official MCP SDK adapter; algorithms must stay in Core. Reserve stdout for protocol messages.
 - `tests`: deterministic unit and integration tests; no external network calls.
 - `examples`: small runnable demonstrations.
 

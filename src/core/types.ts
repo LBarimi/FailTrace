@@ -1,6 +1,22 @@
 export type TrialStatus = 'passed' | 'failed' | 'timed_out' | 'spawn_error' | 'interrupted';
 export type TerminationReason = 'exit' | 'signal' | 'timeout' | 'spawn_error' | 'interrupted';
 
+/** A single, explicit target failure rule. Text predicates match decoded UTF-8 output. */
+export type FailurePredicate =
+  | { kind: 'nonzero_exit' }
+  | { kind: 'exit_code'; value: number }
+  | { kind: 'stdout_contains' | 'stderr_contains'; value: string }
+  | { kind: 'stdout_regex' | 'stderr_regex'; pattern: string; flags?: string };
+
+export interface EnvironmentSnapshot {
+  platform: NodeJS.Platform;
+  arch: string;
+  nodeVersion: string;
+  shell: string;
+  /** Only explicitly selected environment keys are recorded. */
+  variables: Record<string, string | null>;
+}
+
 /** Output paths are relative to the containing run's artifactDirectory. */
 export interface TrialResult {
   index: number;
@@ -17,6 +33,8 @@ export interface TrialResult {
   error?: string;
   stdoutPath: string;
   stderrPath: string;
+  /** Whether the configured predicate matched; absent in older artifacts. */
+  failureMatched?: boolean;
 }
 
 export interface RunStatistics {
@@ -43,6 +61,10 @@ export interface RunSummary {
   trials: TrialResult[];
   statistics: RunStatistics;
   error?: string;
+  predicate?: FailurePredicate;
+  environment?: EnvironmentSnapshot;
+  /** Immutable source provenance for runs executed in temporary Git worktrees. */
+  source?: { kind: 'git'; repository: string; commit: string; subdirectory: string };
 }
 
 export interface RunOptions {
@@ -55,6 +77,8 @@ export interface RunOptions {
   env?: NodeJS.ProcessEnv;
   signal?: AbortSignal;
   onTrialComplete?: (trial: TrialResult) => void;
+  predicate?: FailurePredicate;
+  captureEnv?: string[];
 }
 
 /** Internal execution contract; paths returned in TrialResult are run-relative. */

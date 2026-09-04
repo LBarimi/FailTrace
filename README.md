@@ -27,6 +27,7 @@ Results
   Trials         20 / 20
   Passed         13
   Failed         7
+  Matched        7
   Failure rate   35.0%
 
 Duration
@@ -41,13 +42,13 @@ Artifacts:
 .failtrace/runs/<run-id>
 ```
 
-*Representative output; durations and results depend on the target command.*
+*Representative output; timings and results depend on the target command.*
 
-**Available now:** sequential command repetition, per-trial timeouts, interruption handling, failure statistics, and inspectable output artifacts. Isolation and minimization are future milestones.
+**Available now:** repeat commands, define failure predicates, compare saved output, isolate sampled regressions, minimize inputs, create local reproduction bundles, and expose the same Core engine through MCP.
 
 ## Quick start
 
-Requires **Node.js 22.12 or newer** and npm. Install from source:
+Requires **Node.js 22.12 or newer**, npm, and Git for regression isolation and bundling its candidate runs. Install from source:
 
 ```sh
 git clone https://github.com/LBarimi/FailTrace.git
@@ -58,128 +59,214 @@ npm link
 failtrace run "node examples/flaky-demo.js" --repeat 10
 ```
 
-The demo always produces **7 passes, 3 failures, and a 30.0% failure rate**. It exits with code `1` because the target failures were reproduced. Run it from the repository directory.
+The demo produces **7 passes, 3 failures, and a 30.0% failure rate**. Exit code `1` means target failures were recorded. Run it from the repository directory; there is no random generator or persisted counter.
 
-To use the build without linking:
-
-```sh
-node dist/cli/index.js run "node examples/flaky-demo.js" --repeat 10
-```
-
-These instructions use the source checkout; they do not require a published npm release.
+Without linking, replace `failtrace` with `node dist/cli/index.js`. These instructions use the source checkout and require no published npm release.
 
 ## Why FailTrace?
 
-Running a test once tells you what happened once. Repeating it by hand leaves you with scattered logs and an uncertain failure rate.
+Running a test once tells you what happened once. Repeating it by hand leaves scattered logs and an uncertain failure rate. Coding agents face the same repetitive work when they test a suspected regression or remove pieces of a reproducing input.
 
-FailTrace handles the repetitive experimental work: execute the same command, preserve each result, and report how often it failed and how long it took. A developer or coding agent can inspect one run directory instead of collecting dozens of terminal sessions. No AI API, account, server, or external service is involved.
+FailTrace executes those experiments, preserves evidence, and reports structured results. A developer or agent can inspect one artifact directory instead of collecting dozens of terminal sessions. Algorithms run locally; no AI API, account, cloud service, or telemetry is involved.
 
-A **trial** is one target-command execution. A **run** is the collection of trials created by one FailTrace invocation.
+A **trial** is one target-command execution. A **run** collects trials for one command. A **failure predicate** identifies the target failure you want to investigate.
 
-## CLI usage
+## Repeat and identify a failure
 
 ```sh
 failtrace run "<command>" [--repeat N] [--timeout DURATION]
-failtrace --help
-failtrace --version
+failtrace run "npm test" --repeat 20 --stderr-contains "checkout failed"
+failtrace run "npm test" --exit-code 7 --capture-env NODE_ENV,TZ --json
 ```
 
-| Option | Default | Meaning |
-| --- | --- | --- |
-| `--repeat N` | `10` | Positive safe integer; trials run sequentially. |
-| `--timeout DURATION` | `30s` | Positive per-trial limit, such as `500ms`, `30s`, or `2m`. |
-| `--help`, `-h` | | Show usage. |
-| `--version`, `-v` | | Show the FailTrace version. |
+| Option | Meaning |
+| --- | --- |
+| `--repeat N` | Positive trial count; default `10` for run, `5` for bisect, `1` for minimize. |
+| `--timeout DURATION` | Per-trial timeout, default `30s`; supports `ms`, `s`, and `m`. |
+| `--exit-code N` | Match exactly this exit code, including `0`. |
+| `--stdout-contains TEXT`, `--stderr-contains TEXT` | Match a UTF-8 substring. |
+| `--stdout-regex REGEX`, `--stderr-regex REGEX` | Match a JavaScript regex; optional `--regex-flags` supports `i`, `m`, `s`, `u`. |
+| `--capture-env KEY1,KEY2` | On `run`, record only these selected environment values. |
+| `--cwd DIRECTORY` | Resolve working paths from this directory. |
+| `--json` | Emit one JSON result on stdout with no terminal progress; supported on all investigation commands. |
 
-Timeouts without a suffix use milliseconds. Fractional units such as `1.5s` are accepted if they resolve to whole milliseconds. The maximum is `2147483647ms`. Options also accept `--repeat=20` and `--timeout=30s`.
+Choose one predicate. The default matches non-zero exits. A trial that exits normally passes when the predicate does not match, even if a custom predicate ignores its non-zero exit. Timeouts, spawn failures, signals, and interrupted trials remain failed execution outcomes; they never establish that a specific target predicate matched. `Matched` reports actual predicate matches, while `Failed` includes execution failures.
+
+Substring checks stream output. Regex checks have a **16 MiB output limit** and a **one-second evaluation budget** in a worker; exceeding either produces an explicit investigation error. Use a substring for large logs.
+
+Bare timeout numbers mean milliseconds. Fractional units such as `1.001s` are accepted when they resolve to whole milliseconds, up to `2147483647ms`. Options accept `--repeat=20` syntax. To match text beginning with `--`, use `--stderr-contains=--example`.
+
+Quote the entire target command. The platform shell evaluates it in the selected directory: normally `cmd.exe` on Windows and `/bin/sh` on macOS/Linux. Inner quoting, shell operators, and variable syntax follow that shell. Put complicated commands in a script. Commands inherit your permissions and environment, receive no interactive stdin, and write stdout/stderr to artifact files.
+
+Ctrl+C stops new trials, cleans up the active process tree when possible, preserves metadata, and prints a partial summary. Statistics cover recorded trials, including an interrupted active trial; unstarted trials are excluded. Durations include cleanup, so a timed-out trial can take slightly longer than its configured limit. Failure rate is an observed proportion, not a confidence estimate.
+
+## Compare evidence
 
 ```sh
-failtrace run "npm test -- checkout" --repeat 20
-failtrace run "npm test" --repeat 5 --timeout 2m
-failtrace run "node examples/flaky-demo.js" --repeat 10 --timeout 5s
+failtrace compare <run-id>
+failtrace compare <run-a> <run-b> --trial-a 1 --trial-b 2
+failtrace compare <run-id> --max-lines 100 --max-bytes 65536 --json
 ```
 
-Quote the entire target command so its arguments remain together. FailTrace passes it to the platform shell in your current directory: normally `cmd.exe` on Windows and `/bin/sh` on macOS/Linux. Inner quoting, shell operators, and environment-variable syntax follow that shell. For complicated commands, put the logic in a script and run the script. Commands execute with your normal permissions and inherited environment. They receive no interactive stdin; stdout and stderr go to artifact files.
+With one run, comparison selects its first passing and first failing trial. With two runs, it selects the first trial in each. Explicit trial indices override either selection. References can be a run ID, run directory, or `run.json` path.
 
-The process must exit with code `0` to pass. Non-zero exit codes, signals, timeouts, spawn errors, and interrupted active trials count as failures. A missing command usually appears as the shell's non-zero exit; failure to start the shell itself is a distinct spawn error. Timeouts and interruptions are labeled separately in the terminal and metadata.
+Results include aggregate failure-rate changes, command/predicate changes, selected environment changes, stdout/stderr byte counts, full-stream SHA-256 hashes, and bounded line-aligned differences. Default limits are 200 displayed lines and a 64 KiB prefix per stream; truncation is explicit. This is an inspectable positional diff, not a semantic comparison or an optimal edit script. Matching hashes still compare the complete files.
 
-| FailTrace exit code | Meaning |
+## Isolate a regression
+
+```sh
+failtrace bisect --good v1.0.0 --bad HEAD --command "npm test" --repeat 10 --min-failures 3 --stderr-contains "checkout failed"
+```
+
+FailTrace verifies the good and bad endpoints, then searches **the bad revision's first-parent history** in a separate temporary Git worktree. It leaves the user's checkout and uncommitted changes in place. Each candidate uses repeated trials; `--min-failures` is the number of predicate matches required to classify it as reproducing.
+
+The search assumes a **monotonic sampled failure boundary** on that history. Repeated trials help measure flaky behavior but do not provide statistical confidence or detect every intermittent regression. Invalid endpoints, execution problems, or interruption produce an inconclusive/partial result instead of a claimed first bad commit.
+
+Candidate runs and `bisect.json` remain under `.failtrace/bisects/<id>/`. Git worktrees do not include ignored dependencies or uncommitted source changes. Include any needed setup in the command or arrange it for each checkout; setup can make the investigation expensive. The temporary worktree is removed on clean completion, and cleanup errors are reported.
+
+## Minimize a reproduction
+
+```sh
+failtrace minimize --input examples/advanced-input.json --format json --command "node examples/advanced-demo.js" --stderr-contains "BUG reproduced"
+```
+
+This deterministic example reduces a six-element array to `["BUG"]`, preserving the original file. The command reads each candidate from `FAILTRACE_INPUT`. It reports a known message only for the intended failure, avoiding acceptance of unrelated syntax or setup errors.
+
+| Format | Input and reduction behavior |
 | --- | --- |
-| `0` | All completed trials passed. |
-| `1` | At least one target trial failed, timed out, or could not start. |
-| `2` | Invalid usage or an internal error, such as artifact write failure. |
-| `130` | Interrupted by Ctrl+C / SIGINT. |
-| `143` | Interrupted by SIGTERM. |
+| `text` (default) | A UTF-8 file; remove lines, then Unicode characters. |
+| `json` | A JSON file; remove array elements and object members recursively. Scalar values are retained. |
+| `files` | A dedicated input directory; remove whole files and preserve relative paths. The command receives `FAILTRACE_INPUT_DIR`. |
+| `env` | A JSON object of portable variable names and string values; remove selected variables from the target environment. Removed keys are explicitly unset. |
 
-Ctrl+C stops new trials, terminates the active trial when possible, saves the results, and prints a partial summary. Statistics cover recorded trials, including an interrupted active trial; trials that never started are excluded. Failure rate is the failed count divided by recorded trials, with zero used for an empty run. Durations use elapsed wall-clock time per recorded trial, including failed trials and process cleanup. A timed-out trial can therefore take slightly longer than its configured limit.
+Reported units are Unicode characters, JSON tree nodes, files, or environment keys, respectively. Text, JSON, and environment candidates also expose `FAILTRACE_INPUT`. File-set commands must read the copied directory through `FAILTRACE_INPUT_DIR`, rather than the original input path. Other working-directory files and unselected environment variables remain available.
 
-## Deterministic demo
+Use `--repeat N --min-failures K` to require repeated reproduction. The default evaluation budget is `--max-evaluations 200`, including baseline and final verification. Candidates are accepted only when the selected predicate still reproduces in clean trials. Original input, each candidate, its runs, the selected reduction, and `result.json` are retained under `.failtrace/minimizations/<id>/`.
 
-The tiny [demo](examples/flaky-demo.js) fails every third trial. FailTrace supplies `FAILTRACE_TRIAL_INDEX`, starting at `1` for each run. There is no random number generator or persisted counter, so repeat recordings produce the same pass/fail sequence:
+Check both `status` and `finalVerified`. A budget-limited result may still have a verified reduction; it does not mean the search finished. Completed reductions are local to the supported removal operations and the sampled outcomes, with no global-smallest guarantee. An explicit failure predicate is strongly recommended: a generic non-zero exit can match an unrelated failure introduced by reduction.
 
-```text
-Trial   01  02  03  04  05  06  07  08  09  10
-Result   P   P   F   P   P   F   P   P   F   P
+## Create a portable local bundle
+
+```sh
+failtrace bundle <run-id> --file examples/flaky-demo.js
+failtrace bundle <final-run-directory> --file examples/advanced-demo.js --file package.json --input <minimized-input-path>
 ```
 
-Run the quick-start command to get an immediate terminal demo suitable for a screenshot or GIF. Real commands are unchanged except for the supplied trial-index environment variable; their behavior may still depend on shared state, clocks, and external systems.
-
-## Artifacts
-
-Every run gets a collision-resistant directory under the current project's `.failtrace/runs/`:
+For the second command, use the printed final run and minimized input paths, or `final.runDirectory` and `minimizedPath` from the JSON result. The bundle replays the final command with the minimized input.
 
 ```text
-.failtrace/
-  runs/
-    <run-id>/
-      run.json
-      trials/
-        001/
-          result.json
-          stdout.txt
-          stderr.txt
-        002/
-          result.json
-          stdout.txt
-          stderr.txt
+.failtrace/reproduction/<id>/
+  README.md
+  repro.json
+  repro.mjs
+  repro.sh
+  repro.cmd
+  engine/       Included compiled FailTrace Core and license
+  source/       Explicitly selected source files
+  input/        Optional selected input file or directory
+  logs/         Original run evidence
 ```
 
-`run.json` records the schema and FailTrace versions, command, working directory, requested trials, timeout, timestamps, run status, trial metadata, and aggregate statistics. Each `result.json` records its index, command, timestamps, duration, exit code, signal, status, timeout/spawn indicators, termination reason, output paths, and an error message when available.
+Copy the directory to another location and run `node repro.mjs`, `sh repro.sh`, or `repro.cmd`. The included engine needs only Node.js; **install the target's own dependencies and external tools separately** as its bundle README explains. Replay runs from `source/`, restores the recorded predicate/count/timeout, relocates the selected input, and saves new evidence under `replay-artifacts/`. It reports actual target-predicate matches, not arbitrary command errors.
 
-Output streams directly to `stdout.txt` and `stderr.txt`; JSON references the files instead of duplicating output. Trial output paths are relative to the run's `artifactDirectory`. Metadata is written using a temporary file followed by a rename, and completed trial artifacts are retained after interruption.
+Source files are opt-in through repeatable `--file` options and retain their paths relative to the original run's working directory. Selected paths must be regular files; symlinks and traversal are rejected. `--input` accepts a file or directory. `--output` chooses a new destination, which must not already exist. Creation never executes the target or overwrites an existing bundle. Importing `repro.mjs` also does not execute it.
 
-Artifacts are local, inspectable, and safe to delete when no run is active. `.failtrace/` is ignored by Git. Target output can contain whatever your command prints, so inspect artifacts before sharing them.
+Bisect candidate runs record their local repository and immutable commit. Bundling one of these run paths reads explicitly selected committed regular files from that commit, even after its temporary worktree has been removed. The local repository must still contain the commit; this performs no network fetch or dependency installation. Symlinks, submodules, and untracked files are unsupported for commit-based source selection.
 
-## Programmatic Core API
+Use `--command "node relative-script.js"` when the original command contains machine-specific absolute paths. The bundle defaults to explicitly selected environment snapshot values; `--env-file` supplies a JSON object of string/null overrides instead. Null unsets a key. When bundling an environment minimization, include null values for removed original keys so the recipient's environment cannot reintroduce them. Inspect selected values and original logs for private data before sharing.
 
-The reusable engine lives in `src/core`. After building, code in the repository can use it directly:
+## MCP for coding agents
 
-```ts
-import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import { runTrials } from './dist/core/index.js';
+```sh
+failtrace mcp --cwd /absolute/path/to/project
+```
 
-const controller = new AbortController();
-const summary = await runTrials({
-  command: 'node examples/flaky-demo.js',
-  repeat: 10,
-  timeoutMs: 5_000,
-  signal: controller.signal,
-  onTrialComplete: (trial) => console.log(trial.index, trial.status),
-});
+The stdio adapter uses the official Model Context Protocol SDK and exposes five tools:
 
-console.log(summary.statistics);
-const failure = summary.trials.find((trial) => trial.status !== 'passed');
-if (failure) {
-  console.log(await readFile(join(summary.artifactDirectory, failure.stderrPath), 'utf8'));
+| Tool | Core operation |
+| --- | --- |
+| `failtrace_run` | Repeat commands with predicates and evidence. |
+| `failtrace_compare` | Compare saved runs or trial outputs. |
+| `failtrace_bisect` | Search a sampled first-parent regression boundary. |
+| `failtrace_minimize` | Reduce a reproducing input. |
+| `failtrace_bundle` | Create a local reproduction directory. |
+
+Tools have typed input schemas, structured results, artifact paths, and cancellation support. Target failures are returned as evidence. Large result lists are summarized, with complete metadata kept in artifacts. stdout is reserved for protocol messages; diagnostics go to stderr. The server runs locally with the same permissions and shell behavior as the CLI.
+
+For clients using an `mcpServers` configuration, a source checkout can be launched like this; adapt configuration keys to your client:
+
+```json
+{
+  "mcpServers": {
+    "failtrace": {
+      "command": "node",
+      "args": [
+        "/absolute/path/to/FailTrace/dist/cli/index.js",
+        "mcp",
+        "--cwd",
+        "/absolute/path/to/project"
+      ]
+    }
+  }
 }
 ```
 
-Core also accepts `cwd`, `env`, and `artifactsDir` (the parent of `runs/`, defaulting to `<cwd>/.failtrace`). Output is exposed through paths, keeping large logs out of memory. Use an `AbortSignal` to cancel; Core does not install process-global signal listeners. Target failures are returned as data. Invalid configuration and FailTrace's own operational errors reject the call.
+Use paths for your machine; Windows JSON paths can use forward slashes such as `C:/projects/FailTrace/dist/cli/index.js`. The CLI and Core work independently of MCP. Algorithms live in Core, and the adapter makes direct Core calls.
 
-## Development
+## Artifacts and exit codes
 
-Read [AGENTS.md](AGENTS.md) and this README before changing code.
+Each run uses a collision-resistant `.failtrace/runs/<run-id>/` directory:
+
+```text
+run.json
+trials/001/result.json
+trials/001/stdout.txt
+trials/001/stderr.txt
+trials/002/...
+```
+
+Run metadata includes schema/version, command, working directory, count, timeout, predicate, platform/runtime snapshot, selected environment values, timestamps, trials, and statistics. Trial metadata includes exit/signal, duration, timeout/spawn indicators, termination reason, predicate match, and output paths. Output streams to files instead of being duplicated in JSON; trial paths are relative to the run directory. JSON is written to a temporary file and renamed into place.
+
+`.failtrace/` is ignored by Git. Saved artifacts can be removed when their investigations are inactive. Reading run metadata has a 32 MiB limit; very large run counts may exceed it. Output files have no size cap and can consume significant disk space.
+
+| Exit code | Meaning |
+| --- | --- |
+| `0` | A run has no failed outcomes; comparison/bundle succeeded; bisect found a boundary; or minimization completed and passed final verification. |
+| `1` | `run` recorded a failed trial. Bundle replay uses `1` when the target predicate reproduces. |
+| `2` | Invalid usage, an internal error, or an inconclusive/incomplete investigation, including evaluation limits. |
+| `130`, `143` | Interrupted by SIGINT/Ctrl+C or SIGTERM. |
+
+## Core API and development
+
+```ts
+import { runTrials, compareRuns, minimizeFailure, createBundle } from './dist/core/index.js';
+
+const run = await runTrials({
+  command: 'node examples/flaky-demo.js',
+  repeat: 10,
+  timeoutMs: 5_000,
+  predicate: { kind: 'exit_code', value: 1 },
+  onTrialComplete: (trial) => console.log(trial.index, trial.status),
+});
+const comparison = await compareRuns({ runA: run.artifactDirectory });
+const reduction = await minimizeFailure({
+  command: 'node examples/advanced-demo.js',
+  input: 'examples/advanced-input.json',
+  format: 'json',
+  predicate: { kind: 'stderr_contains', value: 'BUG reproduced' },
+});
+if (reduction.finalVerified && reduction.final) {
+  await createBundle({
+    run: reduction.final.runDirectory,
+    files: ['examples/advanced-demo.js', 'package.json'],
+    input: reduction.minimizedPath,
+  });
+}
+```
+
+Core also exports `bisectRegression`, public option/result types, `loadRun`, and predicate helpers. Investigation operations accept `AbortSignal`; Core installs no process-global signal listeners. `runTrials` accepts `cwd`, `env`, `captureEnv`, and `artifactsDir`. Target outcomes are data. Invalid input and operational errors can reject; inspect returned status fields too, because bisect preserves investigation errors as a result with `status: 'error'`. Read stdout/stderr by joining a trial's relative output path with its run's `artifactDirectory`.
+
+Read [AGENTS.md](AGENTS.md) before changing code, then verify:
 
 ```sh
 npm install
@@ -190,40 +277,26 @@ node dist/cli/index.js run "node examples/flaky-demo.js" --repeat 10
 ```
 
 ```text
-src/
-  core/       Execution, orchestration, statistics, artifacts, public types
-  cli/        Argument parsing, terminal output, process signal handling
-tests/        Deterministic unit and integration tests
-examples/     Small runnable demonstrations
+src/core/    Execution, predicates, statistics, artifacts, compare, bisect,
+             minimization, bundles, and public types
+src/cli/     Argument parsing, terminal presentation, process signals
+src/mcp/     Official SDK stdio adapter
+tests/       Deterministic local unit/integration tests; no external network
+examples/    Runnable repetition and minimization demonstrations
 ```
 
-The project uses strict TypeScript, Node.js built-ins, and Vitest. CLI depends on Core; Core never imports CLI code. Tests use local deterministic fixtures and make no external network calls.
+Strict TypeScript and Node.js built-ins keep Core small. Vitest verifies behavior, including local Git repositories, moved reproduction bundles, and a real MCP client. CI runs on Windows, macOS, and Linux with Node.js 22 and 24.
 
-## Philosophy and current limits
+## Philosophy, limits, and next work
 
-- Local-first, deterministic orchestration with readable JSON and text evidence.
-- Small modules and explicit data structures; dependencies and abstractions must solve a current problem.
-- One command, one working directory, sequential trials. FailTrace does not reset files, databases, or other target state between trials.
-- Failure currently means anything other than a successful exit. There are no custom predicates or automatic stdout/stderr comparisons yet.
-- The observed failure rate is a sample statistic, not a confidence estimate or proof that a command is reliable.
-- Process-tree cleanup is best effort: process groups on macOS/Linux and `taskkill` on Windows. Detached or escaped descendants may survive. Force-killing FailTrace itself or losing power cannot produce the same clean finalization as Ctrl+C.
-- Output is streamed to disk without a size cap. Long runs or verbose commands can consume significant disk space.
-- Target commands still need shell syntax appropriate for their platform. No isolation, sandbox, or portable environment capture is provided.
+All six initial milestones are implemented: repetition, predicates/comparison, regression isolation, minimization, reproduction bundles, and MCP. The next useful work is hardening these workflows against real-world projects and improving evidence quality.
 
-## Roadmap — planned, not implemented
-
-| Milestone | Direction |
-| --- | --- |
-| **1 — Available now** | Command repetition, evidence, timeouts, interruption, and statistics. |
-| **2 — Failure predicates and comparison** | Specific exit codes, text/regex matching, PASS vs FAIL output comparison, environment snapshots; `failtrace compare`. |
-| **3 — Regression isolation** | `failtrace bisect` with repeated trials at candidate commits to investigate flaky regressions. |
-| **4 — Failure minimization** | Delta-debugging-inspired reduction of text, JSON, arrays, files, test cases, and environment variables. Accept a reduction only while the target failure still reproduces. |
-| **5 — Reproduction bundles** | Portable reproduction instructions, configuration, scripts, inputs, and logs under `.failtrace/reproduction/`. |
-| **6 — MCP** | A thin adapter exposing stable Core capabilities to MCP-compatible coding agents. |
-
-Future MCP tools may include `failtrace_run`, `failtrace_compare`, `failtrace_bisect`, `failtrace_minimize`, and `failtrace_bundle`. Algorithms will remain in Core. There is no MCP server in the current release.
-
-There are no plans in milestone 1 for SaaS, cloud storage, authentication, telemetry, AI API calls, a web UI, or a plugin framework.
+- Local-first, inspectable JSON/text evidence and deterministic orchestration. Target commands themselves may remain flaky or stateful.
+- Commands run sequentially. FailTrace does not reset target files, databases, dependency installations, clocks, or external services between trials.
+- Process-tree cleanup is best effort: process groups on macOS/Linux and `taskkill` on Windows. Escaped or detached descendants may survive; force-killing FailTrace or losing power cannot guarantee clean metadata finalization.
+- Shell commands and target environments are not automatically portable. Bundles preserve selected files and evidence, not a container or complete machine snapshot.
+- Regression and reduction conclusions depend on the predicate, sample count, threshold, chosen removal operations, and evaluation budget. They are not proofs of global minimality or statistical certainty.
+- No SaaS, cloud storage, authentication, telemetry, AI API calls, web UI, daemon, or speculative plugin framework.
 
 ## License
 

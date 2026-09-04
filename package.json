@@ -1,15 +1,29 @@
 {
   "name": "failtrace",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Reproduce, isolate, and minimize software failures. Built for humans and coding agents.",
   "type": "module",
   "license": "MIT",
-  "engines": { "node": ">=22.12.0" },
-  "bin": { "failtrace": "./dist/cli/index.js" },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "bin": {
+    "failtrace": "./dist/cli/index.js"
+  },
   "main": "./dist/core/index.js",
   "types": "./dist/core/index.d.ts",
-  "exports": { ".": { "types": "./dist/core/index.d.ts", "import": "./dist/core/index.js" } },
-  "files": ["dist", "examples", "README.md", "LICENSE"],
+  "exports": {
+    ".": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "examples",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
@@ -19,13 +33,30 @@
     "demo": "node dist/cli/index.js run \"node examples/flaky-demo.js\" --repeat 10",
     "prepack": "npm run build"
   },
-  "repository": { "type": "git", "url": "git+https://github.com/LBarimi/FailTrace.git" },
-  "bugs": { "url": "https://github.com/LBarimi/FailTrace/issues" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LBarimi/FailTrace.git"
+  },
+  "bugs": {
+    "url": "https://github.com/LBarimi/FailTrace/issues"
+  },
   "homepage": "https://github.com/LBarimi/FailTrace#readme",
-  "keywords": ["debugging", "flaky-tests", "reproduction", "cli", "testing", "coding-agents"],
+  "keywords": [
+    "debugging",
+    "flaky-tests",
+    "reproduction",
+    "cli",
+    "testing",
+    "coding-agents"
+  ],
   "devDependencies": {
+    "@modelcontextprotocol/client": "^2.0.0",
     "@types/node": "^22.0.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "^2.0.0",
+    "zod": "^4.5.4"
   }
 }

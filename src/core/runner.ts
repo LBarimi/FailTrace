@@ -3,6 +3,7 @@ import { mkdir, open, type FileHandle } from 'node:fs/promises';
 import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { terminateProcessTree } from './process-tree.js';
+import { effectiveEnvironment } from './environment.js';
 import type { TrialOptions, TrialResult } from './types.js';
 
 interface ExecutionResult {
@@ -14,22 +15,10 @@ interface ExecutionResult {
 }
 
 function commandEnvironment(options: TrialOptions): NodeJS.ProcessEnv {
-  const environment = { ...process.env };
-  const overrides = {
+  return effectiveEnvironment({
     ...options.env,
     FAILTRACE_TRIAL_INDEX: String(options.index),
-  };
-  for (const [key, value] of Object.entries(overrides)) {
-    // Windows environment keys are case-insensitive. Avoid duplicate PATH/Path
-    // entries, whose ordering would otherwise decide which value Node uses.
-    if (process.platform === 'win32') {
-      for (const inherited of Object.keys(environment)) {
-        if (inherited.toLowerCase() === key.toLowerCase()) delete environment[inherited];
-      }
-    }
-    environment[key] = value;
-  }
-  return environment;
+  });
 }
 
 async function execute(

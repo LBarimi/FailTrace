@@ -1,3 +1,13 @@
 export { runTrials, validateRunOptions, VERSION, DEFAULT_REPEAT, DEFAULT_TIMEOUT_MS } from './run-trials.js';
 export { aggregateStatistics } from './statistics.js';
-export type { RunOptions, RunSummary, RunStatistics, TrialResult, TrialStatus, TerminationReason } from './types.js';
+export { assessRun, validatePredicate, DEFAULT_PREDICATE } from './predicates.js';
+export { loadRun } from './run-reader.js';
+export { compareRuns } from './compare.js';
+export type { CompareOptions, ComparisonResult, OutputComparison } from './compare.js';
+export { bisectRegression } from './bisect.js';
+export type { BisectOptions, BisectResult, BisectCandidate } from './bisect.js';
+export { minimizeFailure } from './minimize.js';
+export type { MinimizeOptions, MinimizeResult, MinimizeEvaluation, MinimizeFormat } from './minimize.js';
+export { createBundle } from './bundle.js';
+export type { BundleOptions, BundleResult } from './bundle.js';
+export type { RunOptions, RunSummary, RunStatistics, TrialResult, TrialStatus, TerminationReason, FailurePredicate, EnvironmentSnapshot } from './types.js';
