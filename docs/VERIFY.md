@@ -1,6 +1,6 @@
 # Verify a proposed fix
 
-**Status: implemented in source, not yet released on npm.** Core `verifyFix`, CLI `verify`, and MCP `failtrace_verify` enforce the same evidence checks. Build this checkout to use them; older published packages can use the manual run/compare procedure below. A minimization's `finalVerified` only says the reduced input still reproduces the defect; it does not verify a code fix.
+**Implemented in 0.5.0.** Core `verifyFix`, CLI `verify`, and MCP `failtrace_verify` enforce the same evidence checks. Versions through 0.4.0 can use the manual run/compare procedure below. A minimization's `finalVerified` only says the reduced input still reproduces the defect; it does not verify a code fix.
 
 ## Capture a baseline, then verify
 
@@ -39,7 +39,7 @@ Context snapshots are taken before and after execution, not continuously. They h
 
 ## Compatibility: full runs before and after a change
 
-The following recipe uses commands available in the published 0.3.1 package and the current source. Replace the example command and failure message with those from your project. Decide the repeat count before observing either result, and keep the input, setup, working directory, timeout and relevant environment the same. Use your project's reset script if trials change external state; sequential execution alone provides no reset or independence guarantee.
+The following compatibility recipe uses commands available in versions through 0.4.0. Replace the example command and failure message with those from your project. Decide the repeat count before observing either result, and keep the input, setup, working directory, timeout and relevant environment the same. Use your project's reset script if trials change external state; sequential execution alone provides no reset or independence guarantee.
 
 Before editing the code:
 
@@ -76,7 +76,7 @@ failtrace compare <baseline-run> <candidate-run> --trial-a <matching-baseline-in
 
 The two-run default selects the first trial of each run, which may not show the relevant failure. Comparison reports output differences, aggregate rates and recorded setting differences; it does not validate the whole experiment, compare every setting, or decide whether the fix worked. Inspect full trial evidence through Core `loadRun`, or the returned JSON and individual result files; a sampled MCP trial list is not a complete denominator. Selected environment snapshots do not capture all runtime state.
 
-For agents using a package without Verify, call `failtrace_run` twice and `failtrace_compare` with `runA`, `runB`, `trialA` and `trialB`. Reuse the exact predicate object and time budget; the caller must perform the checks above.
+For agents using a version through 0.4.0, call `failtrace_run` twice and `failtrace_compare` with `runA`, `runB`, `trialA` and `trialB`. Reuse the exact predicate object and time budget; the caller must perform the checks above.
 
 A suitable report is: "The target matched 14/50 valid baseline trials and 0/50 valid candidate trials under the recorded conditions. All candidate commands exited successfully. The target was not observed in that candidate sample; elimination and statistical improvement have not been established." The counts here illustrate wording, not a measured FailTrace case.
 

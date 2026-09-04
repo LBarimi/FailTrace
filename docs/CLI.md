@@ -4,7 +4,7 @@ See the [README](../README.md) for installation and the guided demo, and [agent 
 
 Concurrency, classification early stopping, and metadata reconstruction below require 0.4.0 or later. See [performance guidance](PERFORMANCE.md).
 
-Verify and baseline context capture are also implemented in source and await a release. Build the checkout to use these new options; they are not in the published 0.3.1 package.
+Verify and baseline context capture require version 0.5.0 or later.
 
 ## Repeat and identify a failure
 
@@ -56,7 +56,7 @@ After modifying code, use the [verification workflow](VERIFY.md). `compare` help
 
 ## Verify a proposed fix
 
-This operation is implemented in source and awaits release. Capture the baseline before editing the selected source, input or setup files:
+This operation requires version 0.5.0 or later. Capture the baseline before editing the selected source, input or setup files:
 
 ```sh
 failtrace run "node reproduce.js" --repeat 20 --stderr-contains "checkout failed" --context-input cases.json --context-setup package-lock.json --context-source reproduce.js --capture-env NODE_ENV,TZ --json
@@ -144,7 +144,7 @@ Use `--command "node relative-script.js"` when the original command contains mac
 failtrace mcp --cwd /absolute/path/to/project
 ```
 
-The stdio adapter uses the official Model Context Protocol SDK. The source exposes the following tools; Verify awaits release:
+The stdio adapter uses the official Model Context Protocol SDK and exposes these tools:
 
 | Tool | Core operation |
 | --- | --- |
@@ -152,7 +152,7 @@ The stdio adapter uses the official Model Context Protocol SDK. The source expos
 | `failtrace_compare` | Compare saved runs or trial outputs. |
 | `failtrace_bisect` | Search a sampled first-parent regression boundary. |
 | `failtrace_minimize` | Reduce a reproducing input. |
-| `failtrace_verify` | Check a candidate using captured baseline context, original predicate and healthy full-budget observations (unreleased). |
+| `failtrace_verify` | Check a candidate using captured baseline context, original predicate and healthy full-budget observations. |
 | `failtrace_bundle` | Create a local reproduction directory. |
 
 Tools have typed input schemas, structured results, artifact paths, and cancellation support. Target failures are returned as evidence. Large result lists are summarized, with complete metadata kept in artifacts. stdout is reserved for protocol messages; diagnostics go to stderr. The server runs locally with the same permissions and shell behavior as the CLI.

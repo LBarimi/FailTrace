@@ -13,10 +13,12 @@ Publish the exact reviewed GitHub release archive to npm using its public HTTPS 
 Replace both `<VERSION>` placeholders with the exact version, without a leading `v`. After the release archive above is public and verified, use:
 
 ```sh
-npm publish "https://github.com/LBarimi/FailTrace/releases/download/v<VERSION>/failtrace-<VERSION>.tgz" --access public --allow-remote=root --ignore-scripts --registry=https://registry.npmjs.org
+npm publish "https://github.com/LBarimi/FailTrace/releases/download/v<VERSION>/failtrace-<VERSION>.tgz" --access public --allow-remote=all --ignore-scripts --registry=https://registry.npmjs.org
 ```
 
-`--allow-remote=root` permits this explicit URL with npm 12 without changing persistent configuration. `--ignore-scripts` disables lifecycle scripts for this publication; the archive has already been built and tested. Complete any required npm account authentication for the publication. Do not change the input to a local path when retrying.
+The command-scoped `--allow-remote=all` permits the verified archive URL during publication without changing persistent configuration. npm 12.0.2 treats the publication archive fetch as non-root, so `--allow-remote=root` fails with `EALLOWREMOTE` even for this explicit URL. This command publishes one reviewed archive; it does not install its dependency tree. Keep the exact HTTPS URL and scope this option to the publication command. The installation examples use their own narrower URL policy.
+
+`--ignore-scripts` disables lifecycle scripts for this publication; the archive has already been built and tested. Complete any required npm account authentication for the publication. Add `--browser=false` when printing a manual authentication link is preferable to opening a browser. Do not change the input to a local path when retrying.
 
 ## Verify the public result
 

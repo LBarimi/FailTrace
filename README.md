@@ -68,7 +68,7 @@ Paths in angle brackets come from the preceding result. If a failed outcome is a
 | “What changed between PASS and FAIL?” | `compare` | Bounded output differences, full hashes, selected environment changes |
 | “Which revision introduced it?” | `bisect` | Repeated candidate trials and a sampled first-parent boundary |
 | “The reproducer is too large.” | `minimize` | Reduced text, JSON/arrays, files, or environment keys; final verification |
-| “Did my code change help?” | `verify` (unreleased source) | Original target observations, execution health and declared context changes; [workflow and older-version fallback](docs/VERIFY.md) |
+| “Did my code change help?” | `verify` | Original target observations, execution health and declared context changes; [workflow and older-version fallback](docs/VERIFY.md) |
 | “Someone else needs the evidence?” | `bundle` | Selected source/input, original evidence, included Core engine, replay scripts |
 
 [Full command reference](docs/CLI.md) · [Runnable examples](examples) · [Implementation and verification](docs/IMPLEMENTATION.md)
@@ -81,7 +81,7 @@ Paths in angle brackets come from the preceding result. If a failed outcome is a
 
 **Predicate → Compare → Bisect → Minimize → Verify → Bundle → MCP**
 
-Predicate, Compare, Bisect, Minimize, Bundle, and the thin MCP adapter are implemented. **Verify is implemented in the source checkout and awaits release** through Core, `failtrace verify`, and `failtrace_verify`. It requires a baseline with captured context, checks healthy completion, and reports finite target observations without claiming elimination. The sequence expresses product emphasis; the existing MCP adapter remains supported. See the [roadmap and status](docs/ROADMAP.md) and [verification workflow and limits](docs/VERIFY.md).
+Predicate, Compare, Bisect, Minimize, Bundle, and the thin MCP adapter are implemented. **Verify is implemented in 0.5.0** through Core, `failtrace verify`, and `failtrace_verify`. It requires a baseline with captured context, checks healthy completion, and reports finite target observations without claiming elimination. The sequence expresses product emphasis; the existing MCP adapter remains supported. See the [roadmap and status](docs/ROADMAP.md) and [verification workflow and limits](docs/VERIFY.md).
 
 ## For coding agents
 
@@ -93,7 +93,7 @@ failtrace mcp --cwd /absolute/path/to/your/project
 
 It exposes `failtrace_run`, `failtrace_compare`, `failtrace_bisect`, `failtrace_minimize`, and `failtrace_bundle`, with typed inputs, structured results, artifact paths, and cancellation. Target failures are ordinary evidence. Large responses retain full metadata on disk; `matchedTrials` reports the complete predicate-match count.
 
-The unreleased source also exposes `failtrace_verify`. Capture context with the baseline run before editing code, then supply an explicit candidate command and working directory. An unrelated syntax/setup error is inconclusive even if it no longer prints the target message. See [agent verification](docs/AGENT-WORKFLOWS.md#recheck-after-a-code-change).
+Version 0.5.0 also exposes `failtrace_verify`. Capture context with the baseline run before editing code, then supply an explicit candidate command and working directory. An unrelated syntax/setup error is inconclusive even if it no longer prints the target message. See [agent verification](docs/AGENT-WORKFLOWS.md#recheck-after-a-code-change).
 
 **[Connect Codex, Claude Code, Cursor, or another MCP client →](docs/AGENT-WORKFLOWS.md)**
 
@@ -107,11 +107,11 @@ The guide includes client configuration, bounded experiments, result interpretat
 
 - Repetition measures observed outcomes under the chosen execution settings. Bisect uses repeated trials and a failure threshold, assuming a monotonic boundary on first-parent history. Early-stopped classification samples are not full-run failure-rate estimates and do not provide statistical confidence.
 - Minimization accepts only reproducing candidates and independently rechecks the result. Check `status` and `finalVerified`; limits and inconclusive runs are reported. Reductions are local to the supported removal operations.
-- Verify in source enforces a full, healthy baseline and candidate sample with explicit context changes. `target_not_observed` means no target match in that sample; it does not establish a statistical improvement or prove the defect gone. Captured file/environment scope does not include all external state.
+- Verify in 0.5.0 enforces a full, healthy baseline and candidate sample with explicit context changes. `target_not_observed` means no target match in that sample; it does not establish a statistical improvement or prove the defect gone. Captured file/environment scope does not include all external state.
 - Bundles include selected files and the Node Core engine. Target dependencies, services, uncaptured environment state, and shell portability still need attention. Creation never executes the bundle.
 - Commands run with your local permissions. Process cleanup is best effort. Logs can contain private output and grow without a size cap; `.failtrace/` is ignored by this repository.
 
-`run` exits `1` when it records failed outcomes; that is useful evidence. The source Verify command uses `0` for healthy target-not-observed evidence, `1` for target observed, and `2` for inconclusive evidence. Invalid usage and incomplete investigations use `2`. Interruptions use `130`/`143`. See the [reference](docs/CLI.md#artifacts-and-exit-codes) for details.
+`run` exits `1` when it records failed outcomes; that is useful evidence. The Verify command uses `0` for healthy target-not-observed evidence, `1` for target observed, and `2` for inconclusive evidence. Invalid usage and incomplete investigations use `2`. Interruptions use `130`/`143`. See the [reference](docs/CLI.md#artifacts-and-exit-codes) for details.
 
 ## Contribute a useful debugging workflow
 

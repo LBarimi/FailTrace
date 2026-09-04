@@ -2,8 +2,8 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.LBarimi/failtrace",
   "title": "FailTrace",
-  "description": "Reproduce, compare, isolate, and minimize software failures with saved evidence.",
-  "version": "0.4.0",
+  "description": "Reproduce failures, isolate their cause, and verify proposed fixes with saved evidence.",
+  "version": "0.5.0",
   "repository": {
     "url": "https://github.com/LBarimi/FailTrace",
     "source": "github"
@@ -14,7 +14,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "failtrace",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "runtimeHint": "npx",
       "transport": {
         "type": "stdio"

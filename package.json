@@ -1,8 +1,8 @@
 {
   "name": "failtrace",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "mcpName": "io.github.LBarimi/failtrace",
-  "description": "Reproduce, isolate, and minimize software failures. Built for humans and coding agents.",
+  "description": "Reproduce, isolate, and minimize failures, then verify proposed fixes.",
   "type": "module",
   "license": "MIT",
   "engines": {

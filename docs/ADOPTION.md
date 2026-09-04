@@ -32,6 +32,8 @@ The primary installation routes are `npx --yes failtrace demo`, `npm install --g
 
 Publication, registration, and successful installation establish distribution and compatibility. They do not establish independent users, recurring agent use, or retention; those outcomes still need voluntary external evidence.
 
+The [0.4.0 release](https://github.com/LBarimi/FailTrace/releases/tag/v0.4.0) ships the performance controls. Its reviewed archive SHA-256 is `950855294fa20d1e1628e658097d98e2947907eb219552006c0344102ec87aba`. On 2026-09-05, unauthenticated npm downloads matched the same archive, publication source fields identified the public HTTPS URL, and a fresh-cache installation exercised CLI/MCP concurrency, Core loading and threshold stopping, the demo, and bundle replay. The matching [MCP Registry record](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.LBarimi%2Ffailtrace/versions/0.4.0) was active. The release source is main commit `0dd3f085594f963d753c8c2c93902b9829f1b70f`.
+
 ## Current priorities
 
 1. **Close the loop after a code change.** Make the existing baseline → change → rerun → compare workflow usable now, with the same failure predicate and comparable input/settings. Dedicated fix verification is the next Core priority; define its evidence requirements, uncertainty, and inconclusive outcomes before exposing a new command. See the [verification design and current workflow](VERIFY.md). Minimization's `finalVerified` validates the reduced reproducer, not a code fix.

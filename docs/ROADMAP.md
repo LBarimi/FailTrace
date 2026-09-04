@@ -1,6 +1,6 @@
 # Product direction and roadmap
 
-FailTrace helps developers and coding agents turn a difficult failure into repeatable experiments, a smaller reproducer, and inspectable evidence. **Fix verification** now connects that evidence to a proposed code change in the source implementation: determine what new observations establish about the original failure without claiming elimination.
+FailTrace helps developers and coding agents turn a difficult failure into repeatable experiments, a smaller reproducer, and inspectable evidence. **Fix verification** now connects that evidence to a proposed code change in version 0.5.0: determine what new observations establish about the original failure without claiming elimination.
 
 Success remains independent use and repeat use, as described in the [adoption goal](ADOPTION.md). The priorities below are not a release schedule or evidence of adoption.
 
@@ -16,9 +16,9 @@ This expresses product emphasis, not a requirement to execute every operation in
 | Compare | Implemented: saved runs, selected trial output, hashes, statistics and selected environment | Make comparable evidence easy to inspect; it currently gives no fix verdict |
 | Bisect | Implemented: repeated first-parent candidate classification in an isolated worktree | Preserve inconclusive outcomes and source evidence |
 | Minimize | Implemented: text, JSON/arrays, files and environment keys | Keep the same target failure and independently check the reduction |
-| **Verify** | **Implemented in source; release pending: Core `verifyFix`, CLI/JSON and MCP** | Validate installed artifacts and real affected/fixed controls; seek independent use |
+| **Verify** | **Implemented in 0.5.0: Core `verifyFix`, CLI/JSON and MCP** | Seek independent use and address observed workflow friction |
 | Bundle | Implemented: selected source/input, evidence and local replay engine | Preserve reproduction context; bundling an entire verification report is not implemented |
-| MCP | Implemented: five released tools plus Verify in source, all calling Core | Keep the adapter thin and preserve complete evidence counts |
+| MCP | Implemented: six tools in 0.5.0, all calling Core | Keep the adapter thin and preserve complete evidence counts |
 
 The six original milestones are implemented in 0.3.1. Version 0.4.0 adds opt-in concurrency, threshold stopping for bisect/minimize, efficient metadata, recovery, file-copy optimization and benchmarks; see [performance scope and remaining limits](PERFORMANCE.md).
 
@@ -29,9 +29,9 @@ An agent can already run commands again and compare two saved runs. That require
 The [verification contract and workflow](VERIFY.md) define the implemented scope and its limits. The release and adoption sequence is:
 
 1. Validate the workflow using an affected/fixed control and negative controls: an unrelated error, an unchanged defect, and an interrupted experiment.
-2. Keep baseline eligibility, explicit experiment settings, healthy completion checks, fixed-budget sampling and the linked report in Core. These checks now separate observed target failures, absent observations and inconclusive evidence in source.
+2. Keep baseline eligibility, explicit experiment settings, healthy completion checks, fixed-budget sampling and the linked report in Core. These checks separate observed target failures, absent observations and inconclusive evidence.
 3. Exercise the Core contract on a recognizable real bug. The existing [Prettier case](../examples/cases/prettier-chain/README.md) supplies an affected/fixed example, not a generic verification API or proof of independent use.
-4. Validate the source CLI/JSON and MCP wrappers against the same operation, including an independently installed package. Document limitations and finish the release gate before advertising npm availability.
+4. Validate CLI/JSON and MCP wrappers against the same operation, including an independently installed package and unrelated-error controls.
 5. Seek voluntary evidence that developers or agents used the workflow on their own fixes and returned to it. Adjust priorities if that reveals a more important obstacle.
 
 ## Positioning and market evidence
