@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Usage: node scripts/package-smoke.mjs [path/to/failtrace-version.tgz] [--keep]
 // Packs the checkout when no tarball is supplied. Installs only into a fresh
-// temporary consumer, then exercises its installed CLI, Core and demo.
+// temporary consumer, then exercises its installed CLI, Core, MCP and demo.
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
@@ -55,7 +55,7 @@ async function exerciseInstalledCore() {
   const within = relative(installed, imported);
   assert(!isAbsolute(within) && within !== '..' && !within.startsWith('..'), 'Core must resolve from the installed tarball');
   assert.equal(api.VERSION, process.env.FAILTRACE_SMOKE_VERSION);
-  for (const name of ['runTrials', 'compareRuns', 'bisectRegression', 'minimizeFailure', 'createBundle']) {
+  for (const name of ['runTrials', 'compareRuns', 'bisectRegression', 'minimizeFailure', 'verifyFix', 'createBundle']) {
     assert.equal(typeof api[name], 'function', `Missing public Core export: ${name}`);
   }
   const project = join(consumer, 'independent project');
@@ -83,6 +83,105 @@ async function exerciseInstalledCore() {
     total: run.statistics.total, failed: run.statistics.failed,
     artifactDirectory: run.artifactDirectory, comparison: 'passed',
   }));
+}
+
+// As above, this runs inside the consumer and resolves only installed Core/CLI.
+async function exerciseInstalledVerification() {
+  const assert = (await import('node:assert/strict')).default;
+  const { execFile } = await import('node:child_process');
+  const { mkdir, readFile, writeFile } = await import('node:fs/promises');
+  const { dirname, join } = await import('node:path');
+  const { fileURLToPath } = await import('node:url');
+  const { promisify } = await import('node:util');
+  const { verifyFix } = await import('failtrace');
+  const execute = promisify(execFile);
+  const consumer = dirname(fileURLToPath(import.meta.url));
+  const cli = join(consumer, 'node_modules', 'failtrace', 'dist', 'cli', 'index.js');
+  const cwd = join(consumer, 'verification project');
+  await mkdir(cwd);
+  const target = join(cwd, 'target.mjs');
+  await writeFile(join(cwd, 'input.json'), '["BUG"]\n');
+  await writeFile(join(cwd, 'setup.json'), '{"fixture":1}\n');
+  const affected = "import { readFileSync } from 'node:fs';\n"
+    + "if (JSON.parse(readFileSync('input.json', 'utf8')).includes('BUG')) { console.error('SMOKE_TARGET'); process.exitCode = 7; }\n";
+  const fixed = "import { readFileSync } from 'node:fs'; JSON.parse(readFileSync('input.json', 'utf8')); console.log('healthy');\n";
+  const unrelated = "throw new Error('UNRELATED_SMOKE_FAILURE');\n";
+  await writeFile(target, affected);
+  const quote = (value) => process.platform === 'win32' ? `"${value}"` : `'${value.replaceAll("'", "'\\''")}'`;
+  const command = `${quote(process.execPath)} target.mjs`;
+  const invoke = async (args, expectedCode) => {
+    let result;
+    try {
+      result = { ...await execute(process.execPath, [cli, ...args], { cwd, windowsHide: true, timeout: 30_000, maxBuffer: 2 * 1024 * 1024 }), code: 0 };
+    } catch (error) {
+      if (typeof error.code !== 'number') throw error;
+      result = error;
+    }
+    assert.equal(result.code, expectedCode, result.stderr);
+    assert.equal(result.stderr, '', 'JSON CLI should reserve stdout for one result and remain quiet on stderr');
+    return JSON.parse(result.stdout);
+  };
+  const baseline = await invoke(['run', command, '--repeat', '2', '--timeout', '5s', '--stderr-contains', 'SMOKE_TARGET',
+    '--context-input', 'input.json', '--context-setup', 'setup.json', '--context-source', 'target.mjs', '--json'], 1);
+  assert(baseline.context, 'Installed CLI must capture baseline context');
+  const options = { baseline: baseline.artifactDirectory, command, cwd };
+  assert.equal((await verifyFix(options)).status, 'target_observed');
+  await writeFile(target, fixed);
+  const allowChanges = [{ field: 'source', reason: 'replace affected target with fixed control' }];
+  const verified = await verifyFix({ ...options, allowChanges });
+  assert.equal(verified.status, 'target_not_observed');
+  assert.equal(verified.candidate.completedTrials, 2);
+  assert.equal(verified.candidate.unhealthyTrials, 0);
+  assert.deepEqual(JSON.parse(await readFile(verified.metadataPath, 'utf8')), verified);
+  const cliArgs = ['verify', options.baseline, '--command', command, '--cwd', cwd, '--allow-change', 'source:fixed control', '--json'];
+  assert.equal((await invoke(cliArgs, 0)).status, 'target_not_observed');
+  await writeFile(target, unrelated);
+  const invalid = await verifyFix({ ...options, allowChanges });
+  assert.equal(invalid.status, 'inconclusive');
+  assert.equal(invalid.candidate.matchedTrials, 0);
+  assert.equal(invalid.candidate.unhealthyTrials, 2);
+  assert.equal((await invoke(cliArgs, 2)).status, 'inconclusive');
+  await writeFile(target, fixed);
+  console.log(JSON.stringify({ cwd, command, baseline: options.baseline, core: 'passed', cli: 'passed', unrelatedErrorGuard: 'passed' }));
+}
+
+// The SDK client is a development-only test harness in this checkout. The
+// server process below is always the independently installed production CLI.
+async function exerciseInstalledMcp(installedDirectory, verification, environment) {
+  const { Client } = await import('@modelcontextprotocol/client');
+  const { StdioClientTransport } = await import('@modelcontextprotocol/client/stdio');
+  const client = new Client({ name: 'failtrace-package-smoke', version: '1.0.0' });
+  const transport = new StdioClientTransport({
+    command: process.execPath, args: [join(installedDirectory, 'dist', 'cli', 'index.js'), 'mcp', '--cwd', verification.cwd],
+    cwd: verification.cwd, env: Object.fromEntries(Object.entries(environment).filter(([, value]) => value !== undefined)), stderr: 'pipe',
+  });
+  const errors = [];
+  const stderr = [];
+  client.onerror = (error) => errors.push(error.message);
+  transport.stderr?.on('data', (chunk) => stderr.push(chunk.toString('utf8')));
+  try {
+    await client.connect(transport);
+    const listing = await client.listTools();
+    assert(listing.tools.some((tool) => tool.name === 'failtrace_verify'), 'Installed MCP must register Verify');
+    const arguments_ = {
+      baseline: verification.baseline, command: verification.command, cwd: verification.cwd,
+      allowChanges: [{ field: 'source', reason: 'fixed control' }],
+    };
+    const valid = await client.callTool({ name: 'failtrace_verify', arguments: arguments_ });
+    assert.equal(valid.isError, false);
+    assert.equal(valid.structuredContent.status, 'target_not_observed');
+    assert.equal(valid.structuredContent.candidate.healthyTrials, 2);
+    await writeFile(join(verification.cwd, 'target.mjs'), "throw new Error('UNRELATED_SMOKE_FAILURE');\n");
+    const invalid = await client.callTool({ name: 'failtrace_verify', arguments: arguments_ });
+    assert.equal(invalid.isError, false);
+    assert.equal(invalid.structuredContent.status, 'inconclusive');
+    assert.equal(invalid.structuredContent.candidate.unhealthyTrials, 2);
+    assert.deepEqual(errors, []);
+    assert.equal(stderr.join(''), '', 'MCP stdout must stay protocol-only and stderr should be quiet');
+    return 'passed';
+  } finally {
+    await client.close();
+  }
 }
 
 const manifest = JSON.parse(await readFile(join(repository, 'package.json'), 'utf8'));
@@ -143,6 +242,12 @@ try {
     cwd: consumer, env: environment, windowsHide: true, timeout: 30_000, maxBuffer: 1024 * 1024,
   });
   const core = JSON.parse(coreOutput.stdout);
+  await writeFile(join(consumer, 'verify-smoke.mjs'), `await (${exerciseInstalledVerification.toString()})();\n`);
+  const verifyOutput = await execute(process.execPath, ['verify-smoke.mjs'], {
+    cwd: consumer, env: environment, windowsHide: true, timeout: 60_000, maxBuffer: 2 * 1024 * 1024,
+  });
+  const verification = JSON.parse(verifyOutput.stdout);
+  const mcpVerification = await exerciseInstalledMcp(installedDirectory, verification, environment);
   const help = await npmRun(['exec', '--offline', '--', 'failtrace', '--help'], consumer);
   assert(/\bfailtrace demo\b/.test(help.stdout), 'Installed CLI must advertise the demo');
   const demoOutput = await npmRun(['exec', '--offline', '--', 'failtrace', 'demo', '--json'], consumer);
@@ -156,7 +261,8 @@ try {
   assert((await stat(demo.bundle.directory)).isDirectory());
   const report = {
     package: manifest.name, version: manifest.version, tarball, sha256,
-    checks: { installedCli: 'passed', installedCore: 'passed', productionDependenciesOnly: 'passed', installedDemo: 'passed' },
+    checks: { installedCli: 'passed', installedCore: 'passed', productionDependenciesOnly: 'passed', installedDemo: 'passed',
+      installedVerifyCore: verification.core, installedVerifyCli: verification.cli, installedVerifyMcp: mcpVerification, unrelatedErrorGuard: verification.unrelatedErrorGuard },
     core: { total: core.total, failed: core.failed, comparison: core.comparison },
     retained: keep,
     ...(keep ? { consumerDirectory: consumer, coreRunDirectory: core.artifactDirectory,

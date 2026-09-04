@@ -102,7 +102,7 @@ For a project configuration, merge this entry into that project's `.cursor/mcp.j
 }
 ```
 
-Cursor also supports a global `~/.cursor/mcp.json`. For a configuration tied to one project, the project file keeps the working directory explicit. Check the server in Cursor's Customize page and confirm the five tools are available to Agent. Cursor's configuration locations, `stdio` fields, and workspace interpolation are documented in its [official MCP reference](https://cursor.com/docs/mcp).
+Cursor also supports a global `~/.cursor/mcp.json`. For a configuration tied to one project, the project file keeps the working directory explicit. Check the server in Cursor's Customize page and confirm the tools listed below are available to Agent. Cursor's configuration locations, `stdio` fields, and workspace interpolation are documented in its [official MCP reference](https://cursor.com/docs/mcp).
 
 ## Other clients and Windows paths
 
@@ -139,6 +139,8 @@ Ask the agent:
 
 The server exposes `failtrace_run`, `failtrace_compare`, `failtrace_bisect`, `failtrace_minimize`, and `failtrace_bundle`. A client may add a server prefix to their displayed names.
 
+The source build additionally exposes **`failtrace_verify` (unreleased)** and `captureContext` on `failtrace_run`. These are not available in the public 0.3.1 package. Rebuild and reconnect the source server to use them; do not infer availability from this guide instead of listing your installed server's tools.
+
 Version 0.4.0 adds optional `concurrency` to `failtrace_run`; it defaults to `1` and is not accepted by bisect/minimize. Overlapping commands can change failure probability through shared resources. Returned trials stay sorted by index. Versions through 0.3.1 predate this option; see [performance guidance](PERFORMANCE.md).
 
 The `failtrace_run` arguments are:
@@ -173,7 +175,7 @@ That command should report five passes and exit `0`. In investigations that reco
 | Passing and failing logs need comparison | `failtrace_compare`: selected trial indices, stream hashes, bounded diffs, and truncation. |
 | A known good revision became bad | `failtrace_bisect`: verified endpoint assessments, `status`, `firstBad`, and cleanup diagnostics. |
 | An input reproduces but is too large | `failtrace_minimize`: accepted candidates, `status`, `finalVerified`, and `minimizedPath`. |
-| Code was changed and the original failure needs rechecking | Two full `failtrace_run` samples and `failtrace_compare`; inspect raw outcomes using the [after-fix workflow](VERIFY.md). A dedicated Verify tool is planned. |
+| Code was changed and the original failure needs rechecking | `failtrace_verify` in source: captured baseline, explicit candidate authority, full sample, context changes and healthy completion. Older packages use the [manual after-fix workflow](VERIFY.md). |
 | Someone else needs the evidence and input | `failtrace_bundle`: selected source/input files, `configPath`, and returned bundle directory. |
 
 ### Repeat, then compare
@@ -184,9 +186,42 @@ Comparison accepts `runA`, optional `runB`, and optional `trialA`/`trialB`. With
 
 ### Recheck after a code change
 
-> Preserve a full baseline that reproduces the known failure. After applying the proposed code change, use `failtrace_run` with the same predicate, input/setup, timeout and relevant environment, and a repeat count chosen before seeing the outcome. Count actual target matches and inspect every trial's termination and exit code. An unrelated error without the target message is not a successful fix. Compare actual matching baseline and clean candidate trial indices. Report incomplete or incomparable evidence, and do not claim that zero matches proves the bug is gone.
+> Before editing code, preserve a full baseline that reproduces the known failure. Use `failtrace_run` with an explicit predicate, relevant `captureEnv` keys and `captureContext` declaring input/setup/source files. After the change, call `failtrace_verify` with the actual baseline path, an explicitly authorized command and cwd, and a reason for each intended context change. Report matched and unhealthy counts, status, reasons and report path. A syntax/setup error without the target message is inconclusive, not a successful fix. Zero healthy target matches do not prove elimination or improvement.
 
-This workflow uses the existing tools; no `failtrace_verify` tool exists yet. Minimization's `finalVerified` verifies that a reduction still fails, not that a code change fixes it. See the [current procedure and planned Verify contract](VERIFY.md) for baseline eligibility, healthy completion and statistical limits.
+This dedicated workflow requires the unreleased source build. For example, adapt these baseline arguments to real files in your project:
+
+```json
+{
+  "command": "node reproduce.js",
+  "cwd": "/absolute/path/to/project",
+  "repeat": 20,
+  "timeoutMs": 30000,
+  "predicate": { "kind": "stderr_contains", "value": "checkout failed" },
+  "captureEnv": ["NODE_ENV", "TZ"],
+  "captureContext": {
+    "inputFiles": ["cases.json"],
+    "setupFiles": ["package-lock.json"],
+    "sourceFiles": ["reproduce.js"]
+  }
+}
+```
+
+Explicit source files select a files-only scope even inside Git. Without them, context capture uses bounded Git identity. Empty lists do not mean automatic discovery, and uncaptured external state remains unknown. After changing the code, `failtrace_verify` takes:
+
+```json
+{
+  "baseline": "/absolute/path/to/returned/baseline-run",
+  "command": "node reproduce.js",
+  "cwd": "/absolute/path/to/project",
+  "allowChanges": [{ "field": "source", "reason": "repair checkout handling" }]
+}
+```
+
+Use the actual returned baseline path, not the illustrative one above. Verify inherits the baseline predicate, file declarations, captured environment keys and sampling defaults; it requires the same canonical working directory. Optional `repeat` sets a prechosen full candidate budget, with no threshold stopping. Optional `healthyExitCodes` replaces `[0]` for nonmatching trials; optional `env` is a string/null override dictionary, with null unsetting a variable. Declare changed `command`, `source`, `inputs`, `setup`, `environment`, `timeout` or `concurrency` with reasons in `allowChanges`; missing/unstable evidence cannot be excused this way.
+
+Read the operation's `status` even when MCP `isError` is false. `target_observed` records a remaining target, `target_not_observed` requires healthy comparable complete evidence, and `inconclusive`/`interrupted` cannot support an absence claim. Counts cover all trials. Context summaries give file counts and source identity; complete hashes and before/after changes are at the returned `metadataPath`. The report also links baseline/candidate run metadata for full trial inspection.
+
+For older packages, use two full `failtrace_run` samples and `failtrace_compare`, performing these checks yourself. Minimization's `finalVerified` verifies that a reduction still fails, not that a code change fixes it. See the [verification procedure and limits](VERIFY.md).
 
 ### Minimize, then bundle
 
@@ -235,6 +270,7 @@ MCP calls return an envelope containing `structuredContent` and a JSON text repr
 - For runs, `matchedTrials` counts all recorded trials that matched the target predicate, including trials omitted from the response. `statistics.failed` also includes execution failures such as timeouts. Use each trial's `failureMatched` to choose particular evidence. `statistics.failureRate` is a fraction, not a percentage value.
 - For minimization, require `finalVerified: true` before claiming the reduction still reproduces. `limit_reached` can retain a verified partial reduction; it does not mean the search completed or found a global minimum.
 - For bisect, inspect `status`, `reason`, and `cleanupError`. An error or inconclusive search does not establish a culprit.
+- For Verify in source, inspect `baselineEligibility`, `reasons`, `changes`, and both runs' complete counts. `healthyTrials` includes valid target matches; `unhealthyTrials` is divided into `infrastructureTrials`, `unrelatedFailureTrials`, and `invalidEvidenceTrials`. An absence of target text from a failed command is not a fix verdict.
 - For comparison, inspect `stdout.truncated` and `stderr.truncated`; a displayed prefix is not the complete log. SHA-256 comparisons cover the complete streams.
 
 Long MCP lists are sampled. When `trialsOmitted`, `evaluationsOmitted`, or `candidatesOmitted` is non-zero, follow the operation's `metadataPath` and candidate run paths for complete evidence. In 0.4.0 and later, a run with `trialStorage: "individual"` stores its authoritative trial records in `trials/<index>/result.json`; use the public Core `loadRun` API to reconstruct the full run, or inspect those individual records. Raw running/compact `run.json` need not embed all trials. Use `matchedTrials` for the full target-match count; counting only sampled `failureMatched` entries is not a valid total. Trial stdout/stderr paths are relative to the containing run's `artifactDirectory`; combine them before opening a log with the agent's file tools.
@@ -286,7 +322,8 @@ do not authorize client reconfiguration, publishing, or unrelated changes.
 | Demo or project command is missing | The configured `--cwd` and the tool's optional `cwd`; relative paths resolve from the server directory. |
 | Tool returns immediately with a failed target | Inspect the trial exit/status and logs; a command error is data, not proof of the intended predicate. |
 | Long call is canceled | The client's request timeout and cancellation status; read partial metadata before starting another experiment. |
-| Agent keeps using shell loops | Confirm the five tools are connected, ask for one by name, and opt into the repository instruction snippet if desired. |
+| Agent keeps using shell loops | Confirm the installed tools are connected, ask for one by name, and opt into the repository instruction snippet if desired. |
+| Verify tool is missing | Verify is unreleased; use a rebuilt source server or the manual run/compare procedure for older packages. |
 | Bundle does not replay | Explicit source-file selection, target dependency setup, selected input, environment removals, and command portability. |
 
 Client setup references were checked against official documentation on **2026-09-04**. The schemas and result fields described here come from this repository's [MCP adapter](../src/mcp/index.ts), [Core implementation](../src/core), and [README](../README.md).

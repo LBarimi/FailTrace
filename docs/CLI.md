@@ -4,6 +4,8 @@ See the [README](../README.md) for installation and the guided demo, and [agent 
 
 Concurrency, classification early stopping, and metadata reconstruction below require 0.4.0 or later. See [performance guidance](PERFORMANCE.md).
 
+Verify and baseline context capture are also implemented in source and await a release. Build the checkout to use these new options; they are not in the published 0.3.1 package.
+
 ## Repeat and identify a failure
 
 ```sh
@@ -15,12 +17,14 @@ failtrace run "npm test" --exit-code 7 --capture-env NODE_ENV,TZ --json
 | Option | Meaning |
 | --- | --- |
 | `--repeat N` | Positive trial count; default `10` for run, `5` for bisect, `1` for minimize. |
-| `--concurrency N` | Positive safe integer, `run` only; maximum active trials, default `1`. |
+| `--concurrency N` | Positive safe integer; maximum active trials, default `1` for `run`, inherited for `verify`. Bisect/minimize remain sequential. |
 | `--timeout DURATION` | Per-trial timeout, default `30s`; supports `ms`, `s`, and `m`. |
 | `--exit-code N` | Match exactly this exit code, including `0`. |
 | `--stdout-contains TEXT`, `--stderr-contains TEXT` | Match a UTF-8 substring. |
 | `--stdout-regex REGEX`, `--stderr-regex REGEX` | Match a JavaScript regex; optional `--regex-flags` supports `i`, `m`, `s`, `u`. |
 | `--capture-env KEY1,KEY2` | On `run`, record only these selected environment values. |
+| `--capture-context` | On `run`, capture bounded source identity before/after execution for later verification. |
+| `--context-input FILE`, `--context-setup FILE`, `--context-source FILE` | Repeatable regular file paths relative to `cwd`; each implies context capture. Explicit source files select files-only scope; otherwise source identity uses Git. |
 | `--cwd DIRECTORY` | Resolve working paths from this directory. |
 | `--json` | Emit one JSON result on stdout with no terminal progress; supported on all investigation commands. |
 
@@ -48,7 +52,22 @@ With one run, comparison selects its first passing and first failing trial. With
 
 Results include aggregate failure-rate changes, command/predicate/concurrency changes, selected environment changes, stdout/stderr byte counts, full-stream SHA-256 hashes, and bounded line-aligned differences. A concurrency change identifies different experiment settings. Default limits are 200 displayed lines and a 64 KiB prefix per stream; truncation is explicit. This is an inspectable positional diff, not a semantic comparison or an optimal edit script. Matching hashes still compare the complete files.
 
-After modifying code, use [full runs before and after the change](VERIFY.md) and inspect raw trial outcomes alongside comparison. `compare` is not a fix verdict, and there is no `verify` command yet.
+After modifying code, use the [verification workflow](VERIFY.md). `compare` helps inspect outputs but does not validate the full experiment or produce a fix verdict. Older published packages can use the documented manual before/after procedure.
+
+## Verify a proposed fix
+
+This operation is implemented in source and awaits release. Capture the baseline before editing the selected source, input or setup files:
+
+```sh
+failtrace run "node reproduce.js" --repeat 20 --stderr-contains "checkout failed" --context-input cases.json --context-setup package-lock.json --context-source reproduce.js --capture-env NODE_ENV,TZ --json
+failtrace verify <baseline-run-directory> --command "node reproduce.js" --cwd . --allow-change "source:repair checkout handling" --json
+```
+
+Adapt project paths and replace the baseline placeholder with the returned artifact directory. The baseline run can exit `1`; do not chain these commands with `&&`. Verify requires explicit `--command` and `--cwd`, inherits the original predicate, selected file/environment declarations, repeat/timeout/concurrency settings, and rejects unsuitable baselines before target execution. Canonical working directories must match.
+
+`--repeat N` preselects the full candidate count. `--timeout` and `--concurrency` can override inherited settings if the change is explicitly allowed. Repeat `--allow-change FIELD:REASON` for intended `command`, `source`, `inputs`, `setup`, `environment`, `timeout`, or `concurrency` interventions. A missing context, changed file during execution, timeout or unrelated unhealthy exit remains inconclusive. The default healthy nonmatch exit is `0`; repeat `--healthy-exit-code N` to replace that policy.
+
+Inspect `status`, `baselineEligibility`, `reasons`, `changes`, `plan`, and both evidence references in the JSON. Complete trial counts are distinct from target matches and unhealthy executions. The durable report's `metadataPath` links all evidence. Exit `0` means `target_not_observed` in a healthy comparable sample, `1` means `target_observed`, and `2` means inconclusive/invalid. It never reports that a defect is eliminated or that its rate statistically improved. See [context scope, result semantics and limitations](VERIFY.md).
 
 ## Isolate a regression
 
@@ -125,7 +144,7 @@ Use `--command "node relative-script.js"` when the original command contains mac
 failtrace mcp --cwd /absolute/path/to/project
 ```
 
-The stdio adapter uses the official Model Context Protocol SDK and exposes five tools:
+The stdio adapter uses the official Model Context Protocol SDK. The source exposes the following tools; Verify awaits release:
 
 | Tool | Core operation |
 | --- | --- |
@@ -133,6 +152,7 @@ The stdio adapter uses the official Model Context Protocol SDK and exposes five 
 | `failtrace_compare` | Compare saved runs or trial outputs. |
 | `failtrace_bisect` | Search a sampled first-parent regression boundary. |
 | `failtrace_minimize` | Reduce a reproducing input. |
+| `failtrace_verify` | Check a candidate using captured baseline context, original predicate and healthy full-budget observations (unreleased). |
 | `failtrace_bundle` | Create a local reproduction directory. |
 
 Tools have typed input schemas, structured results, artifact paths, and cancellation support. Target failures are returned as evidence. Large result lists are summarized, with complete metadata kept in artifacts. stdout is reserved for protocol messages; diagnostics go to stderr. The server runs locally with the same permissions and shell behavior as the CLI.
@@ -169,7 +189,7 @@ trials/001/stderr.txt
 trials/002/...
 ```
 
-Run metadata includes schema/version, command, working directory, requested count, concurrency, timeout, predicate, platform/runtime snapshot, selected environment values, timestamps, and statistics. Trial metadata includes exit/signal, duration, timeout/spawn indicators, termination reason, predicate match, and output paths. Output streams to files instead of being duplicated in JSON; trial paths are relative to the run directory. JSON is written to a temporary file and renamed into place.
+Run metadata includes schema/version, command, working directory, requested count, concurrency, timeout, predicate, platform/runtime snapshot, selected environment values, timestamps, and statistics. With opt-in context capture it also records declared file hashes and source identity before/after execution. Trial metadata includes exit/signal, duration, timeout/spawn indicators, termination reason, predicate match, and output paths. Output streams to files instead of being duplicated in JSON; trial paths are relative to the run directory. JSON is written to a temporary file and renamed into place.
 
 Each completed trial's `result.json` is authoritative. `run.json` is written initially and at finalization rather than rewritten after every trial. A running snapshot or a large final summary uses on-disk `schemaVersion: 2`, `trialStorage: "individual"`, and an empty embedded trial array. Completed/interrupted compact summaries record `trialCount`, and loading requires that exact number of records. Compact error summaries omit this count because a failed write may have left fewer durable records; loading recovers those records while preserving the error status. Use the public `loadRun(reference)` API, also used by compare/bundle, to reconstruct index-sorted evidence from individual results. It accepts storage versions 1 and 2 and returns the existing schema-1 in-memory summary. Older FailTrace versions cannot read compact storage. Raw `run.json` alone may show stale progress after a process crash; reconstruction cannot recover a trial result that was never durably written.
 
@@ -177,7 +197,7 @@ Small final summaries retain storage schema 1 and embedded trials for compatibil
 
 | Exit code | Meaning |
 | --- | --- |
-| `0` | A run has no failed outcomes; comparison/bundle succeeded; bisect found a boundary; or minimization completed and passed final verification. |
-| `1` | `run` recorded a failed trial. Bundle replay uses `1` when the target predicate reproduces. |
+| `0` | A run has no failed outcomes; comparison/bundle succeeded; bisect found a boundary; minimization completed and passed final verification; or Verify returned healthy `target_not_observed` evidence. |
+| `1` | `run` recorded a failed trial, or Verify returned `target_observed`. Bundle replay uses `1` when the target predicate reproduces. |
 | `2` | Invalid usage, an internal error, or an inconclusive/incomplete investigation, including evaluation limits. |
 | `130`, `143` | Interrupted by SIGINT/Ctrl+C or SIGTERM. |

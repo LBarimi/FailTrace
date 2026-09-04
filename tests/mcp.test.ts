@@ -66,11 +66,11 @@ afterEach(async () => {
 });
 
 describe('official SDK stdio MCP adapter', () => {
-  it('lists typed tools and invokes all five Core workflows over a real SDK connection', async () => {
+  it('lists typed tools and invokes the original five Core workflows over a real SDK connection', async () => {
     const { client, cwd, errors, stderr } = await startClient();
     const listing = await client.listTools();
     expect(listing.tools.map((tool) => tool.name).sort()).toEqual([
-      'failtrace_bisect', 'failtrace_bundle', 'failtrace_compare', 'failtrace_minimize', 'failtrace_run',
+      'failtrace_bisect', 'failtrace_bundle', 'failtrace_compare', 'failtrace_minimize', 'failtrace_run', 'failtrace_verify',
     ]);
     for (const tool of listing.tools) expect(tool.inputSchema.type).toBe('object');
     expect(listing.tools.find((tool) => tool.name === 'failtrace_run')!.inputSchema.properties).toHaveProperty('concurrency');
@@ -142,7 +142,7 @@ describe('official SDK stdio MCP adapter', () => {
 
   it('supports the modern protocol with the same typed tools', async () => {
     const { client, errors, stderr } = await startClient(true);
-    expect((await client.listTools()).tools).toHaveLength(5);
+    expect((await client.listTools()).tools).toHaveLength(6);
     const call = await client.callTool({
       name: 'failtrace_run', arguments: { command: process.platform === 'win32' ? 'exit /b 7' : 'exit 7', repeat: 1 },
     });
@@ -189,7 +189,7 @@ describe('official SDK stdio MCP adapter', () => {
     const missing = await client.callTool({ name: 'failtrace_compare', arguments: { runA: 'missing-run' } });
     expect(missing.isError).toBe(true);
     expect(structured(missing).error).toBeTypeOf('string');
-    expect((await client.listTools()).tools).toHaveLength(5);
+    expect((await client.listTools()).tools).toHaveLength(6);
   });
 
   it('maps null environment values to unset and captures selected environment evidence', async () => {

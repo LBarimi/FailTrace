@@ -8,6 +8,8 @@ import { createBundle } from '../core/bundle.js';
 import { compareRuns } from '../core/compare.js';
 import { minimizeFailure } from '../core/minimize.js';
 import { runTrials, VERSION } from '../core/run-trials.js';
+import { verifyFix, type VerifyResult, type VerifyRunEvidence } from '../core/verify.js';
+import type { ContextSnapshot, RunContext } from '../core/verify-context.js';
 import type { RunOptions, RunSummary } from '../core/types.js';
 
 const positiveInteger = z.number().int().min(1).max(Number.MAX_SAFE_INTEGER);
@@ -21,6 +23,11 @@ const predicateSchema = z.discriminatedUnion('kind', [
   }).strict(),
 ]);
 const environmentSchema = z.record(z.string().min(1), z.string().nullable());
+const captureContextSchema = z.object({
+  inputFiles: z.array(z.string().min(1)).optional(),
+  setupFiles: z.array(z.string().min(1)).optional(),
+  sourceFiles: z.array(z.string().min(1)).optional(),
+}).strict();
 const commandSchema = z.object({
   command: z.string().min(1).describe('Command for the platform shell, executed with your local permissions.'),
   cwd: z.string().min(1).optional().describe('Working directory; relative paths resolve from the server working directory.'),
@@ -49,6 +56,35 @@ function sample<T>(values: T[]): T[] {
   return values.length <= 40 ? values : [...values.slice(0, 20), ...values.slice(-20)];
 }
 
+function contextProjection(context: RunContext): Record<string, unknown> {
+  const snapshot = (value: ContextSnapshot): Record<string, unknown> => ({
+    inputFiles: value.inputs.length, setupFiles: value.setup.length, sourceFiles: value.sourceFiles.length,
+    source: value.source.kind === 'git'
+      ? { kind: 'git', commit: value.source.commit, patchSha256: value.source.patchSha256,
+        subdirectory: value.source.subdirectory, trackedFiles: value.source.tracked.length,
+        deletedFiles: value.source.deleted.length, untrackedFiles: value.source.untracked.length }
+      : { kind: value.source.kind },
+    issues: sample(value.issues), issuesOmitted: Math.max(0, value.issues.length - 40),
+  });
+  return {
+    schemaVersion: context.schemaVersion, workingDirectory: context.workingDirectory, stable: context.stable,
+    declaredFiles: { inputs: context.declaration.inputFiles.length, setup: context.declaration.setupFiles.length, source: context.declaration.sourceFiles.length },
+    before: snapshot(context.before), ...(context.after === undefined ? {} : { after: snapshot(context.after) }),
+    details: 'File lists and complete identities are in the run metadata; this is a context summary.',
+  };
+}
+
+function verificationProjection(result: VerifyResult): Record<string, unknown> {
+  const evidence = (run: VerifyRunEvidence | null): Record<string, unknown> | null => run === null ? null : {
+    ...run, ...(run.context === undefined ? {} : { context: contextProjection(run.context) }),
+  };
+  return {
+    ...result, baseline: evidence(result.baseline), candidate: evidence(result.candidate),
+    changes: result.changes.map(({ field, allowed, reason }) => ({ field, allowed, ...(reason === undefined ? {} : { reason }) })),
+    changeDetails: 'Complete before/after identities and settings are preserved at metadataPath.',
+  };
+}
+
 function runProjection(run: RunSummary): Record<string, unknown> {
   return {
     id: run.id,
@@ -70,6 +106,7 @@ function runProjection(run: RunSummary): Record<string, unknown> {
     })),
     trialsOmitted: Math.max(0, run.trials.length - 40),
     ...(run.decision === undefined ? {} : { decision: run.decision }),
+    ...(run.context === undefined ? {} : { context: contextProjection(run.context) }),
     ...(run.error === undefined ? {} : { error: run.error }),
   };
 }
@@ -82,9 +119,10 @@ function createServer(cwd: string, shutdown: AbortSignal, pending: Set<Promise<C
   const server = new McpServer({ name: 'failtrace', version: VERSION }, {
     capabilities: { tools: {} },
     instructions: 'Use FailTrace for repeated debugging experiments. Run measures a flaky failure; compare inspects PASS/FAIL output; '
-      + 'bisect searches known good/bad revisions; minimize reduces a reproducing input; bundle prepares a replay. '
+      + 'bisect searches known good/bad revisions; minimize reduces a reproducing input; verify checks a candidate against captured baseline context; bundle prepares a replay. '
       + 'Reuse returned artifact paths between tools. Select a specific failure predicate before bisect or minimize. '
-      + 'Check status and finalVerified; sampled outcomes are evidence, not proof. Target failures are data, not tool errors. '
+      + 'Capture baseline context before changing code. Verify requires an explicit command and cwd, and declares absent observations only for healthy, comparable fixed-budget samples. '
+      + 'Check status and finalVerified; sampled outcomes are evidence, not proof of elimination. Target failures are data, not tool errors. '
       + 'Commands run locally in the selected cwd using the platform shell. Complete metadata and logs remain in artifacts.',
   });
   const disconnected = new AbortController();
@@ -111,6 +149,7 @@ function createServer(cwd: string, shutdown: AbortSignal, pending: Set<Promise<C
       artifactsDir: z.string().min(1).optional(),
       captureEnv: z.array(z.string().min(1)).optional().describe('Only these selected environment variables are recorded in metadata.'),
       concurrency: positiveInteger.optional().describe('Maximum active run trials; default 1. Shared ports, files, databases and resource contention can change failure probability.'),
+      captureContext: captureContextSchema.optional().describe('Capture declared regular input/setup/source file identities for verification. Source files select a files-only scope; without them, capture Git identity. Use captureEnv separately for relevant variable names.'),
     }),
     annotations: executesCommand,
   }, (input, context) => invoke(context, async (signal) => {
@@ -119,8 +158,41 @@ function createServer(cwd: string, shutdown: AbortSignal, pending: Set<Promise<C
       ...(input.artifactsDir === undefined ? {} : { artifactsDir: input.artifactsDir }),
       ...(input.captureEnv === undefined ? {} : { captureEnv: input.captureEnv }),
       ...(input.concurrency === undefined ? {} : { concurrency: input.concurrency }),
+      ...(input.captureContext === undefined ? {} : { captureContext: {
+        ...(input.captureContext.inputFiles === undefined ? {} : { inputFiles: input.captureContext.inputFiles }),
+        ...(input.captureContext.setupFiles === undefined ? {} : { setupFiles: input.captureContext.setupFiles }),
+        ...(input.captureContext.sourceFiles === undefined ? {} : { sourceFiles: input.captureContext.sourceFiles }),
+      } }),
     });
     return toolResult(runProjection(run), run.status === 'error');
+  }));
+
+  server.registerTool('failtrace_verify', {
+    title: 'Verify a candidate against baseline evidence',
+    description: 'Check baseline eligibility and captured context, then run a fixed candidate budget using the original predicate. Requires explicit current command/cwd. Reports target_observed, target_not_observed, inconclusive or interrupted; zero matches with unrelated errors is inconclusive, never proof of a fix.',
+    inputSchema: z.object({
+      baseline: z.string().min(1).describe('Saved baseline run ID, directory or run.json; relative references resolve from the explicit cwd.'),
+      command: z.string().min(1).describe('Explicit current command to authorize local execution; the saved command is never executed implicitly.'),
+      cwd: z.string().min(1).describe('Required current working directory; relative paths resolve from the server directory.'),
+      repeat: positiveInteger.optional().describe('Full candidate trial budget; defaults to the baseline requested count. No classification early stopping.'),
+      timeoutMs: positiveInteger.max(2_147_483_647).optional(),
+      concurrency: positiveInteger.optional(),
+      env: environmentSchema.optional(),
+      healthyExitCodes: z.array(z.number().int().min(0).max(0xffff_ffff)).min(1).optional().describe('Normal exit codes accepted for nonmatching trials; default [0].'),
+      allowChanges: z.array(z.object({
+        field: z.enum(['command', 'source', 'inputs', 'setup', 'environment', 'timeout', 'concurrency']),
+        reason: z.string().trim().min(1),
+      }).strict()).optional().describe('Explicitly declare intended context interventions and their reasons. Missing evidence cannot be made comparable by allowing a change.'),
+    }).strict(),
+    annotations: executesCommand,
+  }, (input, context) => invoke(context, async (signal) => {
+    const verification = await verifyFix({
+      baseline: input.baseline, ...commandOptions(input, cwd, signal), cwd: resolve(cwd, input.cwd),
+      ...(input.concurrency === undefined ? {} : { concurrency: input.concurrency }),
+      ...(input.healthyExitCodes === undefined ? {} : { healthyExitCodes: input.healthyExitCodes }),
+      ...(input.allowChanges === undefined ? {} : { allowChanges: input.allowChanges }),
+    });
+    return toolResult(verificationProjection(verification));
   }));
 
   server.registerTool('failtrace_compare', {

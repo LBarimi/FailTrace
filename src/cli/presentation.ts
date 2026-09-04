@@ -1,5 +1,5 @@
 import { relative } from 'node:path';
-import type { ComparisonResult, RunSummary, TrialResult } from '../core/index.js';
+import type { ComparisonResult, RunSummary, TrialResult, VerifyResult } from '../core/index.js';
 import type { DemoProgress, DemoResult } from '../demo/index.js';
 
 export const HELP = `FailTrace - Reproduce. Isolate. Minimize.
@@ -12,6 +12,7 @@ Usage:
   failtrace compare <run-a> [run-b] [--trial-a N] [--trial-b N]
   failtrace bisect --good REF --bad REF --command "<command>"
   failtrace minimize --input PATH --command "<command>" [--format text]
+  failtrace verify <baseline> --command "<command>" --cwd DIRECTORY
   failtrace bundle <run> [--file PATH ...] [--input PATH]
   failtrace mcp [--cwd DIRECTORY]
   failtrace --help
@@ -31,9 +32,17 @@ Experiment options (run, bisect, minimize):
 
 Command-specific options:
   run       --capture-env KEY1,KEY2 (selected values only)
-            --concurrency N (default: 1; run only)
+            --concurrency N (run default: 1)
+            --capture-context (record source identity for later verification)
+            --context-input FILE, --context-setup FILE, --context-source FILE
+            (repeatable regular files; each implies --capture-context)
   compare   --max-lines N (200), --max-bytes N (65536)
   minimize  --format text|json|files|env, --max-evaluations N (200)
+  verify    --repeat N, --timeout DURATION, --concurrency N (inherit baseline)
+            --allow-change FIELD:REASON (repeatable; declare interventions)
+            Fields: command, source, inputs, setup, environment, timeout,
+            concurrency. --healthy-exit-code N (repeatable; default: 0)
+            Predicate and context declarations are inherited from baseline.
   bundle    --file PATH (repeatable), --input PATH, --command COMMAND,
             --output NEW_DIRECTORY, --env-file JSON_FILE
 
@@ -53,11 +62,13 @@ Examples:
 The command runs in the current directory using the platform shell.
 Concurrent run trials can change failure behavior through shared resources.
 Progress uses completion order with trial indices; JSON trials use index order.
-Artifacts: .failtrace/ (runs, bisects, minimizations, reproduction, demos).
+Artifacts: .failtrace/ (runs, bisects, minimizations, verifications, reproduction, demos).
 Demo works from any directory and exits 0 when its expected failures are shown.
 Minimize exposes FAILTRACE_INPUT or FAILTRACE_INPUT_DIR to the command.
 Bundles contain the Node engine; install target dependencies separately.
-Exit codes: 0 success, 1 run target failure, 2 error/inconclusive/limit,
+Verify reports finite observations, never proof that a bug is eliminated.
+Exit codes: 0 success/verify target not observed, 1 run failure/verify target observed,
+            2 error/inconclusive/limit,
             130 interrupted by Ctrl+C, 143 interrupted by SIGTERM.
 `;
 
@@ -79,7 +90,7 @@ export function formatHeader(command: string, repeat: number, timeoutMs: number,
   ].join('\n');
 }
 
-export function formatTrial(trial: TrialResult, requestedTrials: number): string {
+export function formatTrial(trial: TrialResult, requestedTrials?: number): string {
   const labels = {
     passed: 'PASS',
     failed: 'FAIL',
@@ -87,7 +98,7 @@ export function formatTrial(trial: TrialResult, requestedTrials: number): string
     spawn_error: 'SPAWN ERROR',
     interrupted: 'INTERRUPTED',
   } as const;
-  const index = String(trial.index).padStart(Math.max(2, String(requestedTrials).length), '0');
+  const index = String(trial.index).padStart(Math.max(2, String(requestedTrials ?? trial.index).length), '0');
   const detail = trial.status === 'failed'
     ? trial.signal ? `  signal ${trial.signal}` : `  exit ${trial.exitCode}`
     : '';
@@ -144,6 +155,26 @@ export function formatComparison(result: ComparisonResult): string {
     lines.push('', 'Environment changes');
     for (const change of result.environmentChanges) lines.push(`  ${change.key}: ${JSON.stringify(change.before)} -> ${JSON.stringify(change.after)}`);
   }
+  return lines.join('\n');
+}
+
+export function formatVerification(result: VerifyResult): string {
+  const lines = ['', `Result  ${result.status}`, ''];
+  for (const [label, evidence] of [['Baseline', result.baseline], ['Candidate', result.candidate]] as const) {
+    lines.push(`${label}  ${evidence ? `${evidence.matchedTrials} target matches / ${evidence.completedTrials} completed / ${evidence.requestedTrials} requested; ${evidence.unhealthyTrials} unhealthy` : 'not run or unavailable'}`);
+    if (evidence && evidence.unhealthyTrials > 0) {
+      lines.push(`  Infrastructure ${evidence.infrastructureTrials}; unrelated failures ${evidence.unrelatedFailureTrials}; invalid evidence ${evidence.invalidEvidenceTrials}`);
+    }
+  }
+  for (const change of result.changes) {
+    lines.push(`Changed ${change.field}  ${change.allowed ? 'declared' : 'not allowed'}${change.reason ? `: ${change.reason}` : ''}`);
+  }
+  for (const reason of result.reasons) lines.push(`Reason  ${reason}`);
+  lines.push('', result.status === 'target_not_observed'
+    ? 'The target failure was not observed in this healthy, comparable sample. This does not prove elimination.'
+    : result.status === 'target_observed' ? 'The target failure was observed in the candidate sample.'
+      : 'The evidence does not establish an absent target failure. Inspect the report before drawing a conclusion.');
+  lines.push('', 'Report:', result.metadataPath);
   return lines.join('\n');
 }
 
