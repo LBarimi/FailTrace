@@ -20,7 +20,7 @@ This expresses product emphasis, not a requirement to execute every operation in
 | Bundle | Implemented: selected source/input, evidence and local replay engine | Preserve reproduction context and, after Verify exists, its report |
 | MCP | Implemented: five tools that call Core | Expose stable Core operations; add verification only after its Core contract works |
 
-The six original milestones are implemented in the published 0.3.1 package. The source also includes performance work after that release: opt-in concurrency, threshold stopping for bisect/minimize, efficient metadata, recovery, file-copy optimization and benchmarks. These source changes are not yet an npm release; see [performance scope and remaining limits](PERFORMANCE.md).
+The six original milestones are implemented in 0.3.1. Version 0.4.0 adds opt-in concurrency, threshold stopping for bisect/minimize, efficient metadata, recovery, file-copy optimization and benchmarks; see [performance scope and remaining limits](PERFORMANCE.md).
 
 ## Why Verify is next
 

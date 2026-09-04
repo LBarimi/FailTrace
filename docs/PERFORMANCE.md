@@ -1,6 +1,6 @@
 # Performance and evidence
 
-This document describes unreleased source changes after 0.3.1. Build the source checkout before trying these options. The public 0.3.1 package retains its original execution and metadata behavior.
+This document describes the performance changes in 0.4.0. Versions through 0.3.1 retain their original execution and metadata behavior.
 
 ## Execution controls
 

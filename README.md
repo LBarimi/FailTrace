@@ -73,7 +73,7 @@ Paths in angle brackets come from the preceding result. If a failed outcome is a
 
 [Full command reference](docs/CLI.md) · [Runnable examples](examples) · [Implementation and verification](docs/IMPLEMENTATION.md)
 
-**Unreleased performance improvements in the source checkout:** `run --concurrency N` opts into overlapping trials while the default stays `1`. Shared ports, files, databases, and resource contention can change failure probability. Bisect/minimize keep sequential trials and stop when their classification threshold is decided. Ordinary runs still attempt the full requested count. See [performance measurements and operational guidance](docs/PERFORMANCE.md) for metadata recovery, external dependency caches, and remaining tradeoffs. These changes are not included in the published 0.3.1 package.
+**Performance controls in 0.4.0:** `run --concurrency N` opts into overlapping trials while the default stays `1`. Shared ports, files, databases, and resource contention can change failure probability. Bisect/minimize keep sequential trials and stop when their classification threshold is decided. Ordinary runs still attempt the full requested count. See [performance measurements and operational guidance](docs/PERFORMANCE.md) for metadata recovery, external dependency caches, and remaining tradeoffs.
 
 **[Real bug case: reduce a Prettier formatting failure from 464 to 11 characters →](https://github.com/LBarimi/FailTrace/tree/main/examples/cases/prettier-chain)** The runnable investigation uses pinned affected/fixed releases, rejects unrelated parser errors, and produces a replayable bundle. The case includes authored surrounding code and links to the original upstream report.
 
