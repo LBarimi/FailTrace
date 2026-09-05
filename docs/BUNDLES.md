@@ -1,6 +1,6 @@
 # Review a bundle before sharing
 
-The controls on this page are implemented in the source checkout toward 1.0 and are not in published 0.6.0. Version 0.6.0 includes original evidence and captured environment values by default. Build the checkout to use the new behavior.
+The controls on this page require FailTrace 1.0. Version 0.6.0 includes original evidence and captured environment values by default. See [installation and publication status](../README.md#quick-start) when selecting a package version.
 
 A reproduction bundle is a local directory with selected source/input files, execution settings and an included Node Core engine. Creation never executes or uploads the target. The original investigation remains intact.
 

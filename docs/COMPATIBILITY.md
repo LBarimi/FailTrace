@@ -1,6 +1,6 @@
 # Compatibility contract for 1.0
 
-This is the contract being prepared on `main` for 1.0. **The published package is still 0.6.0.** It does not contain the unreleased limits or bundle sharing controls described here. See [migration from 0.x](MIGRATING-TO-1.md) before adopting the source changes.
+This contract defines the supported surfaces for FailTrace 1.x. See [migration from 0.x](MIGRATING-TO-1.md) before upgrading. Publication status and available installation routes are recorded in the [README](../README.md#quick-start); a version in a checkout does not by itself establish public registry availability.
 
 ## Supported integration surfaces
 

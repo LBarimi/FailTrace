@@ -1,6 +1,6 @@
 {
   "name": "failtrace",
-  "version": "1.0.0-rc.1",
+  "version": "1.0.0",
   "mcpName": "io.github.LBarimi/failtrace",
   "description": "Reproduce, isolate, and minimize failures, then verify proposed fixes.",
   "type": "module",

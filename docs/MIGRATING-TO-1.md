@@ -1,6 +1,6 @@
 # Migrating from 0.x to 1.0
 
-These changes are implemented in the source checkout toward 1.0 and are **not yet in the published 0.6.0 package**. Keep using an actually published version for pinned installs. This guide describes the migration to review before the stable release; it is not a publication announcement.
+These changes apply to FailTrace 1.0 and are absent from 0.6.0. Use an actually published version for pinned installs; see [installation and publication status](../README.md#quick-start). This guide defines the migration, not registry availability.
 
 The core operations and seven MCP tools already exist. The 1.0 preparation changes bounded execution, result handling and bundle sharing rather than adding another debugging stage. See the [compatibility contract](COMPATIBILITY.md).
 

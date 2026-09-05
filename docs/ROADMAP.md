@@ -17,7 +17,7 @@ This expresses product emphasis, not a requirement to execute every operation in
 | Bisect | Implemented: repeated first-parent candidate classification in an isolated worktree | Preserve inconclusive outcomes and source evidence |
 | Minimize | Implemented: text, JSON/arrays, files and environment keys | Keep the same target failure and independently check the reduction |
 | **Verify** | **Implemented in 0.5.0: Core `verifyFix`, CLI/JSON and MCP** | Seek independent use and address observed workflow friction |
-| Bundle | Implemented: selected source/input, evidence and local replay engine; source toward 1.0 adds explicit sharing choices and a content manifest | Preserve reproduction context and review included data; bundling an entire verification report is not implemented |
+| Bundle | Implemented: selected source/input and local replay engine; 1.0 adds explicit sharing choices, optional original evidence and a content manifest | Preserve reproduction context and review included data; bundling an entire verification report is not implemented |
 | MCP | Implemented: six tools in 0.5.0; version 0.6.0 adds bounded read-only run inspection as the seventh, all calling Core | Keep the adapter thin and preserve complete evidence counts |
 
 The six original milestones are implemented in 0.3.1. Version 0.4.0 adds opt-in concurrency, threshold stopping for bisect/minimize, efficient metadata, recovery, file-copy optimization and benchmarks; see [performance scope and remaining limits](PERFORMANCE.md).
@@ -47,9 +47,9 @@ Our product hypothesis is that reusable, local failure experiments and trustwort
 
 ## Supporting work and boundaries
 
-The remaining 1.0 release work is to validate the [public compatibility contract](COMPATIBILITY.md) and [0.x migration](MIGRATING-TO-1.md), complete final installed-package and cross-platform evidence checks, and verify the actual GitHub/npm/MCP distribution. The source already includes output/input/metadata limits and bundle sharing controls. These are release acceptance tasks; 1.0 has not been published, and passing them will not by itself establish independent adoption.
+The 1.0 scope includes the [public compatibility contract](COMPATIBILITY.md), [0.x migration](MIGRATING-TO-1.md), bounded experiments and bundle sharing controls. The public 1.0.0-rc.1 archive passed cross-platform and minimum-runtime CI, independent installation, public-download verification and replay. Final GitHub/npm/MCP distribution is verified separately; see [publication status](../README.md#quick-start). After release, prioritize voluntary evidence of useful real-project and agent workflows. Release checks do not establish independent adoption.
 
 - Statistical uncertainty belongs with a defined sampling plan. Sequential trials are not automatically independent; zero observed failures do not prove elimination. Do not reuse bisect's classification stopping rule for an ordinary failure-rate confidence claim.
-- The source checkout toward 1.0 adds [bounded output, input copies and metadata](RESOURCE-LIMITS.md), preserving inconclusive outcomes when evidence is incomplete. Published 0.6.0 does not have these controls. There are no general before/after-trial reset hooks, total filesystem quota or automatic retention. Project-owned wrapper scripts can perform setup/reset today.
+- Version 1.0 adds [bounded output, input copies, input complexity and metadata](RESOURCE-LIMITS.md), preserving inconclusive outcomes when evidence is incomplete. Version 0.6.0 predates these controls. There are no general before/after-trial reset hooks, total filesystem quota or automatic retention. Project-owned wrapper scripts can perform setup/reset today.
 - Further predicate modes, environment matrices, reducers and performance paths remain candidates, not committed releases. The syntax `--fail-when`, bisect/minimize `--run`, and `matrix` is not currently supported.
 - Keep Core independent of the CLI, MCP, AI providers and cloud services. Maintain the existing adapter while prioritizing the quality of the experiments it exposes.

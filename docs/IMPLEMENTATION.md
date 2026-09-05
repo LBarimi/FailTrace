@@ -8,6 +8,10 @@ Version 0.5.0 implements dedicated code-fix verification in Core, CLI and MCP. I
 
 Version 0.6.0 adds bounded, read-only inspection of complete saved run trials and stdout/stderr byte ranges through public Core and MCP. Inspection never executes the saved command, and target output remains untrusted evidence.
 
+Version 1.0 adds bounded output (`output-budget.ts`, `runner.ts`), retained input and pre-parse complexity guards (`input-budget.ts`, `input-complexity.ts`, `minimize-input.ts`), bounded metadata and reconstruction (`metadata-budget.ts`, `run-metadata.ts`, `run-reader.ts`), and compact schema-2 bisect evidence. Reviewable bundle sharing is implemented by `bundle.ts`, `bundle-files.ts` and `bundle-environment.ts`. These modules remain in Core. The [compatibility contract](COMPATIBILITY.md) and [migration guide](MIGRATING-TO-1.md) cover the public behavior and breaking changes.
+
+The public [1.0.0-rc.1 candidate](https://github.com/LBarimi/FailTrace/releases/tag/v1.0.0-rc.1), commit `b291d84244fe3b2b3fbed822dca1964ac6006d1b`, passed 366 tests, type checking, build, eleven installed-package check groups and all seven [CI gates](https://github.com/LBarimi/FailTrace/actions/runs/33943581907). Those gates preserve the six OS/Node combinations and add a Linux package installation on the minimum Node 22.12.0. Its public archive SHA-256 is `5671558ae3a7accea6cf07a5c55d27be13695a24804ff34f87c944a8b4410464`; anonymous download, a fresh-cache public URL install, the full demo, manifest hashes and bundle replay were verified. Final 1.0.0 distribution requires the same checks on its own exact archive, as described in [release preparation](RELEASING.md).
+
 ## Required outcomes
 
 - M2: explicit exit-code, stdout/stderr substring and regex predicates; inspectable selected environment snapshots; compare saved runs and successful/failed trial outputs with bounded text diffs and stream hashes.

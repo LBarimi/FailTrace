@@ -1,14 +1,16 @@
 # Command reference
 
+This guide targets FailTrace 1.0. Check [installation and publication status](../README.md#quick-start) before using a version-pinned package; during release preparation, use an available package or the documented source fallback.
+
 See the [README](../README.md) for installation and the guided demo, and [agent workflows](AGENT-WORKFLOWS.md) for client setup.
 
 Concurrency, classification early stopping, and metadata reconstruction below require 0.4.0 or later. See [performance guidance](PERFORMANCE.md).
 
 Verify and baseline context capture require version 0.5.0 or later.
 
-The source checkout toward 1.0 limits commands to 64 KiB UTF-8, `--repeat` to 100000, `--concurrency` to 64 and minimization `--max-evaluations` to 10000. It also bounds metadata creation and reconstruction. Metadata exhaustion preserves recorded trials and returns incomplete evidence with exit 2; see [resource scope](RESOURCE-LIMITS.md#metadata-and-scheduling).
+Version 1.0 limits commands to 64 KiB UTF-8, `--repeat` to 100000, `--concurrency` to 64 and minimization `--max-evaluations` to 10000. It also bounds metadata creation and reconstruction. Metadata exhaustion preserves recorded trials and returns incomplete evidence with exit 2; see [resource scope](RESOURCE-LIMITS.md#metadata-and-scheduling).
 
-The source checkout toward 1.0 adds `--max-output-bytes` (16 MiB per trial) and `--max-total-output-bytes` (256 MiB across an investigation) to run, bisect, minimize and verify. These flags are not in published 0.6.0. Output exhaustion preserves partial evidence and is inconclusive, with CLI exit 2. Verify inherits the baseline caps; an override requires `--allow-change outputLimits:reason`. See [resource scopes and result semantics](RESOURCE-LIMITS.md).
+Version 1.0 adds `--max-output-bytes` (16 MiB per trial) and `--max-total-output-bytes` (256 MiB across an investigation) to run, bisect, minimize and verify. These flags are not in published 0.6.0. Output exhaustion preserves partial evidence and is inconclusive, with CLI exit 2. Verify inherits the baseline caps; an override requires `--allow-change outputLimits:reason`. See [resource scopes and result semantics](RESOURCE-LIMITS.md).
 
 ## Repeat and identify a failure
 
@@ -87,7 +89,7 @@ The search assumes a **monotonic sampled failure boundary** on that history. Rep
 
 Candidate runs and `bisect.json` remain under `.failtrace/bisects/<id>/`. Git worktrees do not include ignored dependencies or uncommitted source changes. Each candidate resets and cleans its temporary worktree, including ignored dependencies and build output. Include setup in the command as needed, and use an [external package-manager cache](PERFORMANCE.md#dependency-setup-during-bisect) to reuse downloads while preserving isolation. The temporary worktree is removed on clean completion, and cleanup errors are reported.
 
-In the source checkout toward 1.0, bisect JSON uses `schemaVersion: 2`. Each `candidates[].run` contains `trialCount`, `matchedTrials` and `metadataPath`, replacing its embedded `trials` array. Core callers read full details with `await loadRun(candidate.run.metadataPath)`; MCP clients can pass that path to `failtrace_inspect_run`. Trial files and source provenance remain in the candidate run directory after worktree cleanup. This changes the parent bisect result shape; it does not change the stored run schemas.
+In version 1.0, bisect JSON uses `schemaVersion: 2`. Each `candidates[].run` contains `trialCount`, `matchedTrials` and `metadataPath`, replacing its embedded `trials` array. Core callers read full details with `await loadRun(candidate.run.metadataPath)`; MCP clients can pass that path to `failtrace_inspect_run`. Trial files and source provenance remain in the candidate run directory after worktree cleanup. This changes the parent bisect result shape; it does not change the stored run schemas.
 
 ## Minimize a reproduction
 
@@ -108,7 +110,7 @@ Reported units are Unicode characters, JSON tree nodes, files, or environment ke
 
 File-set copies request copy-on-write support when available and otherwise use ordinary copies. They do not use hard links; modifying a candidate cannot modify the original through a shared file link.
 
-In the source checkout toward 1.0, `--max-input-bytes` bounds the original input and each candidate (16 MiB default), and `--max-candidate-bytes` bounds cumulative managed input copies (256 MiB default). Bounded streaming copies replace the published copy-on-write optimization. Storage exhaustion preserves an existing best available input, reports `limit_reached`, and leaves `finalVerified` false. See [input storage scope](RESOURCE-LIMITS.md#minimization-input-storage).
+In version 1.0, `--max-input-bytes` bounds the original input and each candidate (16 MiB default), and `--max-candidate-bytes` bounds cumulative managed input copies (256 MiB default). Bounded streaming copies replace the published copy-on-write optimization. Storage exhaustion preserves an existing best available input, reports `limit_reached`, and leaves `finalVerified` false. See [input storage scope](RESOURCE-LIMITS.md#minimization-input-storage).
 
 Use `--repeat N --min-failures K` to require repeated reproduction. The default evaluation budget is `--max-evaluations 200`, including baseline and final verification. Candidates are accepted only when the selected predicate still reproduces in clean trials. Original input, each candidate, its runs, the selected reduction, and `result.json` are retained under `.failtrace/minimizations/<id>/`.
 
@@ -118,7 +120,7 @@ Check both `status` and `finalVerified`. A budget-limited result may still have 
 
 ## Create a portable local bundle
 
-The source checkout toward 1.0 excludes original logs/metadata and captured environment values by default, adds `manifest.json`, and requires omitted captured environment keys before replay. Use `--include-evidence` for unchanged original evidence, repeat `--include-env KEY` for selected captured values, or supply reviewed values through `--env-file`. `--max-bundle-bytes` defaults to 512 MiB. These changes are not in published 0.6.0; see [sharing choices, prerequisites and migration](BUNDLES.md).
+Version 1.0 excludes original logs/metadata and captured environment values by default, adds `manifest.json`, and requires omitted captured environment keys before replay. Use `--include-evidence` for unchanged original evidence, repeat `--include-env KEY` for selected captured values, or supply reviewed values through `--env-file`. `--max-bundle-bytes` defaults to 512 MiB. Version 0.6.0 predates these changes; see [sharing choices, prerequisites and migration](BUNDLES.md).
 
 ```sh
 failtrace bundle <run-id> --file examples/flaky-demo.js
@@ -130,6 +132,7 @@ For the second command, use the printed final run and minimized input paths, or 
 ```text
 .failtrace/reproduction/<id>/
   README.md
+  manifest.json Relative file inventory, byte lengths and creation-time hashes
   repro.json
   repro.mjs
   repro.sh
@@ -137,7 +140,7 @@ For the second command, use the printed final run and minimized input paths, or 
   engine/       Included compiled FailTrace Core and license
   source/       Explicitly selected source files
   input/        Optional selected input file or directory
-  logs/         Original run evidence (source toward 1.0: only with --include-evidence)
+  logs/         Original run evidence (only with --include-evidence)
 ```
 
 Copy the directory to another location and run `node repro.mjs`, `sh repro.sh`, or `repro.cmd`. The included engine needs only Node.js; **install the target's own dependencies and external tools separately** as its bundle README explains. Replay runs from `source/`, restores the recorded predicate/requested count/timeout/concurrency, relocates the selected input, and saves new evidence under `replay-artifacts/`. It reports actual target-predicate matches, not arbitrary command errors. Replay executes the full requested count even for an early-stopped source run; exit `1` means at least one match, not that a previous classification's `minFailures` threshold was met.
@@ -146,12 +149,12 @@ Source files are opt-in through repeatable `--file` options and retain their pat
 
 Bisect candidate runs record their local repository and immutable commit. Bundling one of these run paths reads explicitly selected committed regular files from that commit, even after its temporary worktree has been removed. The local repository must still contain the commit; this performs no network fetch or dependency installation. Symlinks, submodules, and untracked files are unsupported for commit-based source selection.
 
-Use `--command "node relative-script.js"` when the original command contains machine-specific absolute paths. In published 0.6.0, the bundle defaults to explicitly selected environment snapshot values; `--env-file` supplies a JSON object of string/null overrides instead. The source checkout toward 1.0 requires explicit value selection as described above. Null unsets a key. When bundling an environment minimization, include null values for removed original keys so the recipient's environment cannot reintroduce them. Inspect selected values and original logs for private data before sharing.
+Use `--command "node relative-script.js"` when the original command contains machine-specific absolute paths. In published 0.6.0, the bundle defaults to explicitly selected environment snapshot values; `--env-file` supplies a JSON object of string/null overrides instead. Version 1.0 requires explicit value selection as described above. Null unsets a key. When bundling an environment minimization, include null values for removed original keys so the recipient's environment cannot reintroduce them. Inspect selected values and original logs for private data before sharing.
 
 ## MCP for coding agents
 
 ```sh
-npx --yes failtrace@0.6.0 mcp --cwd "/absolute/path/to/project"
+npx --yes failtrace@1.0.0 mcp --cwd "/absolute/path/to/project"
 ```
 
 The stdio adapter uses the official Model Context Protocol SDK and exposes these tools:
@@ -177,7 +180,7 @@ For clients using an `mcpServers` configuration, launch the pinned registry pack
       "command": "npx",
       "args": [
         "--yes",
-        "failtrace@0.6.0",
+        "failtrace@1.0.0",
         "mcp",
         "--cwd",
         "/absolute/path/to/project"
@@ -187,7 +190,7 @@ For clients using an `mcpServers` configuration, launch the pinned registry pack
 }
 ```
 
-Use an absolute project path. Pinning the version prevents an unnoticed schema change, and `--yes` prevents an interactive npm prompt from blocking stdio startup. Use `npx.cmd` when a native Windows client does not resolve npm's command shim. For a preinstalled fallback, run `npm install --global failtrace@0.6.0` and configure `failtrace` (`failtrace.cmd` on Windows) with the remaining arguments. The CLI and Core work independently of MCP. Algorithms live in Core, and the adapter makes direct Core calls. See the [client-specific setup and inspection examples](AGENT-WORKFLOWS.md).
+Use an absolute project path. Pinning the version prevents an unnoticed schema change, and `--yes` prevents an interactive npm prompt from blocking stdio startup. Use `npx.cmd` when a native Windows client does not resolve npm's command shim. For a preinstalled fallback, run `npm install --global failtrace@1.0.0` and configure `failtrace` (`failtrace.cmd` on Windows) with the remaining arguments. The CLI and Core work independently of MCP. Algorithms live in Core, and the adapter makes direct Core calls. See the [client-specific setup and inspection examples](AGENT-WORKFLOWS.md).
 
 ## Artifacts and exit codes
 
@@ -205,7 +208,7 @@ Run metadata includes schema/version, command, working directory, requested coun
 
 Individual storage uses each completed trial's `result.json` as its authoritative record; schema-1 storage reads the trials embedded in its header. `run.json` is written initially and at finalization rather than rewritten after every trial. A running snapshot or a large final summary uses on-disk `schemaVersion: 2`, `trialStorage: "individual"`, and an empty embedded trial array. Completed/interrupted compact summaries record `trialCount`, and loading requires that exact number of records. Compact error summaries omit this count because a failed write may have left fewer durable records; loading recovers those records while preserving the error status. Use the public `loadRun(reference)` API, also used by compare/bundle, to reconstruct index-sorted evidence from individual results. It accepts storage versions 1 and 2 and returns the existing schema-1 in-memory summary. Versions before 0.4.0 cannot read compact storage. Raw `run.json` alone may show stale progress after a process crash; reconstruction cannot recover a trial result that was never durably written.
 
-Small final summaries retain storage schema 1 and embedded trials for compatibility. At 1 MiB, new final summaries switch to individual storage before reaching the 32 MiB per-document reader limit. The source checkout toward 1.0 additionally bounds aggregate reconstruction and writes schema-2 `bisect.json` reports with compact candidate descriptors; use `loadRun(candidate.run.metadataPath)` for their individual trials. Published 0.6.0 still embeds candidate summaries and does not cap output files or retained candidates. See the [new resource limits](RESOURCE-LIMITS.md), [compatibility contract](COMPATIBILITY.md) and [0.x migration](MIGRATING-TO-1.md).
+Small final summaries retain storage schema 1 and embedded trials for compatibility. At 1 MiB, new final summaries switch to individual storage before reaching the 32 MiB per-document reader limit. Version 1.0 additionally bounds aggregate reconstruction and writes schema-2 `bisect.json` reports with compact candidate descriptors; use `loadRun(candidate.run.metadataPath)` for their individual trials. Published 0.6.0 still embeds candidate summaries and does not cap output files or retained candidates. See the [new resource limits](RESOURCE-LIMITS.md), [compatibility contract](COMPATIBILITY.md) and [0.x migration](MIGRATING-TO-1.md).
 
 `.failtrace/` is ignored by this repository; configure your own repository accordingly. Saved artifacts can be removed when their investigations are inactive. Resource counters do not impose a total filesystem quota or automatic retention policy.
 

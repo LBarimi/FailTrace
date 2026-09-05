@@ -1,6 +1,6 @@
 # Experiment resource limits
 
-These controls are implemented in the source checkout toward 1.0. They are not available in the published 0.6.0 package. Build the checkout before using them.
+These controls require FailTrace 1.0 and are absent from 0.6.0. See [installation and publication status](../README.md#quick-start) when selecting a package version.
 
 Repeated commands can emit unlimited output even when their input is small. An unattended debugging agent needs a finite evidence allowance and an explicit outcome when evidence is incomplete.
 
@@ -62,7 +62,7 @@ If the original input itself is larger than the requested input or copy allowanc
 
 ## Metadata and scheduling
 
-These fixed limits apply to the source checkout toward 1.0:
+These fixed limits apply to version 1.0:
 
 | Limit | Maximum | Scope |
 | --- | --- | --- |
