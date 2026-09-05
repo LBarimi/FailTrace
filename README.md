@@ -7,22 +7,6 @@ Turn a flaky command into measured failures, a smaller reproducer, and evidence 
 [![CI](https://github.com/LBarimi/FailTrace/actions/workflows/ci.yml/badge.svg)](https://github.com/LBarimi/FailTrace/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-## Measured performance
-
-| Measurement | Observed result | Exact scope |
-| --- | ---: | --- |
-| Run metadata writes | **96.45% fewer logical metadata bytes** | 100 trials: one 0.3.1 reference sample at 3,132,662 bytes → 0.5.0 five-sample median 111,141 bytes (111,094–111,228) |
-| Opt-in concurrency | **3.27× median speedup** | Ten 1 s controlled targets: concurrency 1 at 11.047 s (10.968–11.185) → concurrency 4 at 3.380 s (3.345–3.525); all ten outcomes retained |
-| Threshold classification | **10 → 1 trials; 90.3% lower median wall time** | Ten 10 ms always-matching targets: full-budget median 1.275 s (0.995–1.331) → threshold-1 median 0.124 s (0.111–0.157) |
-
-The 0.5.0 figures are five fixed-order benchmark reports run sequentially with the same Core snapshot on one Windows x64/Node.js 24.19.0 host; the 0.3.1 reference is one earlier sample on that host. These timings are not portable guarantees. Concurrency overlaps commands and can change failure behavior. Threshold stopping reduces classification work and does not produce a full-budget failure-rate sample. Logical metadata bytes are instrumented writes, not physical storage I/O. [Method and caveats](docs/PERFORMANCE.md) · [Sanitized five-sample evidence](docs/benchmarks/readme-0.5.0-windows-node24-5-samples.json)
-
-```sh
-failtrace run "npm test -- checkout" --repeat 20 --stderr-contains "checkout failed"
-```
-
-**One run, reusable evidence:** compare passing and failing logs, test candidate commits repeatedly, remove input while preserving the failure, then package a local reproduction.
-
 ## Quick start
 
 Requires **Node.js 22.12+ and npm**. Run the guided demo from any directory:
@@ -53,29 +37,6 @@ npm exec --yes --allow-remote=root --package=https://github.com/LBarimi/FailTrac
 ```
 
 For this archive alternative, the command-scoped `--allow-remote=root` option permits the explicitly requested URL on npm 12. It is unnecessary for the registry commands above and does not change your npm configuration. Older npm versions that do not recognize it can omit it. See [npm's URL install policy](https://docs.npmjs.com/using-npm/config/#allow-remote).
-
-## A real race, checked against the fix
-
-[p-memoize issue #43](https://github.com/sindresorhus/p-memoize/issues/43) reported duplicate work when same-key calls overlapped. The pinned case compares affected 6.0.2 with 7.0.0, where [PR #48](https://github.com/sindresorhus/p-memoize/pull/48) changed how pending promises are cached.
-
-| Evidence | Observed result |
-| --- | --- |
-| Affected 6.0.2 | The target matched 3 of 6 schedules: all three overlap cases |
-| Fixed 7.0.0 | 0 of 6 target matches; all six commands exited normally with code 0; Verify returned `target_not_observed` |
-| Negative controls | The unchanged candidate and an ineffective source edit each retained 3 of 6 matches; an invalid dependency selection produced 6 unhealthy trials and an `inconclusive` result |
-
-The six schedules were declared before execution: overlap and sequential, repeated three times. They measure controlled schedule coverage, not a naturally sampled flaky-failure probability. `target_not_observed` applies only to this healthy sample and does not prove that every possible execution is fixed.
-
-Clone the repository, install its locked development dependencies, then reproduce the race and run every Verify control with one command:
-
-```sh
-git clone --depth 1 https://github.com/LBarimi/FailTrace.git
-cd FailTrace
-npm ci
-npm run case:p-memoize
-```
-
-[Read the p-memoize case](examples/cases/p-memoize-race) · [See the Prettier case that reduces 464 characters to 11](examples/cases/prettier-chain)
 
 ## Use it on your own failure
 

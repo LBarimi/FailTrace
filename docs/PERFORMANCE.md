@@ -77,17 +77,17 @@ Use `--output <new-directory>` to measure a selected local or CI filesystem; the
 
 ## Five-sample 0.5.0 measurement — 2026-09-05
 
-The README table comes from five complete benchmark reports run sequentially on the same Windows x64 host, OS release 10.0.19045, with Node.js 24.19.0. Every report used the same snapshotted Core JavaScript digest and passed the CI budget checks. Each run used this shape with a new output directory and label:
+These implementation measurements come from five complete benchmark reports run sequentially on the same Windows x64 host, OS release 10.0.19045, with Node.js 24.19.0. Every report used the same snapshotted Core JavaScript digest and passed the CI budget checks. Each run used this shape with a new output directory and label:
 
 ```sh
 node scripts/bench.mjs --suite ci --check --experiments --output <new-directory> --label <label>
 ```
 
-The fixed case order includes the CI structural cases followed by the full-budget, threshold and concurrency controls. The [sanitized five-sample evidence](benchmarks/readme-0.5.0-windows-node24-5-samples.json) retains all five observations for all 18 result IDs and records min, median and max for wall time, logical metadata writes, fsync calls and completed/matched trials. Its median is the third sorted observation. CPU, RSS, throughput, artifact-size and detailed API call counts are excluded from this README-focused aggregate. Raw `.failtrace/` directories, target output and local paths remain private and are not source files.
+The fixed case order includes the CI structural cases followed by the full-budget, threshold and concurrency controls. The [sanitized five-sample evidence](benchmarks/readme-0.5.0-windows-node24-5-samples.json) retains all five observations for all 18 result IDs and records min, median and max for wall time, logical metadata writes, fsync calls and completed/matched trials. Its median is the third sorted observation. CPU, RSS, throughput, artifact-size and detailed API call counts are excluded from this aggregate. Raw `.failtrace/` directories, target output and local paths remain private and are not source files.
 
 For 100 sequential no-output trials, an earlier same-host 0.3.1 sample wrote 3,132,662 logical metadata bytes. The five 0.5.0 samples range from 111,094 to 111,228 bytes, with a median of 111,141: 96.45% fewer than that single reference. This percentage compares one historical observation with the later five-sample median; it describes instrumented logical writes rather than timing or physical storage traffic.
 
-Selected values used in the README:
+Selected implementation measurements:
 
 | Workload and setting | Median wall time (min–max) | Completed work and evidence |
 | --- | ---: | --- |
