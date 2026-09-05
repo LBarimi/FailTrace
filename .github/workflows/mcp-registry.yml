@@ -34,7 +34,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - name: Verify main, six-job CI, committed metadata and public npm package
+      - name: Verify main, CI gates, committed metadata and public npm package
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -79,6 +79,7 @@ jobs:
               assert(jobs.some((job) => job.name === `check (${os}, ${node})` && job.conclusion === 'success'), `Missing successful CI job: ${os}, Node ${node}`);
             }
           }
+          assert(jobs.some((job) => job.name === 'minimum-node' && job.conclusion === 'success'), 'Missing successful minimum Node.js 22.12.0 installation check');
           const response = await fetch(`https://registry.npmjs.org/${encodeURIComponent(manifest.name)}/${encodeURIComponent(version)}`, { signal: AbortSignal.timeout(30_000) });
           assert.equal(response.status, 200, 'Publish this exact package version to the public npm registry first');
           const published = await response.json();

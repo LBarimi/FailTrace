@@ -125,8 +125,8 @@ npm test
 npm run test:package
 ```
 
-Core is a reusable TypeScript API exported by `failtrace`. Algorithms live in `src/core`; CLI, demo orchestration, and MCP call it. CI checks Windows, macOS, and Linux with Node.js 22 and 24.
+Core is a reusable TypeScript API exported by `failtrace`. Algorithms live in `src/core`; CLI, demo orchestration, and MCP call it. CI checks Windows, macOS, and Linux with Node.js 22 and 24, plus a Linux installation check pinned to the minimum Node.js 22.12.0.
 
-For the source checkout toward 1.0, see the [compatibility contract](docs/COMPATIBILITY.md) and [migration from 0.x](docs/MIGRATING-TO-1.md). These document unreleased changes; the public installation examples above still target available packages.
+The source checkout is preparing **1.0.0-rc.1**. See the [compatibility contract](docs/COMPATIBILITY.md) and [migration from 0.x](docs/MIGRATING-TO-1.md). This source version is not a publication announcement; the public installation examples above still target available packages.
 
 [MIT license](LICENSE)

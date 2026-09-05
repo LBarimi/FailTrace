@@ -4,7 +4,7 @@ Publish the exact reviewed GitHub release archive to npm using its public HTTPS 
 
 ## Prepare and verify the public archive
 
-1. Use an exact version with matching package, runtime, lockfile, and MCP metadata. Keep the existing release gates: the exact `main` commit must pass all six Windows/macOS/Linux and Node.js 22/24 CI jobs, and any existing version tag must point to that commit.
+1. Use an exact version with matching package, runtime, lockfile, and MCP metadata. Keep the existing release gates: the exact `main` commit must pass all six Windows/macOS/Linux and Node.js 22/24 CI jobs, plus the `minimum-node` installed-package check on Node.js 22.12.0. Any existing version tag must point to that commit.
 2. Run the [Prepare release tarball workflow](../.github/workflows/release.yml). It builds, packs, smoke-tests the installed package outside the checkout, and produces the archive, `SHA256SUMS`, and `release.json`. This workflow prepares artifacts; it does not publish them.
 3. Review those artifacts, then attach the same archive and checksum to the corresponding public GitHub release. Download the HTTPS asset without authentication and confirm its SHA-256 matches the reviewed checksum. Preserve those exact bytes; do not repack the source or substitute another archive for npm publication.
 

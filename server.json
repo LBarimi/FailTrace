@@ -3,7 +3,7 @@
   "name": "io.github.LBarimi/failtrace",
   "title": "FailTrace",
   "description": "Reproduce failures, isolate their cause, and verify proposed fixes with saved evidence.",
-  "version": "0.6.0",
+  "version": "1.0.0-rc.1",
   "repository": {
     "url": "https://github.com/LBarimi/FailTrace",
     "source": "github"
@@ -14,7 +14,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "failtrace",
-      "version": "0.6.0",
+      "version": "1.0.0-rc.1",
       "runtimeHint": "npx",
       "transport": {
         "type": "stdio"
