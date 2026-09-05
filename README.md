@@ -19,11 +19,11 @@ Requires **Node.js 22.12+ and npm**. Run from any directory:
 npx --yes failtrace@1.0.0 demo
 ```
 
-The guided demo measures a failure, shrinks its input, checks a proposed fix, and creates a replayable bundle. It also shows why an unrelated crash is an inconclusive result. Evidence stays under `.failtrace/`; the demo prints the replay command.
+![Animated FailTrace demo: record failures, shrink the input, reject an unrelated crash, and check the next patch](docs/assets/demo.gif)
 
-![FailTrace's built-in demo: repeated failures, a smaller input, patch checks, and replay evidence](docs/assets/demo.svg)
+Recorded from the controlled CLI demo; output is abridged and timing edited. [Static version](docs/assets/demo-poster.png) · [Full results and limits](docs/DEMO.md) · [Install for everyday use](docs/INSTALL.md)
 
-This is a controlled example of the workflow. [See what its results establish](docs/DEMO.md), or [install the CLI for everyday use](docs/INSTALL.md).
+The demo saves its evidence under `.failtrace/` and prints a command to replay the reduced failure.
 
 ## For coding agents
 

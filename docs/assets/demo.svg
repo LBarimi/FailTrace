@@ -16,6 +16,6 @@
 <text x="70" y="363" fill="#d8e4f3" font-size="18">Unrelated crash       inconclusive           2 unrelated failures</text>
 <text x="70" y="393" fill="#d8e4f3" font-size="18">Intended fix          target not observed    2 healthy observations</text>
 <text x="34" y="445" fill="#81b4ff" font-size="16">04  SHARE A REPRODUCTION</text>
-<text x="70" y="480" fill="#d8e4f3" font-size="18">Bundle created: source + input + logs + replay scripts</text>
+<text x="70" y="480" fill="#d8e4f3" font-size="18">Bundle created: source + input + manifest + replay scripts</text>
 <text x="34" y="538" fill="#8fa5bf" font-size="14">Finite observations, not proof of elimination. Full evidence: .failtrace/demos/&lt;id&gt;/</text>
 </g></svg>

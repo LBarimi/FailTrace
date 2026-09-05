@@ -41,7 +41,7 @@ ${text(70, 333, 'Baseline control      target observed        2 / 2 matches')}
 ${text(70, 363, 'Unrelated crash       inconclusive           2 unrelated failures')}
 ${text(70, 393, 'Intended fix          target not observed    2 healthy observations')}
 ${text(34, 445, '04  SHARE A REPRODUCTION', '#81b4ff', 16)}
-${text(70, 480, 'Bundle created: source + input + logs + replay scripts')}
+${text(70, 480, 'Bundle created: source + input + manifest + replay scripts')}
 ${text(34, 538, 'Finite observations, not proof of elimination. Full evidence: .failtrace/demos/<id>/', '#8fa5bf', 14)}
 </g></svg>\n`;
 const destination = join(root, 'docs/assets/demo.svg');

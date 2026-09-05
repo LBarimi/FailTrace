@@ -18,3 +18,19 @@ The guided demo exits `0` when its expected controls complete. Replaying its int
 For your own investigation, choose a specific failure signature, arrange the target dependencies, and select an appropriate trial budget. Capture [verification context](VERIFY.md) before modifying code. Review the [bundle contents and prerequisites](BUNDLES.md) before sharing.
 
 [Return to quick start](../README.md#quick-start)
+
+## README animation
+
+The README GIF is an animated summary of a recorded FailTrace 1.0.0 CLI demo. It follows the same observations above and highlights the unrelated-error check. The layout abbreviates the CLI output and edits timing for readability; it is not a recording of an autonomous agent, a GUI shipped with FailTrace, or a speed measurement. [Static poster](assets/demo-poster.png) · [Full static summary](assets/demo.svg)
+
+To regenerate it, use Node.js and the optional maintainer image renderer. This does not add a runtime dependency to FailTrace:
+
+```sh
+npm install --prefix .failtrace/media-tools --no-save --package-lock=false sharp@0.35.4
+npm run build
+node scripts/render-demo-animation.mjs
+```
+
+The renderer executes the demo and validates the depicted results before writing `docs/assets/demo.gif` and `docs/assets/demo-poster.png`. Use `--cli <installed-package>/dist/cli/index.js` to record an independently installed release, or `--sharp <sharp-package-directory>` to use an existing renderer installation. Raw evidence and vector storyboards stay under the generated `.failtrace/demos/<id>/` directory. The GIF must remain below 1 MiB. Rendering uses [Sharp's GIF output](https://sharp.pixelplumbing.com/api-output/#gif).
+
+Review each scene and the animation at README width before committing. Only validated demo values enter the artwork; local command paths, artifact paths, environment values and raw logs must remain private. Keep the caption's recorded version consistent with the CLI used to render. `node scripts/render-demo.mjs` separately regenerates the full static SVG summary from a fresh source demo.
