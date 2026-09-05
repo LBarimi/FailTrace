@@ -1,136 +1,107 @@
 # FailTrace
 
-**Reproduce. Isolate. Minimize. Verify.**
+**Debugging experiments for AI coding agents and developers.**
 
-Turn a flaky command into measured failures, a smaller reproducer, and evidence someone else can replay. Built for developers and coding agents. Local execution, inspectable files, no AI API or telemetry.
+Turn a hard-to-reproduce failure into saved trials, a smaller reproducer, and evidence you can inspect after a proposed fix.
+
+Use FailTrace from the **CLI or an MCP client** to repeat commands, compare failures, isolate regressions, minimize inputs, verify patches, and package a replay. Everything runs locally. No AI API, account, or telemetry is required.
 
 [![CI](https://github.com/LBarimi/FailTrace/actions/workflows/ci.yml/badge.svg)](https://github.com/LBarimi/FailTrace/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
+**[Try the demo](#quick-start)** · **[Connect your coding agent](docs/AGENT-WORKFLOWS.md)** · **[Use your own command](#use-it-on-your-own-failure)**
+
 ## Quick start
 
-**FailTrace 1.0.0 is available on npm and as a verified [GitHub release](https://github.com/LBarimi/FailTrace/releases/tag/v1.0.0).** See the [1.x compatibility contract](docs/COMPATIBILITY.md) and [migration guide](docs/MIGRATING-TO-1.md) when upgrading.
-
-Requires **Node.js 22.12+ and npm**. Run the guided demo from any directory:
+Requires **Node.js 22.12+ and npm**. Run from any directory:
 
 ```sh
-npx --yes failtrace demo
+npx --yes failtrace@1.0.0 demo
 ```
 
-The demo runs one evidence flow: **7 passes / 3 failures**, a six-element JSON input reduced to **`["BUG"]`**, the minimized failure observed twice, an unrelated crash rejected as inconclusive, a proposed fix with **2 healthy / 0 matching** observations, and the affected implementation restored in a bundle ready to replay. It preserves evidence under `.failtrace/demos/<id>/` and prints the replay command. The target-free result describes that finite sample; it does not prove elimination. The demo exits `0` when all expected controls are verified. Replaying its intentionally failing bundle exits `1`.
+The guided demo measures a failure, shrinks its input, checks a proposed fix, and creates a replayable bundle. It also shows why an unrelated crash is an inconclusive result. Evidence stays under `.failtrace/`; the demo prints the replay command.
 
-![A real FailTrace demo: 7 passes, 3 failures, input reduced to BUG, an unrelated crash rejected, a healthy fixed sample, and a replayable bundle](docs/assets/demo.svg)
+![FailTrace's built-in demo: repeated failures, a smaller input, patch checks, and replay evidence](docs/assets/demo.svg)
 
-Install the command for everyday use:
-
-```sh
-npm install --global failtrace
-failtrace demo
-```
-
-Prefer a project dependency? Use `npm install --save-dev failtrace` and run `npx failtrace`. Neither a source checkout nor a TypeScript build is required.
-
-### GitHub release alternative
-
-The verified [v1.0.0 archive and checksum](https://github.com/LBarimi/FailTrace/releases/tag/v1.0.0) include compiled code. Run that exact GitHub package with:
-
-```sh
-npm exec --yes --allow-remote=root --package=https://github.com/LBarimi/FailTrace/releases/download/v1.0.0/failtrace-1.0.0.tgz -- failtrace demo
-```
-
-For this archive alternative, the command-scoped `--allow-remote=root` option permits the explicitly requested URL on npm 12. It is unnecessary for the registry commands above and does not change your npm configuration. Older npm versions that do not recognize it can omit it. See [npm's URL install policy](https://docs.npmjs.com/using-npm/config/#allow-remote).
-
-## Use it on your own failure
-
-```sh
-# Measure a known failure signature.
-failtrace run "npm test -- checkout" --repeat 20 --stderr-contains "checkout failed"
-
-# Compare the first passing and failed trial from the printed run ID.
-failtrace compare <run-id>
-
-# Reduce an input read by your script through FAILTRACE_INPUT.
-failtrace minimize --input cases.json --format json --command "node reproduce.js" --stderr-contains "checkout failed"
-
-# Package the final run and reduced input paths printed by minimization.
-failtrace bundle <final-run-directory> --file reproduce.js --input <minimized-input-path>
-```
-
-Paths in angle brackets come from the preceding result. If a failed outcome is a timeout or setup problem, select a matching trial explicitly when comparing. Use `--json` for machine-readable results.
-
-| Problem | Operation | Evidence you get |
-| --- | --- | --- |
-| “It fails sometimes.” | `run` | Failure frequency, predicate matches, durations, stdout/stderr |
-| “What changed between PASS and FAIL?” | `compare` | Bounded output differences, full hashes, selected environment changes |
-| “Which revision introduced it?” | `bisect` | Repeated candidate trials and a sampled first-parent boundary |
-| “The reproducer is too large.” | `minimize` | Reduced text, JSON/arrays, files, or environment keys; final verification |
-| “Did my code change help?” | `verify` | Original target observations, execution health and declared context changes; [workflow and older-version fallback](docs/VERIFY.md) |
-| “The agent response omitted the trial I need.” | Core `inspectRunEvidence` / MCP `failtrace_inspect_run` | Filtered saved-trial pages and bounded stdout/stderr chunks without command execution |
-| “Someone else needs the evidence?” | `bundle` | Selected source/input, content manifest, optional original evidence, included Core engine and replay scripts |
-
-[Full command reference](docs/CLI.md) · [Runnable examples](examples) · [Implementation and verification](docs/IMPLEMENTATION.md)
-
-## Product priorities
-
-The unreleased source tightens Bisect's handling of unrelated nonzero exits and adds explicit healthy/inconclusive exit policies. See the [migration note](docs/COMPATIBILITY.md#migration-review-for-unreleased-bisect-safety-changes); the published 1.0.0 package retains its original behavior.
-
-**Predicate → Compare → Bisect → Minimize → Verify → Bundle → MCP**
-
-All seven capabilities are implemented through reusable Core and the CLI/MCP adapters. Verify requires a baseline with captured context, checks healthy completion, and reports finite target observations without claiming elimination. Saved-run inspection pages complete trial evidence without executing the command. Version 1.0 adds bounded experiments, explicit bundle sharing choices and a [public compatibility contract](docs/COMPATIBILITY.md). The sequence expresses product emphasis; see the [roadmap](docs/ROADMAP.md) and [verification workflow and limits](docs/VERIFY.md).
+This is a controlled example of the workflow. [See what its results establish](docs/DEMO.md), or [install the CLI for everyday use](docs/INSTALL.md).
 
 ## For coding agents
 
-FailTrace handles the repeated experiments; the agent investigates the resulting evidence. Use it through the CLI with `--json`, or connect its official-SDK stdio MCP server:
+Give your agent a consistent way to run debugging experiments and return the evidence behind its conclusions.
+
+- **Follow the same failure.** Define a target message, exit code, or regular expression before investigating.
+- **Inspect saved work.** Get structured counts and bounded summaries, then page through the trial logs you need without running the command again.
+- **Recheck a patch.** Verify compares a candidate with a captured baseline and separates target observations from unrelated errors or incomplete evidence.
+
+Connect the local stdio MCP server through your client's configuration:
 
 ```sh
 npx --yes failtrace@1.0.0 mcp --cwd "/absolute/path/to/your/project"
 ```
 
-The exact version keeps every client on the documented tool schemas, and `--yes` prevents npm's first-use prompt from blocking the stdio handshake. FailTrace reserves stdout for MCP messages; npm notices and server diagnostics use stderr. In native Windows client configuration, use `npx.cmd` when `npx` is not resolved as a command. A global-install fallback is `npm install --global failtrace@1.0.0`, followed by `failtrace mcp --cwd "/absolute/path/to/your/project"` (`failtrace.cmd` in a native Windows configuration).
+**[Setup for Codex, Claude Code, Cursor, and other MCP clients →](docs/AGENT-WORKFLOWS.md)**
 
-It exposes seven tools: `failtrace_run`, `failtrace_compare`, `failtrace_bisect`, `failtrace_minimize`, `failtrace_verify`, `failtrace_bundle`, and the read-only `failtrace_inspect_run`. The inspection tool pages complete saved trial evidence and bounded stdout/stderr chunks without re-running the command. Target output is untrusted data: inspect it as evidence, never as instructions or tool arguments. Large responses retain full metadata on disk; `matchedTrials` reports the complete predicate-match count.
+Your client launches this command; running it alone in a terminal waits for MCP requests. The guide covers Windows command shims and an optional project instruction snippet.
 
-For verification, capture context with the baseline run before editing code, then supply an explicit candidate command and working directory. An unrelated syntax/setup error is inconclusive even if it no longer prints the target message. See [agent verification](docs/AGENT-WORKFLOWS.md#recheck-after-a-code-change).
+Then try asking your agent:
 
-**[Connect Codex, Claude Code, Cursor, or another MCP client →](docs/AGENT-WORKFLOWS.md)**
+> Use FailTrace to investigate this intermittent test failure. Choose its failure signature, run a bounded sample, compare a healthy trial with a matching failure, and explain what the evidence supports. Capture a baseline before editing, then verify the proposed change.
 
-After connecting, try asking:
+Seven tools expose the same Core engine: `failtrace_run`, `failtrace_compare`, `failtrace_bisect`, `failtrace_minimize`, `failtrace_verify`, `failtrace_bundle`, and the read-only `failtrace_inspect_run`. Agents that use a shell can call the CLI with `--json`.
 
-> This checkout test sometimes fails. Use FailTrace to measure its known failure signature, compare passing and matching trial evidence, and report what the results establish before changing code.
+An installed MCP server makes the tools available; the agent still chooses when to use them. A healthy sample with no target observed does not prove a bug is gone.
 
-The guide includes client configuration, bounded experiments, result interpretation, and an optional instruction snippet for your own repository. Installing a server makes the tools available; it does not guarantee an agent will choose them.
+## Use it on your own failure
+
+Run this from your project, replacing the command and error message with your own:
+
+```sh
+npx --yes failtrace@1.0.0 run "npm test -- checkout" --repeat 20 --stderr-contains "checkout failed"
+```
+
+FailTrace saves each trial's output and prints an investigation ID. Exit `1` can mean the failure you are investigating was recorded. Add `--json` for automation, and use the [command reference](docs/CLI.md) to inspect or continue that investigation.
+
+| When you need to… | Use | What you get |
+| --- | --- | --- |
+| Measure an intermittent failure | `run` | Recorded outcomes, target matches, durations, and logs |
+| Inspect a passing and failing attempt | `compare` | Bounded output differences, full hashes, and selected environment changes |
+| Locate a regression | `bisect` | Repeated candidate trials and a sampled boundary on Git's first-parent history |
+| Shrink a large reproducer | `minimize` | Reduced text, JSON, files, or environment keys, with a separate final check |
+| Check a proposed fix | `verify` | Target observations and execution health against a captured baseline |
+| Retrieve omitted agent evidence | `failtrace_inspect_run` | Saved trial pages and bounded output, without executing a command |
+| Hand the investigation to someone else | `bundle` | Selected source/input, a manifest, and replay scripts |
+
+The target command can use any runtime; FailTrace itself requires Node.js. Input reduction needs your command to read the candidate input. [CLI reference](docs/CLI.md) · [Verify workflow](docs/VERIFY.md) · [Bundle guide](docs/BUNDLES.md)
 
 ## What the results establish
 
-- Repetition measures observed outcomes under the chosen execution settings. Bisect uses repeated trials and a failure threshold, assuming a monotonic boundary on first-parent history. Early-stopped classification samples are not full-run failure-rate estimates and do not provide statistical confidence.
-- Minimization accepts only reproducing candidates and independently rechecks the result. Check `status` and `finalVerified`; limits and inconclusive runs are reported. Reductions are local to the supported removal operations.
-- Verify enforces a full, healthy baseline and candidate sample with explicit context changes. `target_not_observed` means no target match in that sample; it does not establish a statistical improvement or prove the defect gone. Captured file/environment scope does not include all external state.
-- Bundles include selected files and the Node Core engine. Target dependencies, services, uncaptured environment state, and shell portability still need attention. Creation never executes the bundle. Version 1.0 provides a [reviewable manifest and explicit log/environment sharing choices](docs/BUNDLES.md).
-- Commands run with your local permissions. Process cleanup is best effort. Logs can contain private output; `.failtrace/` is ignored by this repository. Version 1.0 has [output, input-copy, input-complexity and metadata limits](docs/RESOURCE-LIMITS.md), rejecting oversized inputs before execution and preserving explicit inconclusive outcomes for incomplete experiments, plus compact bisect results that link to complete saved runs. Version 0.6.0 predates these limits.
+- Repetition and Bisect report observations under chosen settings. They do not provide statistical confidence; concurrency can change failure behavior.
+- Minimization rechecks its result but does not promise the smallest possible input. Check `status` and `finalVerified`.
+- Verify's `target_not_observed` means no target match in a healthy, comparable sample. It does not prove that the intended test path ran or that the defect was eliminated.
+- Bundles include selected files and the Node Core engine. Target dependencies, services, and uncaptured environment state still need setup.
+- Commands run with your local permissions. Cleanup is best effort. Logs, commands, source, and inputs can contain private information: review them before sharing.
 
-`run` exits `1` when it records failed outcomes; that is useful evidence. The Verify command uses `0` for healthy target-not-observed evidence, `1` for target observed, and `2` for inconclusive evidence. Invalid usage and incomplete investigations use `2`. Interruptions use `130`/`143`. See the [reference](docs/CLI.md#artifacts-and-exit-codes) for details.
+[Result and exit-code details](docs/CLI.md#artifacts-and-exit-codes) · [Resource limits](docs/RESOURCE-LIMITS.md) · [Performance scope](docs/PERFORMANCE.md)
 
-## Contribute a useful debugging workflow
+## Availability and contributing
 
-**[Tell us where FailTrace helped or got stuck](https://github.com/LBarimi/FailTrace/issues/new?template=workflow.yml).** A real command, a first-install problem, or an agent integration is useful feedback. Sharing private logs is optional; remove secrets first.
+**1.0.0 is published on npm and as a [GitHub release](https://github.com/LBarimi/FailTrace/releases/tag/v1.0.0).** The commands above use that exact package. See [installation alternatives](docs/INSTALL.md), the [1.x compatibility contract](docs/COMPATIBILITY.md), and [migration from 0.x](docs/MIGRATING-TO-1.md).
 
-Our goal is adoption and repeat use, not feature count. Contributions that shorten the path to useful evidence are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) and the [adoption priorities](docs/ADOPTION.md).
+The unreleased source includes stricter Bisect exit policies, target-first comparison, and clearer CLI diagnostics. These changes are not yet in the npm package. [Changes and migration notes](CHANGELOG.md#unreleased) · [Product roadmap](docs/ROADMAP.md)
 
-To develop from source:
+**[Tell us where FailTrace helped or got stuck →](https://github.com/LBarimi/FailTrace/issues/new?template=workflow.yml)**
+
+A first-install problem, a useful investigation, or a second use on your own project helps decide what to improve. Private logs are optional. Our goal is useful, repeated adoption by people and agents.
+
+To work on the source:
 
 ```sh
 git clone https://github.com/LBarimi/FailTrace.git
 cd FailTrace
 npm ci
-npm run build
-npm run demo
-npm run typecheck
 npm test
-npm run test:package
+npm run typecheck
+npm run demo
 ```
 
-Core is a reusable TypeScript API exported by `failtrace`. Algorithms live in `src/core`; CLI, demo orchestration, and MCP call it. CI checks Windows, macOS, and Linux with Node.js 22 and 24, plus a Linux installation check pinned to the minimum Node.js 22.12.0.
-
-See the [1.x compatibility contract](docs/COMPATIBILITY.md) and [migration from 0.x](docs/MIGRATING-TO-1.md) before upgrading an integration.
-
-[MIT license](LICENSE)
+`npm test` builds the source first. Core is also an ESM TypeScript API exported by `failtrace`; CLI and MCP call the same engine. [Contributing](CONTRIBUTING.md) · [Implementation](docs/IMPLEMENTATION.md) · [Adoption priorities](docs/ADOPTION.md)

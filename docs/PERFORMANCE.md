@@ -1,6 +1,6 @@
 # Performance and evidence
 
-This document describes the performance changes in 0.4.0. Versions through 0.3.1 retain their original execution and metadata behavior.
+This document describes the execution costs and controls in **1.0.0**, alongside explicitly versioned historical measurements. Older releases retain their original behavior. A historical optimization result is not a measurement of the current engine or a comparison with another product.
 
 ## Execution controls
 
@@ -22,15 +22,15 @@ Bundles preserve the recorded concurrency, predicate, timeout, and original requ
 
 ## Metadata and recovery
 
-The source checkout toward 1.0 replaces direct output file descriptors with bounded streaming pipes and bounds managed minimization input copies. File-set copies use bounded streaming snapshots instead of the earlier reflink optimization. Generated run records and saved-run reconstruction also have aggregate limits; bisect schema 2 references candidate trial files instead of embedding their full arrays. See [resource budgets and migration details](RESOURCE-LIMITS.md). Historical measurements describe their recorded versions, not these changed I/O paths.
+Version 1.0 replaces direct output file descriptors with bounded streaming pipes and bounds managed minimization input copies. File-set copies use bounded streaming snapshots instead of the earlier reflink optimization. Generated run records and saved-run reconstruction also have aggregate limits; bisect schema 2 references candidate trial files instead of embedding their full arrays. See [resource budgets and migration details](RESOURCE-LIMITS.md). Historical measurements describe their recorded versions, not these changed I/O paths.
 
 Each `trials/<index>/result.json` is the authoritative record of a finished trial. Run-level metadata is persisted initially and at finalization. It is no longer serialized, rewritten, and synced in full after each trial. Statistics use a running accumulator for constant work per recorded trial.
 
 Small finalized runs still use storage schema 1 and embed their trial arrays. At 1 MiB, final summaries use storage `schemaVersion: 2`, `trialStorage: "individual"`, and an empty embedded array before reaching the 32 MiB reader limit. Completed/interrupted compact summaries record `trialCount` and require exactly that many durable records on load. Compact error summaries omit the count to recover available records after a failed write while preserving error status. Initial running snapshots also use individual storage. `loadRun(reference)` accepts both storage versions and reconstructs index-sorted trials into the existing schema-1 in-memory summary; compare and bundle use that reader. Older FailTrace readers reject compact schema 2 rather than mistake an empty embedded array for completed evidence. After a crash, use the new reader instead of treating the initial raw `run.json` as live progress. A trial whose result was never durably written cannot be reconstructed. Older oversized embedded metadata remains subject to the reader limit.
 
-This removes repeated growing run-summary writes, but trial records still require filesystem operations and durability work. Reconstruction reads those records and the returned summary uses memory proportional to the trial count. CLI JSON can therefore still be large. Through published 0.6.0, parent `bisect.json` reports embed full candidate runs and logs/input copies have no aggregate allowance. The source checkout toward 1.0 adds the limits and compact candidate references described above. MCP bounds returned lists; version 0.6.0 can page saved run trials and stdout/stderr byte ranges through `failtrace_inspect_run`, while other complete evidence remains at returned metadata paths. Monitor disk usage and clean inactive investigations according to your CI policy; no automatic cleanup, retention schedule, or TTL is implemented.
+This removes repeated growing run-summary writes, but trial records still require filesystem operations and durability work. Reconstruction reads those records and the returned summary uses memory proportional to the trial count. CLI JSON can therefore still be large. Through published 0.6.0, parent `bisect.json` reports embed full candidate runs and logs/input copies have no aggregate allowance. Version 1.0 adds the limits and compact candidate references described above. MCP bounds returned lists; version 0.6.0 can page saved run trials and stdout/stderr byte ranges through `failtrace_inspect_run`, while other complete evidence remains at returned metadata paths. Monitor disk usage and clean inactive investigations according to your CI policy; no automatic cleanup, retention schedule, or TTL is implemented.
 
-File-set minimization requests copy-on-write/reflink copying where the filesystem supports it, with ordinary copying as the fallback. It still creates separate candidate files and never relies on hard links, so target writes do not alter the original input. Benefits depend on the filesystem and how much the target modifies copied data.
+Version 1.0 file-set minimization streams bounded copies and checks the source before and after each copy. Candidate files are separate from the original input, so target writes do not modify the original through a hard link. Copy cost grows with retained bytes and the selected filesystem; the earlier reflink optimization is historical.
 
 ## Dependency setup during bisect
 
@@ -51,7 +51,7 @@ $env:npm_config_cache = 'C:/cache/failtrace-npm'
 failtrace bisect --good GOOD_REF --bad BAD_REF --command "npm ci --prefer-offline && npm test" --repeat 5 --min-failures 2
 ```
 
-This reuses package downloads while each candidate installs dependencies for its own lockfile. It does not preserve `node_modules`, guarantee offline availability, or cache build output. Setup inside the command runs for every executed trial and counts toward its timeout. Select a timeout that includes setup, and use a specific failure predicate so a setup failure is not mistaken for the target defect. No setup lifecycle or automatic dependency cache is implemented.
+This reuses package downloads while each candidate installs dependencies for its own lockfile. It does not preserve `node_modules`, guarantee offline availability, or cache build output. Setup inside the command runs for every executed trial and counts toward its timeout. Select a timeout that includes setup, and use a specific failure predicate so a setup failure is not mistaken for the target defect. No setup lifecycle or automatic dependency cache is implemented. In the unreleased source, Bisect also requires healthy exits for nonmatching trials and supports explicitly declared inconclusive exits; see the [exit-policy migration note](COMPATIBILITY.md#migration-review-for-unreleased-bisect-safety-changes).
 
 ## Run the benchmarks
 
@@ -133,9 +133,9 @@ The benchmark separates costs before changing execution paths. The following are
 | Candidate optimization | Tradeoff to measure |
 | --- | --- |
 | Executable plus argv mode | Can avoid shell startup; requires a separate API contract without changing existing command-string semantics. |
-| Streaming substring checks | Avoids rereading logs but introduces JavaScript piping and backpressure instead of the existing direct file descriptors. |
+| Streaming substring checks | Could avoid substring rereads by matching inside the existing bounded capture pipeline; must preserve chunk boundaries, output-limit semantics and backpressure. |
 | Reusable regex workers | May reduce worker startup; must retain the 16 MiB limit, evaluation timeout, and worker replacement after timeout. |
 | Saved output hashes | Helps repeated comparisons but adds hashing cost to runs that are never compared; source-file changes also need a validity policy. |
-| Output budgets and retention | Can bound disk growth; truncation must not silently change predicate results or remove needed evidence. |
+| Retention of old investigations | Managed output and copy budgets already exist. Removing inactive historical investigations needs an explicit policy that preserves active and referenced evidence. |
 
-The current implementation still uses a fresh platform shell for each trial, direct file descriptors for target output, streamed substring rereads, isolated regex workers, and on-demand comparison hashes. Choose bounded experiments and measure the actual CI filesystem before applying FailTrace to every test invocation.
+Version 1.0 uses a fresh platform shell for each trial, bounded stdout/stderr pipes with backpressure, streamed substring rereads, isolated regex workers, and on-demand comparison hashes. Choose bounded experiments and measure the actual CI filesystem before applying FailTrace to every test invocation.
