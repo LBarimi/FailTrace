@@ -86,7 +86,8 @@ describe('official SDK stdio MCP adapter', () => {
     });
 
     await copyFile(join(fixtures, 'bundle-target.mjs'), join(cwd, 'target.mjs'));
-    const runCall = await client.callTool({ name: 'failtrace_run', arguments: { command: `${node} target.mjs mixed`, repeat: 2 } });
+    const runCall = await client.callTool({ name: 'failtrace_run', arguments: { command: `${node} target.mjs mixed`, repeat: 2,
+      captureEnv: ['BUNDLE_MARKER'], env: { BUNDLE_MARKER: 'synthetic-selected-value' } } });
     expect(runCall.isError).toBe(false);
     const run = structured(runCall);
     expect(run.status).toBe('completed');
@@ -101,11 +102,15 @@ describe('official SDK stdio MCP adapter', () => {
     expect(structured(comparison)).toMatchObject({ trialA: 1, trialB: 2, stderr: { equal: false } });
 
     const bundled = await client.callTool({
-      name: 'failtrace_bundle', arguments: { run: runDirectory, files: ['target.mjs'], command: 'node target.mjs mixed' },
+      name: 'failtrace_bundle', arguments: { run: runDirectory, files: ['target.mjs'], command: 'node target.mjs mixed',
+        includeEnv: ['BUNDLE_MARKER'], includeEvidence: true, maxBundleBytes: 2 * 1024 * 1024 },
     });
     expect(bundled.isError).toBe(false);
     const bundle = structured(bundled);
     expect(JSON.parse(await readFile(bundle.configPath as string, 'utf8')).command).toBe('node target.mjs mixed');
+    expect(bundle).toMatchObject({ evidenceIncluded: true, environmentKeys: ['BUNDLE_MARKER'], requiredEnvironment: [] });
+    expect(JSON.parse(await readFile(bundle.manifestPath as string, 'utf8')).evidenceIncluded).toBe(true);
+    expect(JSON.parse(await readFile(bundle.configPath as string, 'utf8')).environment).toEqual({ BUNDLE_MARKER: 'synthetic-selected-value' });
     expect(await readFile(join(bundle.directory as string, 'source', 'target.mjs'), 'utf8'))
       .toBe(await readFile(join(cwd, 'target.mjs'), 'utf8'));
 

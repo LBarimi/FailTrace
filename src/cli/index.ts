@@ -123,7 +123,7 @@ async function main(): Promise<number> {
         const env = invocation.envFile === undefined ? undefined
           : await environmentFile(resolve(invocation.cwd ?? process.cwd(), invocation.envFile));
         const bundle = await createBundle({ ...invocation, signal: controller.signal, ...(env === undefined ? {} : { env }) });
-        print(`FailTrace - reproduction bundle\n\nSource files  ${bundle.files.length}\nBundle        ${bundle.directory}\n\nReplay:\nnode "${join(bundle.directory, 'repro.mjs')}"\n\nRead the bundle README for target setup and environment requirements.`);
+        print(`FailTrace - reproduction bundle\n\nSource files  ${bundle.files.length}\nBundle        ${bundle.directory}\nManifest      ${bundle.manifestPath}\nOriginal evidence  ${bundle.evidenceIncluded ? 'included unchanged; review private output and paths' : 'excluded'}\nEnvironment values  ${bundle.environmentKeys.length} explicitly selected\nEnvironment prerequisites  ${bundle.requiredEnvironment.length}\n\nReplay:\nnode "${join(bundle.directory, 'repro.mjs')}"\n\nReview manifest.json and repro.json before sharing. Read the bundle README for target setup and environment requirements.`);
         result(bundle);
         exitCode = 0;
         break;

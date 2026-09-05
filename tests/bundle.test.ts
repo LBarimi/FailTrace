@@ -1,11 +1,13 @@
 import { spawn } from 'node:child_process';
-import { cp, lstat, mkdir, readFile, readdir, rename, rm, symlink, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { appendFile, cp, lstat, mkdir, readFile, readdir, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { delimiter, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createBundle } from '../src/core/bundle.js';
+import { createBundle, type BundleManifest } from '../src/core/bundle.js';
 import { runTrials } from '../src/core/run-trials.js';
 import { loadRun } from '../src/core/run-reader.js';
+import { BundleWriter } from '../src/core/bundle-files.js';
 import type { RunOptions, RunSummary } from '../src/core/types.js';
 import { cleanupDirectories, temporaryDirectory } from './helpers.js';
 
@@ -32,7 +34,7 @@ async function runNode(args: string[], cwd: string, env = nodeEnvironment()): Pr
   });
 }
 
-async function setup(mode = 'mixed', options: Pick<RunOptions, 'concurrency' | 'repeat' | 'stopWhenDecided'> = {}): Promise<{ root: string; source: string; run: RunSummary }> {
+async function setup(mode = 'mixed', options: Pick<RunOptions, 'concurrency' | 'repeat' | 'stopWhenDecided' | 'env' | 'captureEnv'> = {}): Promise<{ root: string; source: string; run: RunSummary }> {
   const root = await temporaryDirectory();
   directories.push(root);
   const source = join(root, 'original project');
@@ -51,9 +53,100 @@ async function setup(mode = 'mixed', options: Pick<RunOptions, 'concurrency' | '
 }
 
 describe('self-contained reproduction bundles', () => {
+  it('rejects directory case collisions even when their child filenames differ', async () => {
+    const root = await temporaryDirectory();
+    directories.push(root);
+    const writer = new BundleWriter(root, 1024);
+    await writer.text('source/Group/one.js', 'one', 'source');
+    await expect(writer.text('source/group/two.js', 'two', 'source')).rejects.toThrow('case-insensitive');
+    expect(await readFile(join(root, 'source', 'Group', 'one.js'), 'utf8')).toBe('one');
+  });
+  it('excludes private evidence by default and inventories the exact shareable content', async () => {
+    const privateValue = 'synthetic-private-environment-value';
+    const privateLog = 'synthetic-private-output-value';
+    const { root, source, run } = await setup('mixed', { captureEnv: ['BUNDLE_PRIVATE'],
+      env: { ...nodeEnvironment(), BUNDLE_PRIVATE: privateValue } });
+    const originalMetadata = await readFile(join(run.artifactDirectory, 'run.json'));
+    const originalOutput = join(run.artifactDirectory, run.trials[0]!.stdoutPath);
+    await appendFile(originalOutput, privateLog);
+    const bundle = await createBundle({ cwd: root, run: run.artifactDirectory, files: ['nested/target.mjs'] });
+    expect(bundle).toMatchObject({ evidenceIncluded: false, environmentKeys: [],
+      requiredEnvironment: [{ key: 'BUNDLE_PRIVATE', state: 'set' }] });
+    expect(await readdir(bundle.directory)).not.toContain('logs');
+    const manifest = JSON.parse(await readFile(bundle.manifestPath, 'utf8')) as BundleManifest;
+    expect(manifest.files.length + 1).toBe(bundle.fileCount);
+    expect(manifest.files.every((file) => !file.path.includes('\\') && !file.path.startsWith('/'))).toBe(true);
+    expect(manifest.files.some((file) => file.category === 'evidence')).toBe(false);
+    let contentBytes = 0;
+    for (const entry of manifest.files) {
+      const content = await readFile(join(bundle.directory, entry.path));
+      expect(content.length).toBe(entry.bytes);
+      expect(createHash('sha256').update(content).digest('hex')).toBe(entry.sha256);
+      expect(content.toString()).not.toContain(privateValue);
+      expect(content.toString()).not.toContain(privateLog);
+      expect(content.toString()).not.toContain(source);
+      expect(content.toString()).not.toContain(source.replaceAll('\\', '\\\\'));
+      contentBytes += content.length;
+    }
+    expect(manifest.contentBytes).toBe(contentBytes);
+    expect(bundle.totalBytes).toBe(contentBytes + (await readFile(bundle.manifestPath)).length);
+    expect(await readFile(join(run.artifactDirectory, 'run.json'))).toEqual(originalMetadata);
+    expect(await readFile(originalOutput, 'utf8')).toContain(privateLog);
+  });
+
+  it('checks omitted environment prerequisites before execution and includes only selected captured values', async () => {
+    const { root, run } = await setup('environment', { captureEnv: ['BUNDLE_VALUE', 'BUNDLE_UNSET'],
+      env: { ...nodeEnvironment(), BUNDLE_VALUE: 'selected', BUNDLE_UNSET: undefined } });
+    const options = { cwd: root, run: run.artifactDirectory, files: ['nested/target.mjs'] };
+    const bundle = await createBundle(options);
+    const absent = { ...nodeEnvironment(), BUNDLE_VALUE: undefined, BUNDLE_UNSET: undefined };
+    const refused = await runNode([join(bundle.directory, 'repro.mjs')], root, absent);
+    expect(refused.code).toBe(2);
+    expect(refused.stderr).toContain('BUNDLE_VALUE must be set');
+    expect(await readdir(bundle.directory)).not.toContain('replay-artifacts');
+    expect((await runNode([join(bundle.directory, 'repro.mjs')], root, { ...absent, BUNDLE_VALUE: 'selected' })).code).toBe(1);
+    const selected = await createBundle({ ...options, includeEnv: ['BUNDLE_VALUE'] });
+    expect(JSON.parse(await readFile(selected.configPath, 'utf8'))).toMatchObject({ schemaVersion: 2,
+      environment: { BUNDLE_VALUE: 'selected' }, requiredEnvironment: [{ key: 'BUNDLE_UNSET', state: 'unset' }] });
+    expect((await runNode([join(selected.directory, 'repro.mjs')], root, absent)).code).toBe(1);
+    const wrongUnset = await runNode([join(selected.directory, 'repro.mjs')], root, { ...absent, BUNDLE_UNSET: 'unwanted' });
+    expect(wrongUnset.code).toBe(2);
+    expect(wrongUnset.stderr).toContain('BUNDLE_UNSET must be unset');
+    await expect(createBundle({ ...options, includeEnv: ['NOT_CAPTURED'] })).rejects.toThrow('explicitly captured');
+  });
+
+  it('cleans an incomplete bundle after a cumulative copy limit without modifying originals', async () => {
+    const { root, run } = await setup();
+    const input = join(root, 'input');
+    await mkdir(input);
+    await writeFile(join(input, 'one'), 'x'.repeat(700));
+    await writeFile(join(input, 'two'), 'y'.repeat(700));
+    const destination = join(root, 'too-large');
+    await expect(createBundle({ cwd: root, run: run.artifactDirectory, input, destination, maxBundleBytes: 1000 }))
+      .rejects.toThrow('maxBundleBytes');
+    await expect(lstat(destination)).rejects.toMatchObject({ code: 'ENOENT' });
+    expect(await readFile(join(input, 'one'), 'utf8')).toBe('x'.repeat(700));
+    expect(await readFile(join(input, 'two'), 'utf8')).toBe('y'.repeat(700));
+    expect((await loadRun(run.artifactDirectory)).trials).toHaveLength(2);
+  });
+
+  it('refuses excessive source selections, invalid budgets and deeply nested inputs', async () => {
+    const { root, run } = await setup();
+    const options = { cwd: root, run: run.artifactDirectory };
+    await expect(createBundle({ ...options, files: Array.from({ length: 10001 }, () => 'target.mjs') })).rejects.toThrow('10000');
+    for (const maxBundleBytes of [0, -1, 1.5, Number.NaN]) {
+      await expect(createBundle({ ...options, maxBundleBytes })).rejects.toThrow('positive safe integer');
+    }
+    const input = join(root, 'deep');
+    await mkdir(join(input, ...Array<string>(64).fill('a')), { recursive: true });
+    const destination = join(root, 'deep-bundle');
+    await expect(createBundle({ ...options, input, destination })).rejects.toThrow('64 path levels');
+    await expect(lstat(destination)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
   it('replays after moving the bundle and deleting original source and artifacts', async () => {
     const { root, source, run } = await setup();
-    const result = await createBundle({ run: run.id, cwd: source, files: ['nested/target.mjs'], destination: join(root, 'bundle') });
+    const result = await createBundle({ run: run.id, cwd: source, files: ['nested/target.mjs'], destination: join(root, 'bundle'), includeEvidence: true });
     const configText = await readFile(result.configPath, 'utf8');
     expect(configText).not.toContain(source);
     expect(configText).not.toContain(run.artifactDirectory);
@@ -177,7 +270,7 @@ describe('self-contained reproduction bundles', () => {
     await expect(createBundle({ run: run.artifactDirectory, cwd: root, command: `node "${join(source, 'nested', 'target.mjs')}"` })).rejects.toThrow(/portable command override/);
   });
 
-  it.each(['../outside.txt', '/etc/passwd', 'C:\\outside.txt', 'nested/../../outside.txt', 'nested/file:stream', 'nested/NUL'])('rejects unsafe source path %s', async (file) => {
+  it.each(['../outside.txt', '/etc/passwd', 'C:\\outside.txt', 'nested/../../outside.txt', 'nested/file:stream', 'nested/NUL', 'nested/control\u0001'])('rejects unsafe source path %s', async (file) => {
     const { root, run } = await setup();
     await expect(createBundle({ run: run.artifactDirectory, cwd: root, files: [file] })).rejects.toThrow(/relative paths|Unsafe/);
   });

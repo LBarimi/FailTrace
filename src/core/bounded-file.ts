@@ -1,4 +1,13 @@
 import { lstat, open } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+
+/** Hash a finite immutable snapshot without retaining its contents in memory. */
+export async function hashBoundedFile(path: string, maxBytes: number, signal?: AbortSignal): Promise<{ bytes: number; sha256: string }> {
+  const hash = createHash('sha256');
+  let bytes = 0;
+  await readSnapshot(path, maxBytes, async (chunk) => { bytes += chunk.length; hash.update(chunk); }, undefined, signal);
+  return { bytes, sha256: hash.digest('hex') };
+}
 
 /** Read only a finite file snapshot, rejecting growth or replacement during I/O. */
 export async function readBoundedFile(path: string, maxBytes: number, signal?: AbortSignal): Promise<Buffer> {

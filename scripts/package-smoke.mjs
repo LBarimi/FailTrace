@@ -349,11 +349,29 @@ try {
   assert.equal(demo.reduction.finalVerified, true);
   assert.deepEqual(demo.reduction.minimizedInput, ['BUG']);
   assert((await stat(demo.bundle.directory)).isDirectory());
+  assert.equal(demo.bundle.evidenceIncluded, false);
+  assert.deepEqual(demo.bundle.environmentKeys, []);
+  assert.deepEqual(demo.bundle.requiredEnvironment, []);
+  await assert.rejects(stat(join(demo.bundle.directory, 'logs')), { code: 'ENOENT' });
+  const bundleManifest = JSON.parse(await readFile(demo.bundle.manifestPath, 'utf8'));
+  assert.equal(bundleManifest.files.length + 1, demo.bundle.fileCount);
+  for (const entry of bundleManifest.files) {
+    const bytes = await readFile(join(demo.bundle.directory, entry.path));
+    assert.equal(bytes.length, entry.bytes);
+    assert.equal(createHash('sha256').update(bytes).digest('hex'), entry.sha256);
+  }
+  const replay = await execute(process.execPath, [join(demo.bundle.directory, 'repro.mjs')], {
+    cwd: consumer, env: environment, windowsHide: true, timeout: 30_000, maxBuffer: 1024 * 1024,
+  }).then(() => { throw new Error('Installed demo bundle must reproduce its target with exit 1.'); }, (error) => error);
+  assert.equal(replay.code, 1);
+  assert.equal(replay.stderr, '');
+  assert.match(replay.stdout, /Target failure reproduced: 1 \/ 1/);
   const report = {
     package: manifest.name, version: manifest.version, tarball: basename(tarball), sha256,
     checks: { installedCli: 'passed', installedCore: 'passed', productionDependenciesOnly: 'passed', installedDemo: 'passed',
       installedVerifyCore: verification.core, installedVerifyCli: verification.cli, installedVerifyMcp: mcpChecks.verification,
-      installedInspectMcp: mcpChecks.inspection, unrelatedErrorGuard: verification.unrelatedErrorGuard },
+      installedInspectMcp: mcpChecks.inspection, installedBundleManifest: 'passed', installedBundleReplay: 'passed',
+      unrelatedErrorGuard: verification.unrelatedErrorGuard },
     core: { total: core.total, failed: core.failed, comparison: core.comparison, inspection: core.inspection },
     retained: keep,
     ...(keep ? { consumerDirectory: consumer, coreRunDirectory: core.artifactDirectory,

@@ -321,11 +321,14 @@ function createServer(cwd: string, shutdown: AbortSignal, pending: Set<Promise<C
 
   server.registerTool('failtrace_bundle', {
     title: 'Create a reproduction bundle',
-    description: 'Copy explicitly selected source/input files, saved evidence and portable replay scripts into a new local directory. Does not execute the bundle.',
+    description: 'Create a local replay bundle with an inspectable manifest. Original metadata/logs and captured environment values are excluded unless explicitly selected. Omitted captured keys become replay prerequisites. Does not execute or publish the bundle.',
     inputSchema: z.object({
       run: z.string().min(1), cwd: z.string().min(1).optional(), files: z.array(z.string().min(1)).optional(),
       input: z.string().min(1).optional(), command: z.string().min(1).optional(), env: environmentSchema.optional(),
       destination: z.string().min(1).optional(),
+      includeEvidence: z.boolean().optional().describe('Include unchanged original metadata/logs, which may contain private output, environment values and local paths. Default false.'),
+      includeEnv: z.array(z.string().min(1)).max(10000).optional().describe('Only these captured environment values enter repro.json. Explicit env overrides also opt in those supplied values.'),
+      maxBundleBytes: positiveInteger.optional().describe('Combined bundle bytes, default 512 MiB; at most 10000 files and 64 path levels.'),
     }).strict(),
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
   }, (input, context) => invoke(context, async (signal) => {
@@ -336,8 +339,13 @@ function createServer(cwd: string, shutdown: AbortSignal, pending: Set<Promise<C
       ...(input.command === undefined ? {} : { command: input.command }),
       ...(input.env === undefined ? {} : { env: input.env }),
       ...(input.destination === undefined ? {} : { destination: input.destination }),
+      ...(input.includeEvidence === undefined ? {} : { includeEvidence: input.includeEvidence }),
+      ...(input.includeEnv === undefined ? {} : { includeEnv: input.includeEnv }),
+      ...(input.maxBundleBytes === undefined ? {} : { maxBundleBytes: input.maxBundleBytes }),
     });
-    return toolResult({ ...result, files: sample(result.files), filesOmitted: Math.max(0, result.files.length - 40) });
+    return toolResult({ ...result, files: sample(result.files), filesOmitted: Math.max(0, result.files.length - 40),
+      environmentKeys: sample(result.environmentKeys), environmentKeysOmitted: Math.max(0, result.environmentKeys.length - 40),
+      requiredEnvironment: sample(result.requiredEnvironment), requirementsOmitted: Math.max(0, result.requiredEnvironment.length - 40) });
   }));
   return server;
 }

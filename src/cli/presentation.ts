@@ -50,6 +50,9 @@ Command-specific options:
             Predicate and context declarations are inherited from baseline.
   bundle    --file PATH (repeatable), --input PATH, --command COMMAND,
             --output NEW_DIRECTORY, --env-file JSON_FILE
+            --include-env KEY (repeatable selected captured values)
+            --include-evidence (unchanged original metadata/logs; default excluded)
+            --max-bundle-bytes N (536870912)
 
 Common options:
   --cwd DIRECTORY    Resolve command/input/artifact paths from this directory
@@ -72,6 +75,7 @@ Artifacts: .failtrace/ (runs, bisects, minimizations, verifications, reproductio
 Demo works from any directory and exits 0 when its expected failures are shown.
 Minimize exposes FAILTRACE_INPUT or FAILTRACE_INPUT_DIR to the command.
 Bundles contain the Node engine; install target dependencies separately.
+Review manifest.json before sharing; original logs and captured values are opt-in.
 Verify reports finite observations, never proof that a bug is eliminated.
 Exit codes: 0 success/verify target not observed, 1 run failure/verify target observed,
             2 error/inconclusive/limit,

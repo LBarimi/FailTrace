@@ -286,6 +286,8 @@ The shipped demo can reduce to `["BUG"]`. Use the observed `minimizedPath` and `
 
 The bundle tool takes `run`, `files`, and `input` for this workflow. `files` is an array of paths relative to the original run's working directory. `input` is the returned input path. Other optional fields are `cwd`, `command`, `env`, and `destination`; the destination must be new. Do not substitute made-up run IDs into a follow-up call.
 
+The source checkout toward 1.0 adds `includeEvidence`, `includeEnv` and `maxBundleBytes`. Original metadata/logs and captured values are excluded by default. Review the returned `manifestPath`, `environmentKeys` and `requiredEnvironment` before sharing or replaying. Select original evidence or captured values explicitly when needed; including original evidence also includes any private values already in those records. Missing environment prerequisites stop replay before target execution. These controls are not in published 0.6.0; see [bundle sharing and migration](BUNDLES.md).
+
 For your own minimization command, read candidate files through `FAILTRACE_INPUT`, or file sets through `FAILTRACE_INPUT_DIR`. A command that keeps reading the original input cannot measure the proposed reductions. For environment minimization, bundle environment overrides should include `null` for every removed original key, so inherited values cannot restore it during replay.
 
 ### Isolate a revision boundary

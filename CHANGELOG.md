@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Bundles now exclude original metadata/logs and captured environment values by default. Explicit evidence/environment selections, a relative file/hash manifest and recorded environment prerequisites make sharing reviewable without altering original evidence. Missing prerequisites stop replay before target execution. New reproduction configurations use schema 2; existing self-contained bundles retain their original engine and behavior.
+- Bound complete bundle copies, including generated files, to an explicit byte allowance (512 MiB default), with file/depth limits and immutable local/Git copy checks. Failed creation cleans only its fresh, owned destination.
 - Bound generated run metadata and saved-run reconstruction, with scheduling limits and explicit inconclusive evidence when the metadata allowance is exhausted. Existing recorded trials remain readable; unstarted trials are not invented. Diagnostic strings are bounded without discarding failure status.
 - Bisect results now use schema 2: candidate summaries contain complete trial/match counts and a `metadataPath`, without duplicating full trial arrays. Core callers that need individual trials must call `loadRun(candidate.run.metadataPath)`. Stored run schemas 1 and 2 remain readable within the documented resource limits.
 - Bound minimization input size and cumulative retained input copies. Storage exhaustion preserves the best available input and existing evidence without claiming a final verification. Bounded snapshot copies reject changing sources and preserve original files; JSON/directory depth limits prevent recursive stack exhaustion.

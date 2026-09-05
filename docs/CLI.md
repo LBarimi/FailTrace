@@ -118,6 +118,8 @@ Check both `status` and `finalVerified`. A budget-limited result may still have 
 
 ## Create a portable local bundle
 
+The source checkout toward 1.0 excludes original logs/metadata and captured environment values by default, adds `manifest.json`, and requires omitted captured environment keys before replay. Use `--include-evidence` for unchanged original evidence, repeat `--include-env KEY` for selected captured values, or supply reviewed values through `--env-file`. `--max-bundle-bytes` defaults to 512 MiB. These changes are not in published 0.6.0; see [sharing choices, prerequisites and migration](BUNDLES.md).
+
 ```sh
 failtrace bundle <run-id> --file examples/flaky-demo.js
 failtrace bundle <final-run-directory> --file examples/advanced-demo.js --file examples/advanced-demo-implementation.js --file package.json --input <minimized-input-path>
@@ -135,7 +137,7 @@ For the second command, use the printed final run and minimized input paths, or 
   engine/       Included compiled FailTrace Core and license
   source/       Explicitly selected source files
   input/        Optional selected input file or directory
-  logs/         Original run evidence
+  logs/         Original run evidence (source toward 1.0: only with --include-evidence)
 ```
 
 Copy the directory to another location and run `node repro.mjs`, `sh repro.sh`, or `repro.cmd`. The included engine needs only Node.js; **install the target's own dependencies and external tools separately** as its bundle README explains. Replay runs from `source/`, restores the recorded predicate/requested count/timeout/concurrency, relocates the selected input, and saves new evidence under `replay-artifacts/`. It reports actual target-predicate matches, not arbitrary command errors. Replay executes the full requested count even for an early-stopped source run; exit `1` means at least one match, not that a previous classification's `minFailures` threshold was met.
@@ -144,7 +146,7 @@ Source files are opt-in through repeatable `--file` options and retain their pat
 
 Bisect candidate runs record their local repository and immutable commit. Bundling one of these run paths reads explicitly selected committed regular files from that commit, even after its temporary worktree has been removed. The local repository must still contain the commit; this performs no network fetch or dependency installation. Symlinks, submodules, and untracked files are unsupported for commit-based source selection.
 
-Use `--command "node relative-script.js"` when the original command contains machine-specific absolute paths. The bundle defaults to explicitly selected environment snapshot values; `--env-file` supplies a JSON object of string/null overrides instead. Null unsets a key. When bundling an environment minimization, include null values for removed original keys so the recipient's environment cannot reintroduce them. Inspect selected values and original logs for private data before sharing.
+Use `--command "node relative-script.js"` when the original command contains machine-specific absolute paths. In published 0.6.0, the bundle defaults to explicitly selected environment snapshot values; `--env-file` supplies a JSON object of string/null overrides instead. The source checkout toward 1.0 requires explicit value selection as described above. Null unsets a key. When bundling an environment minimization, include null values for removed original keys so the recipient's environment cannot reintroduce them. Inspect selected values and original logs for private data before sharing.
 
 ## MCP for coding agents
 

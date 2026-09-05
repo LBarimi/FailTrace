@@ -46,7 +46,7 @@ const allowed: Record<string, string[]> = {
   compare: ['trial-a', 'trial-b', 'max-lines', 'max-bytes', 'cwd', 'json'],
   bisect: [...experiments, 'good', 'bad', 'min-failures', 'cwd', 'json'],
   minimize: [...experiments, 'input', 'format', 'min-failures', 'max-evaluations', 'max-input-bytes', 'max-candidate-bytes', 'cwd', 'json'],
-  bundle: ['file', 'input', 'command', 'output', 'env-file', 'cwd', 'json'],
+  bundle: ['file', 'input', 'command', 'output', 'env-file', 'include-env', 'include-evidence', 'max-bundle-bytes', 'cwd', 'json'],
   mcp: ['cwd'],
 };
 
@@ -84,8 +84,8 @@ export function parseArgs(argv: string[]): CliInvocation {
     const equals = argument.indexOf('=');
     const flag = argument.slice(2, equals === -1 ? undefined : equals);
     if (!flags.includes(flag)) throw new Error(`Unexpected option: --${flag}.`);
-    if (values.has(flag) && !['file', 'context-input', 'context-setup', 'context-source', 'healthy-exit-code', 'allow-change'].includes(flag)) throw new Error(`Option --${flag} may only be provided once.`);
-    if (flag === 'json' || flag === 'capture-context') {
+    if (values.has(flag) && !['file', 'include-env', 'context-input', 'context-setup', 'context-source', 'healthy-exit-code', 'allow-change'].includes(flag)) throw new Error(`Option --${flag} may only be provided once.`);
+    if (flag === 'json' || flag === 'capture-context' || flag === 'include-evidence') {
       if (equals !== -1) throw new Error(`--${flag} does not take a value.`);
       values.set(flag, ['true']);
       continue;
@@ -159,6 +159,9 @@ export function parseArgs(argv: string[]): CliInvocation {
       ...(get('command') === undefined ? {} : { command: get('command')! }),
       ...(get('output') === undefined ? {} : { destination: get('output')! }),
       ...(get('env-file') === undefined ? {} : { envFile: get('env-file')! }),
+      ...(values.has('include-env') ? { includeEnv: values.get('include-env')! } : {}),
+      ...(values.has('include-evidence') ? { includeEvidence: true } : {}),
+      ...(get('max-bundle-bytes') === undefined ? {} : { maxBundleBytes: integer(get('max-bundle-bytes')!, 'Max bundle bytes') }),
     };
   }
   const command = kind === 'run' ? positional[0] : required('command');

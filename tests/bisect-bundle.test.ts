@@ -86,6 +86,11 @@ describe('bundles from isolated bisect evidence', () => {
     expect(await git(cwd, 'status', '--porcelain')).toBe(before);
     expect(await git(cwd, 'rev-parse', 'HEAD')).toBe(bad);
     expect(await readFile(join(cwd, 'untracked.txt'), 'utf8')).toBe('untouched');
+    const tooSmall = join(cwd, '.failtrace', 'oversized-git-bundle');
+    await expect(createBundle({ cwd, run: candidate.run.metadataPath, command: 'node check.mjs',
+      files: ['binary.bin'], destination: tooSmall, maxBundleBytes: 1024 })).rejects.toThrow('maxBundleBytes');
+    await expect(stat(tooSmall)).rejects.toMatchObject({ code: 'ENOENT' });
+    expect(await git(cwd, 'status', '--porcelain')).toBe(before);
   });
 
   it('rejects committed symbolic links before creating an output file', async () => {

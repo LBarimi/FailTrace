@@ -14,7 +14,10 @@ export type { BisectOptions, BisectResult, BisectCandidate, BisectRunEvidence } 
 export { minimizeFailure } from './minimize.js';
 export type { MinimizeOptions, MinimizeResult, MinimizeEvaluation, MinimizeFormat } from './minimize.js';
 export { createBundle } from './bundle.js';
-export type { BundleOptions, BundleResult } from './bundle.js';
+export type { BundleOptions, BundleResult, BundleManifest } from './bundle.js';
+export type { BundleFileEntry, BundleFileCategory } from './bundle-files.js';
+export type { BundleEnvironmentRequirement } from './bundle-environment.js';
+export { DEFAULT_MAX_BUNDLE_BYTES, MAX_BUNDLE_FILES } from './bundle-files.js';
 export { verifyFix, assessBaselineEligibility } from './verify.js';
 export type { VerifyOptions, VerifyResult, VerifyRunEvidence, VerifyContextChange, VerifyChangeField, VerifyAllowedChange, BaselineEligibility } from './verify.js';
 export type { ContextCaptureOptions, ContextDeclaration, ContextSnapshot, FileIdentity, RunContext } from './verify-context.js';

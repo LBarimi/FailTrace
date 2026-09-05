@@ -43,6 +43,8 @@ Output byte budgets do not account for metadata, copied minimization inputs, Git
 
 Commands still run with local permissions. Timeout and descendant cleanup remain best effort, and a target can use files or processes outside these output pipes. Review sensitive output before sharing evidence.
 
+Bundle creation has a separate complete-copy allowance: Core/MCP `maxBundleBytes`, CLI `--max-bundle-bytes`, default 512 MiB. It includes selected source/input, optional original evidence, the engine, replay documents and manifest. See [bundle sharing and copy limits](BUNDLES.md).
+
 ## Minimization input storage
 
 | Option | Default | Scope |

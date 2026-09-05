@@ -89,7 +89,7 @@ async function readGit(source: GitSource, args: string[], signal?: AbortSignal, 
 }
 
 /** Copy one regular file from a recorded local commit without a checkout or fetch. */
-export async function copyGitSourceFile(source: GitSource, file: string, destination: string, signal?: AbortSignal): Promise<void> {
+export async function copyGitSourceFile(source: GitSource, file: string, destination: string, signal?: AbortSignal, reserve?: (bytes: number) => void): Promise<void> {
   const path = sourcePath(source, file);
   const listing = await readGit(source, ['ls-tree', '--full-tree', '-z', source.commit, '--', path], signal);
   const entries = listing.split('\0').filter(Boolean);
@@ -98,11 +98,17 @@ export async function copyGitSourceFile(source: GitSource, file: string, destina
   if (match === undefined || match === null || match[3] !== path) {
     throw new Error(`Selected Git source must be a committed regular file; links, submodules, directories and missing files are unsupported: ${file}`);
   }
+  const blob = match[2]!;
+  const sizeText = (await readGit(source, ['cat-file', '-s', blob], signal)).trim();
+  const bytes = Number(sizeText);
+  if (!/^\d+$/.test(sizeText) || !Number.isSafeInteger(bytes)) throw new Error('Invalid Git source size.');
+  reserve?.(bytes);
   signal?.throwIfAborted();
   await mkdir(dirname(destination), { recursive: true });
   const handle = await open(destination, 'wx');
   try {
-    await readGit(source, ['cat-file', 'blob', `${source.commit}:${path}`], signal, handle.fd);
+    await readGit(source, ['cat-file', 'blob', blob], signal, handle.fd);
+    if ((await handle.stat()).size !== bytes) throw new Error('Git source export size does not match its immutable blob.');
     await handle.sync();
   } finally {
     await handle.close();

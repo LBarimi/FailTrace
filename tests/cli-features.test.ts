@@ -66,6 +66,8 @@ describe('advanced CLI parsing', () => {
   it('parses explicit bundle selections and MCP cwd', () => {
     expect(parseArgs(['bundle', 'run-id', '--file', 'a.js', '--file', 'b.json', '--input', 'input', '--command', 'node a.js', '--output', 'out', '--env-file', 'env.json'])).toMatchObject({ kind: 'bundle', run: 'run-id', files: ['a.js', 'b.json'], input: 'input', command: 'node a.js', destination: 'out', envFile: 'env.json' });
     expect(parseArgs(['mcp', '--cwd', 'project'])).toEqual({ kind: 'mcp', cwd: 'project' });
+    expect(parseArgs(['bundle', 'run-id', '--include-env', 'A', '--include-env', 'B', '--include-evidence', '--max-bundle-bytes', '2048']))
+      .toMatchObject({ kind: 'bundle', includeEnv: ['A', 'B'], includeEvidence: true, maxBundleBytes: 2048 });
   });
 
   it.each([
@@ -78,7 +80,7 @@ describe('advanced CLI parsing', () => {
     ['bisect', '--good', 'v1', '--bad', 'HEAD', '--command', 'test', '--repeat', '1', '--min-failures', '2'],
     ['minimize', '--input', 'in', '--command', 'test', '--format', 'xml'],
     ['minimize', '--input', 'in', '--command', 'test', '--max-evaluations', '1'],
-    ['bundle'], ['mcp', '--json'],
+    ['bundle'], ['bundle', 'run-id', '--include-evidence=false'], ['bundle', 'run-id', '--max-bundle-bytes', '0'], ['mcp', '--json'],
   ])('rejects invalid advanced invocation %j', (...args) => expect(() => parseArgs(args)).toThrow());
 });
 
@@ -144,7 +146,9 @@ describe('advanced built CLI workflows', () => {
     expect(bundled.code).toBe(0);
     expect(bundled.stderr).toBe('');
     const bundle = JSON.parse(bundled.stdout) as BundleResult;
-    expect(await readdir(bundle.directory)).toEqual(expect.arrayContaining(['repro.json', 'repro.mjs', 'repro.sh', 'repro.cmd', 'engine', 'source', 'logs', 'input']));
+    expect(await readdir(bundle.directory)).toEqual(expect.arrayContaining(['repro.json', 'repro.mjs', 'repro.sh', 'repro.cmd', 'engine', 'source', 'manifest.json', 'input']));
+    expect(await readdir(bundle.directory)).not.toContain('logs');
+    expect(bundle.evidenceIncluded).toBe(false);
     const config = JSON.parse(await readFile(bundle.configPath, 'utf8')) as { predicate: unknown };
     expect(config.predicate).toEqual({ kind: 'stderr_contains', value: 'BUG reproduced' });
   });
