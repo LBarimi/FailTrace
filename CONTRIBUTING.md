@@ -25,7 +25,7 @@ npm run test:package
 
 The package check installs the packed artifact in a temporary directory and exercises its public entry points. CI runs on Windows, macOS, and Linux with Node.js 22 and 24.
 
-Read [AGENTS.md](AGENTS.md) for repository conventions. Put algorithms in `src/core`; CLI, demos, and MCP call Core. Use deterministic fixtures and inspectable evidence. Keep temporary output in `.failtrace/` or ignored test directories. Avoid global configuration changes in tests.
+Read the repository's [AGENTS.md](https://github.com/LBarimi/FailTrace/blob/main/AGENTS.md) for repository conventions. Put algorithms in `src/core`; CLI, demos, and MCP call Core. Use deterministic fixtures and inspectable evidence. Keep temporary output in `.failtrace/` or ignored test directories. Avoid global configuration changes in tests.
 
 ## Choose a useful contribution
 

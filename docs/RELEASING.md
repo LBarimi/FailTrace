@@ -5,7 +5,7 @@ Publish the exact reviewed GitHub release archive to npm using its public HTTPS 
 ## Prepare and verify the public archive
 
 1. Use an exact version with matching package, runtime, lockfile, and MCP metadata. Keep the existing release gates: the exact `main` commit must pass all six Windows/macOS/Linux and Node.js 22/24 CI jobs, plus the `minimum-node` installed-package check on Node.js 22.12.0. Any existing version tag must point to that commit.
-2. Run the [Prepare release tarball workflow](../.github/workflows/release.yml). It builds, packs, smoke-tests the installed package outside the checkout, and produces the archive, `SHA256SUMS`, and `release.json`. This workflow prepares artifacts; it does not publish them.
+2. Run the [Prepare release tarball workflow](https://github.com/LBarimi/FailTrace/blob/main/.github/workflows/release.yml). It builds, packs, smoke-tests the installed package outside the checkout, and produces the archive, `SHA256SUMS`, and `release.json`. This workflow prepares artifacts; it does not publish them.
 3. Review those artifacts, then attach the same archive and checksum to the corresponding public GitHub release. Download the HTTPS asset without authentication and confirm its SHA-256 matches the reviewed checksum. Preserve those exact bytes; do not repack the source or substitute another archive for npm publication.
 
 ## Publish from the public URL
@@ -33,6 +33,6 @@ node --input-type=module -e "const v = '<VERSION>'; const r = await fetch('https
 - Download `dist.tarball` without authentication. Verify its `dist.integrity` and confirm its SHA-256 matches the reviewed GitHub archive. Preserve the release commit, CI run, public URLs, and digests as release evidence.
 - Install the exact npm version in a separate temporary project with a fresh cache. Check the installed version, run the demo, replay its bundle, and verify the installed MCP tools as appropriate. A successful publication response alone is not an installation check.
 
-After these checks, the existing [MCP Registry workflow](../.github/workflows/mcp-registry.yml) can publish the matching server metadata; it independently requires the exact public npm version and successful CI.
+After these checks, the existing [MCP Registry workflow](https://github.com/LBarimi/FailTrace/blob/main/.github/workflows/mcp-registry.yml) can publish the matching server metadata; it independently requires the exact public npm version and successful CI.
 
 This procedure prevents local archive inputs in future publications. It does not remove metadata from versions already published. Treat any existing exposure as a separate registry issue and report only removal that has been verified publicly.

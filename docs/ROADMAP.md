@@ -26,10 +26,12 @@ The source checkout supports [execution checkpoints](EXECUTION-EVIDENCE.md). A b
 
 Original authored workflow fixtures exercise affected implementations, valid fixes and misleading candidate controls. They demonstrate how evidence changes a debugging decision; they are not production incident reports or evidence of external adoption.
 
+[Named project actions](PROJECT-WORKFLOW.md) keep repeated baseline/verification settings inspectable using existing project scripts. The unreleased [storage inventory](ARTIFACTS.md) shows bounded totals and observed evidence references. It does not delete records or infer inactivity from their age.
+
 ## Next priorities
 
-- Reduce repeated setup for commands, target signatures and baseline context without granting saved files implicit execution authority.
-- Make saved evidence discoverable and storage operations bounded, reviewable and safe around active or referenced work.
+- Observe whether named project actions reduce repeated setup for commands, signatures and baseline context; improve the steps that cause actual friction.
+- Keep storage operations bounded and reviewable. Automatic deletion needs a separate ownership and active-access contract; legacy paths and reported states do not supply one. Require evidence of user need before adding that broader protocol.
 - Preserve OS/Node, installed-package, replay and performance gates. Record local-only validation accurately while publication is pending.
 - Collect voluntary observations of time to first useful result, interpretation errors and second use. Let those observations determine further features.
 

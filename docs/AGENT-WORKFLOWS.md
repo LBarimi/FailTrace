@@ -305,4 +305,4 @@ do not authorize client reconfiguration, publishing, or unrelated changes.
 | Verify tool is missing | Install 0.5.0 or later, or use the manual run/compare procedure with versions through 0.4.0. |
 | Bundle does not replay | Explicit source-file selection, target dependency setup, selected input, environment removals, and command portability. |
 
-Client setup references were checked against official documentation on **2026-09-04**. The schemas and result fields described here come from this repository's [MCP adapter](../src/mcp/index.ts), [Core implementation](../src/core), and [README](../README.md).
+Client setup references were checked against official documentation on **2026-09-04**. Published implementation sources are the repository's [MCP adapter](https://github.com/LBarimi/FailTrace/blob/main/src/mcp/index.ts) and [Core](https://github.com/LBarimi/FailTrace/tree/main/src/core). For unreleased additions, inspect `src/mcp/index.ts` and `src/core` in the source checkout. See the [README](../README.md) for availability.

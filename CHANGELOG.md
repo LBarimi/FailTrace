@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add a bounded original-workflow benchmark with paired execution/checkpoint costs, independently checked reduction and patch controls, replay, and sanitized aggregate evidence for the unreleased candidate.
+
 - Add a read-only `artifacts` CLI command and `inventoryArtifacts` Core API for bounded logical storage totals, investigation grouping and observed evidence references. Incomplete scans are explicit; saved commands are never executed and no files are deleted.
 
 - Replace external case studies and product-specific setup sections with original authored workflows and generic MCP configuration.

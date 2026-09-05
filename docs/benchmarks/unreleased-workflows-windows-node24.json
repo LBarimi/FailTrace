@@ -1,0 +1,820 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-09-05",
+  "availability": "Unreleased source; not the published 1.1.0 package.",
+  "coreSourceCommit": "5ac3ac78689a54d919c9c618ed31906d22eb6507",
+  "coreJavaScriptSha256": "e6f0962627fb44dcf919b395db60a7cccdb59a7418931a7ca6f09e2b87bbc4ae",
+  "fixtureSha256": "a07507e6e4b433e348c26cdef784ff14b73bfa5dc1b0c44f989e87bfff63a617",
+  "platform": "win32",
+  "architecture": "x64",
+  "node": "v24.19.0",
+  "configuration": {
+    "samples": 3,
+    "records": 2000,
+    "repeat": 5,
+    "maxMinimizationEvaluations": 100
+  },
+  "methodology": {
+    "target": "Authored importer keeps the first entity revision; generated input places revision 1 then 2 for every ID. The independent checker scans each ID and is quadratic in record count. This is a controlled workload, not an external production incident.",
+    "output": "The same wrapper emits either zero or 1 MiB of stdout before the check in each paired case. Checkpoint matching reads the completed-check marker near the end. The target predicate reads stderr.",
+    "wall": "Per-operation wall time after worker import and fixture preparation; includes shell/target startup, experiment execution and evidence persistence. Source interventions are outside the timed regions. Replay includes the separate replay engine process.",
+    "cpu": "Parent process CPU delta only; excludes shell, target and replay subprocesses. RSS is process-lifetime peak, including imports and earlier stages in workflow workers.",
+    "io": "Existing JavaScript filesystem instrumentation; logical metadata writes and sync calls, not physical disk operations. Child direct-FD output and replay child I/O are outside the parent counters.",
+    "artifact": "Final logical file lengths outside timing; includes fixture copies in artifact totals. Workflow evidenceBytes/evidenceFiles separately inventory only .failtrace.",
+    "baseline": "Direct shell records output and requires exit 7; it omits predicates, completed-check validation and durable metadata. It is a lower-cost execution reference, not an equivalent debugging tool.",
+    "sampling": "Sequential samples in fixed case order, new workers and directories, with a single copied engine/fixture snapshot. Filesystem caches and background OS load are not controlled.",
+    "privacy": "This report includes only selected labels, counts, hashes and measurements. Local paths, command strings, output, source patches and environment values stay in private worker artifacts."
+  },
+  "aggregates": [
+    {
+      "mode": "direct-shell",
+      "records": 12,
+      "outputBytes": 0,
+      "phase": "run",
+      "metrics": {
+        "wallMs": {
+          "min": 407.6593,
+          "median": 412.0236,
+          "max": 412.0892
+        },
+        "cpuMs": {
+          "min": 0,
+          "median": 48,
+          "max": 63
+        },
+        "peakRssBytes": {
+          "min": 48422912,
+          "median": 48783360,
+          "max": 48943104
+        },
+        "metadataBytesWritten": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "fsyncCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "unmeasuredWriteCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        }
+      }
+    },
+    {
+      "mode": "run",
+      "records": 12,
+      "outputBytes": 0,
+      "phase": "run",
+      "metrics": {
+        "wallMs": {
+          "min": 562.9839000000001,
+          "median": 577.9082,
+          "max": 595.2934
+        },
+        "cpuMs": {
+          "min": 47,
+          "median": 62,
+          "max": 62
+        },
+        "peakRssBytes": {
+          "min": 50929664,
+          "median": 51036160,
+          "max": 51122176
+        },
+        "metadataBytesWritten": {
+          "min": 8195,
+          "median": 8220,
+          "max": 8252
+        },
+        "fsyncCalls": {
+          "min": 7,
+          "median": 7,
+          "max": 7
+        },
+        "unmeasuredWriteCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        }
+      }
+    },
+    {
+      "mode": "checkpoint",
+      "records": 12,
+      "outputBytes": 0,
+      "phase": "run",
+      "metrics": {
+        "wallMs": {
+          "min": 555.2859,
+          "median": 561.4939,
+          "max": 578.8456
+        },
+        "cpuMs": {
+          "min": 31,
+          "median": 78,
+          "max": 94
+        },
+        "peakRssBytes": {
+          "min": 51048448,
+          "median": 51478528,
+          "max": 51658752
+        },
+        "metadataBytesWritten": {
+          "min": 8715,
+          "median": 8732,
+          "max": 8745
+        },
+        "fsyncCalls": {
+          "min": 7,
+          "median": 7,
+          "max": 7
+        },
+        "unmeasuredWriteCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        }
+      }
+    },
+    {
+      "mode": "direct-shell",
+      "records": 2000,
+      "outputBytes": 0,
+      "phase": "run",
+      "metrics": {
+        "wallMs": {
+          "min": 547.431,
+          "median": 573.4607,
+          "max": 577.6329
+        },
+        "cpuMs": {
+          "min": 0,
+          "median": 15,
+          "max": 15
+        },
+        "peakRssBytes": {
+          "min": 48791552,
+          "median": 49135616,
+          "max": 49348608
+        },
+        "metadataBytesWritten": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "fsyncCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "unmeasuredWriteCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        }
+      }
+    },
+    {
+      "mode": "run",
+      "records": 2000,
+      "outputBytes": 0,
+      "phase": "run",
+      "metrics": {
+        "wallMs": {
+          "min": 698.0808,
+          "median": 728.3697,
+          "max": 759.5199
+        },
+        "cpuMs": {
+          "min": 47,
+          "median": 63,
+          "max": 78
+        },
+        "peakRssBytes": {
+          "min": 50679808,
+          "median": 50978816,
+          "max": 51208192
+        },
+        "metadataBytesWritten": {
+          "min": 8173,
+          "median": 8173,
+          "max": 8213
+        },
+        "fsyncCalls": {
+          "min": 7,
+          "median": 7,
+          "max": 7
+        },
+        "unmeasuredWriteCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        }
+      }
+    },
+    {
+      "mode": "checkpoint",
+      "records": 2000,
+      "outputBytes": 0,
+      "phase": "run",
+      "metrics": {
+        "wallMs": {
+          "min": 701.5307,
+          "median": 729.0007999999999,
+          "max": 743.5929
+        },
+        "cpuMs": {
+          "min": 46,
+          "median": 46,
+          "max": 64
+        },
+        "peakRssBytes": {
+          "min": 51322880,
+          "median": 51380224,
+          "max": 51605504
+        },
+        "metadataBytesWritten": {
+          "min": 8689,
+          "median": 8737,
+          "max": 8737
+        },
+        "fsyncCalls": {
+          "min": 7,
+          "median": 7,
+          "max": 7
+        },
+        "unmeasuredWriteCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        }
+      }
+    },
+    {
+      "mode": "direct-shell",
+      "records": 2000,
+      "outputBytes": 1048576,
+      "phase": "run",
+      "metrics": {
+        "wallMs": {
+          "min": 569.5924,
+          "median": 573.0191,
+          "max": 610.7139000000001
+        },
+        "cpuMs": {
+          "min": 15,
+          "median": 31,
+          "max": 32
+        },
+        "peakRssBytes": {
+          "min": 48906240,
+          "median": 49131520,
+          "max": 49254400
+        },
+        "metadataBytesWritten": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "fsyncCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "unmeasuredWriteCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        }
+      }
+    },
+    {
+      "mode": "run",
+      "records": 2000,
+      "outputBytes": 1048576,
+      "phase": "run",
+      "metrics": {
+        "wallMs": {
+          "min": 743.98,
+          "median": 765.3573,
+          "max": 779.5219
+        },
+        "cpuMs": {
+          "min": 94,
+          "median": 109,
+          "max": 126
+        },
+        "peakRssBytes": {
+          "min": 53985280,
+          "median": 54214656,
+          "max": 54280192
+        },
+        "metadataBytesWritten": {
+          "min": 8152,
+          "median": 8160,
+          "max": 8200
+        },
+        "fsyncCalls": {
+          "min": 7,
+          "median": 7,
+          "max": 7
+        },
+        "unmeasuredWriteCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        }
+      }
+    },
+    {
+      "mode": "checkpoint",
+      "records": 2000,
+      "outputBytes": 1048576,
+      "phase": "run",
+      "metrics": {
+        "wallMs": {
+          "min": 723.0853999999999,
+          "median": 736.5345,
+          "max": 768.7475000000001
+        },
+        "cpuMs": {
+          "min": 31,
+          "median": 47,
+          "max": 156
+        },
+        "peakRssBytes": {
+          "min": 56393728,
+          "median": 56516608,
+          "max": 57245696
+        },
+        "metadataBytesWritten": {
+          "min": 8689,
+          "median": 8698,
+          "max": 8719
+        },
+        "fsyncCalls": {
+          "min": 7,
+          "median": 7,
+          "max": 7
+        },
+        "unmeasuredWriteCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        }
+      }
+    },
+    {
+      "mode": "workflow",
+      "records": 2000,
+      "outputBytes": 0,
+      "phase": "baseline",
+      "metrics": {
+        "wallMs": {
+          "min": 716.0389,
+          "median": 741.7766,
+          "max": 758.6496
+        },
+        "cpuMs": {
+          "min": 94,
+          "median": 125,
+          "max": 125
+        },
+        "peakRssBytes": {
+          "min": 52350976,
+          "median": 52584448,
+          "max": 52768768
+        },
+        "metadataBytesWritten": {
+          "min": 13519,
+          "median": 13523,
+          "max": 13542
+        },
+        "fsyncCalls": {
+          "min": 8,
+          "median": 8,
+          "max": 8
+        },
+        "unmeasuredWriteCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        }
+      }
+    },
+    {
+      "mode": "workflow",
+      "records": 2000,
+      "outputBytes": 0,
+      "phase": "minimize",
+      "metrics": {
+        "wallMs": {
+          "min": 8463.4755,
+          "median": 8482.986700000001,
+          "max": 8644.0867
+        },
+        "cpuMs": {
+          "min": 1297,
+          "median": 1390,
+          "max": 1547
+        },
+        "peakRssBytes": {
+          "min": 58757120,
+          "median": 58822656,
+          "max": 59592704
+        },
+        "metadataBytesWritten": {
+          "min": 2682724,
+          "median": 2682729,
+          "max": 2682814
+        },
+        "fsyncCalls": {
+          "min": 254,
+          "median": 254,
+          "max": 254
+        },
+        "unmeasuredWriteCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        }
+      }
+    },
+    {
+      "mode": "workflow",
+      "records": 2000,
+      "outputBytes": 0,
+      "phase": "reduced-checkpoint",
+      "metrics": {
+        "wallMs": {
+          "min": 122.6934999999994,
+          "median": 124.94620000000032,
+          "max": 135.33890000000065
+        },
+        "cpuMs": {
+          "min": 16,
+          "median": 16,
+          "max": 32
+        },
+        "peakRssBytes": {
+          "min": 58757120,
+          "median": 58822656,
+          "max": 59592704
+        },
+        "metadataBytesWritten": {
+          "min": 4092,
+          "median": 4092,
+          "max": 4092
+        },
+        "fsyncCalls": {
+          "min": 3,
+          "median": 3,
+          "max": 3
+        },
+        "unmeasuredWriteCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        }
+      }
+    },
+    {
+      "mode": "workflow",
+      "records": 2000,
+      "outputBytes": 0,
+      "phase": "bundle",
+      "metrics": {
+        "wallMs": {
+          "min": 113.08630000000085,
+          "median": 117.86650000000009,
+          "max": 118.75799999999981
+        },
+        "cpuMs": {
+          "min": 110,
+          "median": 124,
+          "max": 125
+        },
+        "peakRssBytes": {
+          "min": 58757120,
+          "median": 58822656,
+          "max": 60940288
+        },
+        "metadataBytesWritten": {
+          "min": 8595,
+          "median": 8595,
+          "max": 8595
+        },
+        "fsyncCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "unmeasuredWriteCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        }
+      }
+    },
+    {
+      "mode": "workflow",
+      "records": 2000,
+      "outputBytes": 0,
+      "phase": "replay",
+      "metrics": {
+        "wallMs": {
+          "min": 306.1273000000001,
+          "median": 317.10289999999986,
+          "max": 317.4570999999996
+        },
+        "cpuMs": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "peakRssBytes": {
+          "min": 58757120,
+          "median": 58822656,
+          "max": 60940288
+        },
+        "metadataBytesWritten": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "fsyncCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "unmeasuredWriteCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        }
+      }
+    },
+    {
+      "mode": "workflow",
+      "records": 2000,
+      "outputBytes": 0,
+      "phase": "ineffective-fix",
+      "metrics": {
+        "wallMs": {
+          "min": 797.2591999999986,
+          "median": 805.6685999999991,
+          "max": 811.2785999999996
+        },
+        "cpuMs": {
+          "min": 125,
+          "median": 140,
+          "max": 156
+        },
+        "peakRssBytes": {
+          "min": 58757120,
+          "median": 58822656,
+          "max": 63602688
+        },
+        "metadataBytesWritten": {
+          "min": 30772,
+          "median": 30774,
+          "max": 30777
+        },
+        "fsyncCalls": {
+          "min": 11,
+          "median": 11,
+          "max": 11
+        },
+        "unmeasuredWriteCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        }
+      }
+    },
+    {
+      "mode": "workflow",
+      "records": 2000,
+      "outputBytes": 0,
+      "phase": "unrelated-error",
+      "metrics": {
+        "wallMs": {
+          "min": 624.6587000000018,
+          "median": 626.357,
+          "max": 639.4187000000002
+        },
+        "cpuMs": {
+          "min": 94,
+          "median": 125,
+          "max": 157
+        },
+        "peakRssBytes": {
+          "min": 58757120,
+          "median": 58822656,
+          "max": 64245760
+        },
+        "metadataBytesWritten": {
+          "min": 31044,
+          "median": 31046,
+          "max": 31046
+        },
+        "fsyncCalls": {
+          "min": 11,
+          "median": 11,
+          "max": 11
+        },
+        "unmeasuredWriteCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        }
+      }
+    },
+    {
+      "mode": "workflow",
+      "records": 2000,
+      "outputBytes": 0,
+      "phase": "skipped-check",
+      "metrics": {
+        "wallMs": {
+          "min": 609.7386999999999,
+          "median": 611.7428999999993,
+          "max": 625.0095000000001
+        },
+        "cpuMs": {
+          "min": 93,
+          "median": 141,
+          "max": 171
+        },
+        "peakRssBytes": {
+          "min": 58757120,
+          "median": 58822656,
+          "max": 65806336
+        },
+        "metadataBytesWritten": {
+          "min": 30922,
+          "median": 30926,
+          "max": 30930
+        },
+        "fsyncCalls": {
+          "min": 11,
+          "median": 11,
+          "max": 11
+        },
+        "unmeasuredWriteCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        }
+      }
+    },
+    {
+      "mode": "workflow",
+      "records": 2000,
+      "outputBytes": 0,
+      "phase": "valid-fix",
+      "metrics": {
+        "wallMs": {
+          "min": 802.3413,
+          "median": 825.3173999999999,
+          "max": 829.2139999999999
+        },
+        "cpuMs": {
+          "min": 109,
+          "median": 172,
+          "max": 173
+        },
+        "peakRssBytes": {
+          "min": 58757120,
+          "median": 58822656,
+          "max": 70164480
+        },
+        "metadataBytesWritten": {
+          "min": 30758,
+          "median": 30784,
+          "max": 30785
+        },
+        "fsyncCalls": {
+          "min": 11,
+          "median": 11,
+          "max": 11
+        },
+        "unmeasuredWriteCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        }
+      }
+    },
+    {
+      "mode": "workflow",
+      "records": 2000,
+      "outputBytes": 0,
+      "phase": "compare",
+      "metrics": {
+        "wallMs": {
+          "min": 5.8016999999999825,
+          "median": 5.995500000000902,
+          "max": 6.710699999999633
+        },
+        "cpuMs": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "peakRssBytes": {
+          "min": 58757120,
+          "median": 58822656,
+          "max": 71233536
+        },
+        "metadataBytesWritten": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "fsyncCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "unmeasuredWriteCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        }
+      }
+    },
+    {
+      "mode": "workflow",
+      "records": 2000,
+      "outputBytes": 0,
+      "phase": "inventory",
+      "metrics": {
+        "wallMs": {
+          "min": 501.33710000000065,
+          "median": 521.6533,
+          "max": 521.893
+        },
+        "cpuMs": {
+          "min": 500,
+          "median": 547,
+          "max": 562
+        },
+        "peakRssBytes": {
+          "min": 63107072,
+          "median": 63561728,
+          "max": 71233536
+        },
+        "metadataBytesWritten": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "fsyncCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        },
+        "unmeasuredWriteCalls": {
+          "min": 0,
+          "median": 0,
+          "max": 0
+        }
+      }
+    }
+  ],
+  "workflowControls": {
+    "samples": 3,
+    "initialRecords": 2000,
+    "reducedRecords": {
+      "min": 2,
+      "median": 2,
+      "max": 2
+    },
+    "evaluations": {
+      "min": 63,
+      "median": 63,
+      "max": 63
+    },
+    "evidenceBytes": {
+      "min": 1215870,
+      "median": 1215875,
+      "max": 1215890
+    },
+    "evidenceFiles": {
+      "min": 452,
+      "median": 452,
+      "max": 452
+    },
+    "allFinalVerified": true,
+    "allIneffectiveFixesObserved": true,
+    "allUnrelatedErrorsInconclusive": true,
+    "allSkippedChecksInconclusive": true,
+    "allValidFixesNotObserved": true,
+    "allReplaysObserved": true
+  }
+}

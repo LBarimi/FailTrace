@@ -1,6 +1,6 @@
 # Performance and evidence
 
-This document describes the execution costs and controls in **1.0.0**, alongside explicitly versioned historical measurements. Older releases retain their original behavior. A historical optimization result is not a measurement of the current engine or a comparison with another product.
+This document describes execution controls, measurements of the **unreleased source candidate**, and explicitly versioned historical measurements. Older releases retain their original behavior. A historical optimization result is not a measurement of the current engine.
 
 ## Execution controls
 
@@ -73,9 +73,33 @@ node scripts/bench.mjs --durations noop,10ms --repeats 10,100 --outputs 0,10KiB 
 
 Reports are written under `.failtrace/benchmarks/<id>/report.json`. Each case runs in a fresh worker and measures wall time, FailTrace process CPU, process peak RSS, throughput, artifact size, logical metadata bytes, and instrumented filesystem operation/fsync counts. CPU excludes target subprocesses; peak RSS is for the measured process, not the complete process tree. Logical bytes and API call counts are not physical device I/O. Direct shell and executable baselines use equivalent target/output setup to expose startup costs. Filesystem, OS, Node version, target duration, and cache state affect the results; retain those conditions when comparing runs. Published reports must omit local host paths, credentials, and environment values.
 
-Use `--output <new-directory>` to measure a selected local or CI filesystem; the destination must not already exist, even if empty. `--core <built-core-index>` selects a baseline build. Each invocation snapshots the selected Core and records a JavaScript content digest so a concurrent build cannot change the implementation between cases. See the [benchmark implementation notes](../scripts/bench/README.md) for instrumentation boundaries.
+Use `--output <new-directory>` to measure a selected local or CI filesystem; the destination must not already exist, even if empty. `--core <built-core-index>` selects a baseline build. Each invocation snapshots the selected Core and records a JavaScript content digest so a concurrent build cannot change the implementation between cases. See the [benchmark implementation notes](BENCHMARKS.md) for instrumentation boundaries.
 
 `--experiments` compares full-budget classification with threshold stopping and concurrency 1 with 4. `--hash` compares repeated full-log comparisons against a measurement-only eager-hash/cache prototype; the prototype is not a Core feature. CI uses four representative cases and checks logical metadata bytes `<= 40,000 + 8,192 × trials`, fsync count `<= 8 + trials`, a 100-versus-10-trial metadata growth ratio `<= 15`, and Core wall time `<= 8 ×` its direct-shell baseline `+ 3,000 ms`. These broad regression guards catch scaling mistakes without asserting a portable latency guarantee.
+
+## Unreleased candidate: original workflow costs — 2026-09-05
+
+Three sequential samples measured the Core at `5ac3ac78689a54d919c9c618ed31906d22eb6507`, including execution checkpoints and artifact inventory. The copied Core JavaScript digest was `e6f0962627fb44dcf919b395db60a7cccdb59a7418931a7ca6f09e2b87bbc4ae`. This is **unreleased source**, not a measurement of the npm 1.1.0 package.
+
+The [aggregate record](benchmarks/unreleased-workflows-windows-node24.json) contains selected configuration, digests, methods and min/median/max observations. Raw commands, paths, inputs, logs and per-worker files remain private. The environment was Windows x64, Node.js 24.19.0. No tests, package installation or other FailTrace benchmark ran concurrently. Case order was fixed, and filesystem caches and background OS activity were not controlled.
+
+The authored importer loses later revisions for duplicate IDs. Generated batches contain two revisions per ID; the independent checker scans records for every ID, so its own target work is quadratic. Each paired case runs the same command five times. The high-output case writes 1 MiB of stdout before the completed-check marker. These are controlled input-processing examples; they do not estimate production failure probability or an independent user's debugging time.
+
+| Five target executions | Direct shell median | Core median | Core with checkpoint median (min–max) |
+| --- | ---: | ---: | ---: |
+| 12 records, no preceding stdout | 0.412 s | 0.578 s | 0.561 s (0.555–0.579) |
+| 2000 records, no preceding stdout | 0.573 s | 0.728 s | 0.729 s (0.702–0.744) |
+| 2000 records, 1 MiB preceding stdout per trial | 0.573 s | 0.765 s | 0.737 s (0.723–0.769) |
+
+The direct shell preserves output but omits predicates, checkpoint validation and durable metadata. Core adds observable execution/evidence cost on these short targets. The small differences between checkpoint-enabled and ordinary Core overlap sample variation; they establish neither a speedup nor negligible overhead. All ordinary and checkpoint-enabled Core cases retained seven sync calls per five-trial run; checkpoint fields increased recorded metadata slightly.
+
+The same candidate also completed a larger investigation in each sample. It reduced **2000 records to two** through 63 evaluations and independently reproduced the result. All three ineffective patches still reproduced the target; all unrelated-error and skipped-check controls were inconclusive; all supplied valid patches had no target observed in their healthy five-trial sample. Every bundle replay reproduced the reduced failure.
+
+Selected operation medians were 0.742 s for baseline capture, 8.483 s for minimization, 0.825 s for valid-patch Verify, 0.118 s for bundle creation, 0.317 s for replay, and 0.522 s for inventory of the resulting evidence. The completed workflow retained 452 evidence files and about 1.22 MB of logical evidence. Minimization wrote about 2.68 MB of metadata over its 63 evaluations and made 254 sync calls; cumulative writes exceed retained bytes because investigation reports are updated. These costs justify finite evaluation/storage budgets.
+
+Per-operation wall time includes subprocess execution and evidence persistence but excludes worker import, fixture preparation and source edits between stages. Parent CPU excludes target and replay subprocesses; RSS is a worker-lifetime peak. I/O counters describe instrumented JavaScript calls and logical writes, not physical disk operations. These observations are scope-limited checks of cost and correct evidence, not a portable performance guarantee.
+
+The existing `--suite ci --check --experiments` guard also passed against this same Core digest with no budget failures. Reproduce workflow measurements with `npm run build` followed by `node scripts/bench-workflows.mjs`. See the [harness notes](BENCHMARKS.md#original-workflow-and-checkpoint-costs) for bounded options and methodology.
 
 ## Three-sample 1.0.0 cost check — 2026-09-05
 

@@ -444,6 +444,7 @@ try {
   const mcpChecks = await exerciseInstalledMcp(installedDirectory, verification, environment, workflows);
   const help = await npmRun(['exec', '--offline', '--', 'failtrace', '--help'], consumer);
   assert(/\bfailtrace demo\b/.test(help.stdout), 'Installed CLI must advertise the demo');
+  assert(/\bfailtrace artifacts\b/.test(help.stdout), 'Installed CLI must advertise storage inspection');
   const demoOutput = await npmRun(['exec', '--offline', '--', 'failtrace', 'demo', '--json'], consumer);
   const demo = JSON.parse(demoOutput.stdout);
   assert.equal(demo.status, 'completed');
