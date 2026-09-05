@@ -87,7 +87,7 @@ The target command can use any runtime; FailTrace itself requires Node.js. Input
 
 **1.0.0 is published on npm and as a [GitHub release](https://github.com/LBarimi/FailTrace/releases/tag/v1.0.0).** The commands above use that exact package. See [installation alternatives](docs/INSTALL.md), the [1.x compatibility contract](docs/COMPATIBILITY.md), and [migration from 0.x](docs/MIGRATING-TO-1.md).
 
-The unreleased source includes stricter Bisect exit policies, target-first comparison, and clearer CLI diagnostics. These changes are not yet in the npm package. [Changes and migration notes](CHANGELOG.md#unreleased) · [Product roadmap](docs/ROADMAP.md)
+The 1.1.0 source is prepared for publication with stricter Bisect exit policies, target-first comparison, and clearer CLI diagnostics. These changes are not yet in the npm package. [Changes and migration notes](CHANGELOG.md#110) · [Product roadmap](docs/ROADMAP.md)
 
 **[Tell us where FailTrace helped or got stuck →](https://github.com/LBarimi/FailTrace/issues/new?template=workflow.yml)**
 

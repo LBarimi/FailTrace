@@ -1,6 +1,6 @@
 # Command reference
 
-This guide targets FailTrace 1.0.0. See the [installation instructions](../README.md#quick-start) for verified npm and GitHub package commands.
+This guide describes the 1.1.0 source being prepared for publication. See the [installation instructions](../README.md#quick-start) for verified public package commands; 1.1.0 changes below require this source until that package is published.
 
 See the [README](../README.md) for installation and the guided demo, and [agent workflows](AGENT-WORKFLOWS.md) for client setup.
 
@@ -54,9 +54,9 @@ failtrace compare <run-a> <run-b> --trial-a 1 --trial-b 2
 failtrace compare <run-id> --max-lines 100 --max-bytes 65536 --json
 ```
 
-With one run, published 1.0.0 selects its first passing and first failing trial. **Unreleased source behavior:** prefer a clean exit-0 nonmatch and a recorded target match, so a preceding timeout does not hide the target. If no recorded match exists, failed execution evidence remains inspectable with a warning. With two runs, the first trial in each is still selected. Explicit trial indices override either selection. References can be a run ID, run directory, or `run.json` path.
+With one run, 1.1.0 prefers a clean exit-0 nonmatch and a recorded target match, so a preceding timeout does not hide the target. If no recorded match exists, failed execution evidence remains inspectable with a warning. With two runs, the first trial in each is still selected. Explicit trial indices override either selection. References can be a run ID, run directory, or `run.json` path. Version 1.0.0 selected the first passing and first failing trial within one run.
 
-The unreleased result adds `selectedTrials.a` / `.b` (status, exit code, termination reason, and predicate evidence when recorded), plus `warnings`. Read those fields before interpreting a diff. Aggregate `failureRate` includes infrastructure failures; it is not necessarily the target-match rate. An explicit nonzero nonmatching exit may be intentional or an unrelated failure; comparison does not decide which.
+Version 1.1.0 adds `selectedTrials.a` / `.b` (status, exit code, termination reason, and predicate evidence when recorded), plus `warnings`. Read those fields before interpreting a diff. Aggregate `failureRate` includes infrastructure failures; it is not necessarily the target-match rate. An explicit nonzero nonmatching exit may be intentional or an unrelated failure; comparison does not decide which.
 
 Results include aggregate failure-rate changes, command/predicate/concurrency changes, selected environment changes, stdout/stderr byte counts, full-stream SHA-256 hashes, and bounded line-aligned differences. A concurrency change identifies different experiment settings. Default limits are 200 displayed lines and a 64 KiB prefix per stream; truncation is explicit. This is an inspectable positional diff, not a semantic comparison or an optimal edit script. Matching hashes still compare the complete files.
 
@@ -79,7 +79,7 @@ Inspect `status`, `baselineEligibility`, `reasons`, `changes`, `plan`, and both 
 
 ## Isolate a regression
 
-**Unreleased source behavior:** Bisect now accepts `--healthy-exit-code N` and `--inconclusive-exit-code N` (both repeatable). A target nonmatch must exit `0` by default; an unrelated nonzero exit makes the candidate inconclusive. Supplying healthy codes replaces `[0]`. Explicit inconclusive codes stop the search even when the failure predicate matches. The two code lists cannot overlap. These options are not in the published 1.0.0 package.
+**Since 1.1.0:** Bisect accepts `--healthy-exit-code N` and `--inconclusive-exit-code N` (both repeatable). A target nonmatch must exit `0` by default; an unrelated nonzero exit makes the candidate inconclusive. Supplying healthy codes replaces `[0]`. Explicit inconclusive codes stop the search even when the failure predicate matches. The two code lists cannot overlap. These options are absent from 1.0.0.
 
 For a wrapper that exits `125` when preparation fails, use `--inconclusive-exit-code 125`. This is an explicit convention, not a reserved global exit code. A broad nonzero predicate alone cannot distinguish the target defect from a failed install. Target matches otherwise take precedence over healthy exits. No skipped-commit search or semantic proof that a test ran is implied. The report records both code lists and any candidate-specific `reason`; a candidate run's raw predicate `decision` must not override its health-aware `assessment`.
 

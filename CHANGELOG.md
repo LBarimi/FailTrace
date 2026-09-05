@@ -2,9 +2,19 @@
 
 ## Unreleased
 
+No additional changes.
+
+## 1.1.0
+
+This version is prepared for publication. See the [README](README.md#availability-and-contributing) for verified public installation routes.
+
 - Prefer recorded target matches over infrastructure failures in automatic same-run comparisons, and expose selected trial status, exit code, match evidence and interpretation warnings through Core, CLI and MCP. Explicit trial choices and first-trial selection between two runs are preserved. Unknown Verify options now show an executable syntax hint.
 
 - Tighten Bisect candidate health: nonmatching exits must be healthy (default `0`); unrelated failures stop with an inconclusive result and a trial-specific reason. Core, CLI and MCP can declare other healthy exits or explicit inconclusive exits, which take precedence over target matches. See the compatibility migration note before upgrading workflows that deliberately use nonzero healthy exits.
+
+- Put the CLI demo and coding-agent workflow first in the README, with an animation of the controlled demo, a static alternative, and clearer installation guidance. The recording uses the published 1.0.0 demo; it is not a performance measurement or an autonomous-agent session.
+
+- Document bounded 1.0.0 benchmark samples and their limits, and add an optional workflow report for first-use friction and repeat use. These are measurement and feedback tools, not evidence of independent adoption.
 
 ## 1.0.0
 

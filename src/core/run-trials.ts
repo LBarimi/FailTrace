@@ -13,7 +13,7 @@ import { OutputBudget, outputLimits } from './output-budget.js';
 import { diagnosticMessage, MAX_COMMAND_BYTES, MAX_CONCURRENCY, MAX_METADATA_BYTES, MAX_RECORDED_TRIALS,
   MetadataBudget, MetadataLimitError, trialMetadataAllowance } from './metadata-budget.js';
 
-export const VERSION = '1.0.0';
+export const VERSION = '1.1.0';
 export const DEFAULT_REPEAT = 10;
 export const DEFAULT_TIMEOUT_MS = 30_000;
 

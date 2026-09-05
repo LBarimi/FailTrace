@@ -1,6 +1,6 @@
 # Install FailTrace
 
-Requires Node.js **22.12+** and npm. The published version used here is **1.0.0**. Unreleased source changes are described separately in the [changelog](../CHANGELOG.md#unreleased).
+Requires Node.js **22.12+** and npm. The published version used here is **1.0.0**. The 1.1.0 source changes are described separately in the [changelog](../CHANGELOG.md#110).
 
 ## Try without a global install
 
