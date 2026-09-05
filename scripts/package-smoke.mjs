@@ -144,8 +144,8 @@ async function exerciseInstalledVerification() {
   await writeFile(join(cwd, 'input.json'), '["BUG"]\n');
   await writeFile(join(cwd, 'setup.json'), '{"fixture":1}\n');
   const affected = "import { readFileSync } from 'node:fs';\n"
-    + "if (JSON.parse(readFileSync('input.json', 'utf8')).includes('BUG')) { console.error('SMOKE_TARGET'); process.exitCode = 7; }\n";
-  const fixed = "import { readFileSync } from 'node:fs'; JSON.parse(readFileSync('input.json', 'utf8')); console.log('healthy');\n";
+    + "if (JSON.parse(readFileSync('input.json', 'utf8')).includes('BUG')) { console.error('SMOKE_TARGET'); process.exitCode = 7; } console.log('SMOKE_CHECK_DONE');\n";
+  const fixed = "import { readFileSync } from 'node:fs'; JSON.parse(readFileSync('input.json', 'utf8')); console.log('healthy'); console.log('SMOKE_CHECK_DONE');\n";
   const unrelated = "throw new Error('UNRELATED_SMOKE_FAILURE');\n";
   await writeFile(target, affected);
   const quote = (value) => process.platform === 'win32' ? `"${value}"` : `'${value.replaceAll("'", "'\\''")}'`;
@@ -163,8 +163,10 @@ async function exerciseInstalledVerification() {
     return JSON.parse(result.stdout);
   };
   const baseline = await invoke(['run', command, '--repeat', '2', '--timeout', '5s', '--stderr-contains', 'SMOKE_TARGET',
+    '--require-stdout-contains', 'SMOKE_CHECK_DONE',
     '--context-input', 'input.json', '--context-setup', 'setup.json', '--context-source', 'target.mjs', '--json'], 1);
   assert(baseline.context, 'Installed CLI must capture baseline context');
+  assert(baseline.trials.every(trial => trial.executionMatched === true), 'Installed CLI must record checkpoint evidence');
   const options = { baseline: baseline.artifactDirectory, command, cwd };
   assert.equal((await verifyFix(options)).status, 'target_observed');
   await writeFile(target, fixed);
@@ -173,6 +175,7 @@ async function exerciseInstalledVerification() {
   assert.equal(verified.status, 'target_not_observed');
   assert.equal(verified.candidate.completedTrials, 2);
   assert.equal(verified.candidate.unhealthyTrials, 0);
+  assert.deepEqual(verified.plan.executionRequirement, baseline.executionRequirement);
   assert.deepEqual(JSON.parse(await readFile(verified.metadataPath, 'utf8')), verified);
   const cliArgs = ['verify', options.baseline, '--command', command, '--cwd', cwd, '--allow-change', 'source:fixed control', '--json'];
   assert.equal((await invoke(cliArgs, 0)).status, 'target_not_observed');
@@ -182,8 +185,13 @@ async function exerciseInstalledVerification() {
   assert.equal(invalid.candidate.matchedTrials, 0);
   assert.equal(invalid.candidate.unhealthyTrials, 2);
   assert.equal((await invoke(cliArgs, 2)).status, 'inconclusive');
+  await writeFile(target, 'process.exitCode = 0;\n');
+  const skipped = await verifyFix({ ...options, allowChanges });
+  assert.equal(skipped.status, 'inconclusive');
+  assert.equal(skipped.candidate.executionEvidenceMissingTrials, 2);
+  assert.equal((await invoke(cliArgs, 2)).status, 'inconclusive');
   await writeFile(target, fixed);
-  console.log(JSON.stringify({ cwd, command, baseline: options.baseline, core: 'passed', cli: 'passed', unrelatedErrorGuard: 'passed' }));
+  console.log(JSON.stringify({ cwd, command, baseline: options.baseline, core: 'passed', cli: 'passed', unrelatedErrorGuard: 'passed', skippedCheckGuard: 'passed' }));
 }
 
 // The SDK client is a development-only test harness in this checkout. The
@@ -221,6 +229,7 @@ async function exerciseInstalledMcp(installedDirectory, verification, environmen
     assert.equal(valid.isError, false);
     assert.equal(valid.structuredContent.status, 'target_not_observed');
     assert.equal(valid.structuredContent.candidate.healthyTrials, 2);
+    assert.deepEqual(valid.structuredContent.plan.executionRequirement, { stream: 'stdout', contains: 'SMOKE_CHECK_DONE' });
     const page = await client.callTool({ name: 'failtrace_inspect_run', arguments: {
       view: 'trials', run: verification.baseline, filter: 'matched', limit: 1,
     } });
@@ -247,6 +256,18 @@ async function exerciseInstalledMcp(installedDirectory, verification, environmen
     assert.equal(invalid.isError, false);
     assert.equal(invalid.structuredContent.status, 'inconclusive');
     assert.equal(invalid.structuredContent.candidate.unhealthyTrials, 2);
+    await writeFile(join(verification.cwd, 'target.mjs'), 'process.exitCode = 0;\n');
+    const skipped = await client.callTool({ name: 'failtrace_verify', arguments: arguments_ });
+    assert.equal(skipped.isError, false);
+    assert.equal(skipped.structuredContent.status, 'inconclusive');
+    assert.equal(skipped.structuredContent.candidate.executionEvidenceMissingTrials, 2);
+    const checkpoint = await client.callTool({ name: 'failtrace_run', arguments: {
+      command: verification.command, repeat: 1, executionRequirement: { stream: 'stdout', contains: 'SMOKE_CHECK_DONE' },
+    } });
+    assert.equal(checkpoint.isError, false);
+    assert.equal(checkpoint.structuredContent.assessment, 'inconclusive');
+    assert.equal(checkpoint.structuredContent.executionEvidenceMissingTrials, 1);
+    await writeFile(join(verification.cwd, 'target.mjs'), "throw new Error('UNRELATED_SMOKE_FAILURE');\n");
     const bounded = await client.callTool({ name: 'failtrace_run', arguments: {
       command: verification.command, repeat: 1, maxOutputBytes: 8, maxTotalOutputBytes: 16,
     } });
@@ -371,7 +392,7 @@ try {
     checks: { installedCli: 'passed', installedCore: 'passed', productionDependenciesOnly: 'passed', installedDemo: 'passed',
       installedVerifyCore: verification.core, installedVerifyCli: verification.cli, installedVerifyMcp: mcpChecks.verification,
       installedInspectMcp: mcpChecks.inspection, installedBundleManifest: 'passed', installedBundleReplay: 'passed',
-      unrelatedErrorGuard: verification.unrelatedErrorGuard },
+      unrelatedErrorGuard: verification.unrelatedErrorGuard, installedSkippedCheckGuard: verification.skippedCheckGuard },
     core: { total: core.total, failed: core.failed, comparison: core.comparison, inspection: core.inspection },
     retained: keep,
     ...(keep ? { consumerDirectory: consumer, coreRunDirectory: core.artifactDirectory,

@@ -89,6 +89,8 @@ The target command can use any runtime; FailTrace itself requires Node.js. Input
 
 Version 1.1.0 adds stricter Bisect exit policies, target-first comparison, and clearer CLI diagnostics. Review the migration notes when upgrading existing workflows. [Changes and migration notes](CHANGELOG.md#110) · [Product roadmap](docs/ROADMAP.md)
 
+**In this source checkout, unreleased:** [require a completed-check signal](docs/EXECUTION-EVIDENCE.md) when evaluating an experiment or proposed fix. The original event-import example distinguishes a working patch from a checker that was silently skipped. The published commands above continue to use 1.1.0.
+
 **[Tell us where FailTrace helped or got stuck →](https://github.com/LBarimi/FailTrace/issues/new?template=workflow.yml)**
 
 A first-install problem, a useful investigation, or a second use on your own project helps decide what to improve. Private logs are optional. Our goal is useful, repeated adoption by people and agents.

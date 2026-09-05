@@ -1,6 +1,8 @@
 export { runTrials, validateRunOptions, VERSION, DEFAULT_REPEAT, DEFAULT_TIMEOUT_MS } from './run-trials.js';
 export { aggregateStatistics } from './statistics.js';
 export { assessRun, validatePredicate, DEFAULT_PREDICATE } from './predicates.js';
+export { validateExecutionRequirement } from './execution-evidence.js';
+export type { ExecutionRequirement } from './types.js';
 export { loadRun } from './run-reader.js';
 export { inspectRunEvidence } from './inspect.js';
 export type {

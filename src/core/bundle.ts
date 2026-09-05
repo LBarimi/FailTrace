@@ -3,7 +3,7 @@ import { chmod, lstat, mkdir, readFile, realpath, rm } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadRun, safeArtifactPath } from './run-reader.js';
-import type { FailurePredicate } from './types.js';
+import type { ExecutionRequirement, FailurePredicate } from './types.js';
 import { outputLimits, type OutputLimits } from './output-budget.js';
 import { BundleWriter, DEFAULT_MAX_BUNDLE_BYTES, MAX_BUNDLE_FILES, portableRelativePath, type BundleFileEntry } from './bundle-files.js';
 import { bundleEnvironment, type BundleEnvironmentRequirement } from './bundle-environment.js';
@@ -65,6 +65,7 @@ interface ReproductionConfig extends Required<OutputLimits> {
   concurrency: number;
   timeoutMs: number;
   predicate: FailurePredicate;
+  executionRequirement?: ExecutionRequirement;
   sourceDirectory: 'source';
   artifactsDirectory: 'replay-artifacts';
   environment: Record<string, string | null>;
@@ -146,6 +147,7 @@ export async function replay() {
       maxOutputBytes: config.maxOutputBytes,
       maxTotalOutputBytes: config.maxTotalOutputBytes,
       predicate: config.predicate,
+      ...(config.executionRequirement === undefined ? {} : { executionRequirement: config.executionRequirement }),
       cwd: resolve(directory, config.sourceDirectory),
       artifactsDir: resolve(directory, config.artifactsDirectory),
       env: environment,
@@ -196,6 +198,7 @@ function bundleReadme(config: ReproductionConfig): string {
     '4. Supply omitted captured environment keys listed in `requiredEnvironment`: set or unset each key as recorded. Missing prerequisites stop replay before command execution with exit 2. Values must suit the original experiment; presence checks cannot prove equivalent values.',
     '5. Run `node repro.mjs`, `sh repro.sh`, or `repro.cmd` from any directory.', '',
     'Replay runs from `source/` using the configured command, predicate, trial budget, timeout, output caps and concurrency. Concurrency can alter failures through shared state or contention.',
+    'If repro.json contains an executionRequirement, each replay trial must also emit that checkpoint. Missing completion makes the replay inconclusive.',
     'Exit 1 means at least one target match, 0 means no match in the completed sample, 2 means inconclusive or invalid execution, and 130/143 mean interruption. An unrelated nonzero exit does not match a specific output predicate.',
     'New evidence is saved under `replay-artifacts/runs/`. Creation-time file hashes do not cover later edits or replay output. Review new evidence separately before sharing it.', '',
     'Explicit environment overrides use null to unset a key. Other variables are inherited from the replay environment.',
@@ -276,6 +279,7 @@ export async function createBundle(options: BundleOptions): Promise<BundleResult
       timeoutMs: run.timeoutMs,
       ...outputLimits(run),
       predicate: run.predicate ?? { kind: 'nonzero_exit' },
+      ...(run.executionRequirement === undefined ? {} : { executionRequirement: { ...run.executionRequirement } }),
       sourceDirectory: 'source',
       artifactsDirectory: 'replay-artifacts',
       environment,

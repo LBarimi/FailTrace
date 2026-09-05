@@ -94,7 +94,7 @@ describe('self-contained reproduction bundles', () => {
     expect(await readFile(originalOutput, 'utf8')).toContain(privateLog);
   });
 
-  it('checks omitted environment prerequisites before execution and includes only selected captured values', async () => {
+  it('checks omitted environment prerequisites before executing replay', async () => {
     const { root, run } = await setup('environment', { captureEnv: ['BUNDLE_VALUE', 'BUNDLE_UNSET'],
       env: { ...nodeEnvironment(), BUNDLE_VALUE: 'selected', BUNDLE_UNSET: undefined } });
     const options = { cwd: root, run: run.artifactDirectory, files: ['nested/target.mjs'] };
@@ -105,6 +105,13 @@ describe('self-contained reproduction bundles', () => {
     expect(refused.stderr).toContain('BUNDLE_VALUE must be set');
     expect(await readdir(bundle.directory)).not.toContain('replay-artifacts');
     expect((await runNode([join(bundle.directory, 'repro.mjs')], root, { ...absent, BUNDLE_VALUE: 'selected' })).code).toBe(1);
+  });
+
+  it('includes only selected captured values and preserves an unset prerequisite', async () => {
+    const { root, run } = await setup('environment', { captureEnv: ['BUNDLE_VALUE', 'BUNDLE_UNSET'],
+      env: { ...nodeEnvironment(), BUNDLE_VALUE: 'selected', BUNDLE_UNSET: undefined } });
+    const options = { cwd: root, run: run.artifactDirectory, files: ['nested/target.mjs'] };
+    const absent = { ...nodeEnvironment(), BUNDLE_VALUE: undefined, BUNDLE_UNSET: undefined };
     const selected = await createBundle({ ...options, includeEnv: ['BUNDLE_VALUE'] });
     expect(JSON.parse(await readFile(selected.configPath, 'utf8'))).toMatchObject({ schemaVersion: 2,
       environment: { BUNDLE_VALUE: 'selected' }, requiredEnvironment: [{ key: 'BUNDLE_UNSET', state: 'unset' }] });

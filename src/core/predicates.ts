@@ -99,6 +99,7 @@ export function assessRun(summary: RunSummary, minFailures = 1): 'reproduced' | 
     if (trial.index !== offset + 1 || trial.terminationReason !== 'exit'
       || trial.spawningFailed || trial.timedOut || trial.signal !== null || trial.error !== undefined || trial.outputLimit !== undefined
       || trial.exitCode === null || !Number.isSafeInteger(trial.exitCode) || trial.exitCode < 0
+      || (summary.executionRequirement !== undefined && trial.executionMatched !== true)
       || !['passed', 'failed'].includes(trial.status)
       || (trial.failureMatched !== undefined && trial.failureMatched !== (trial.status === 'failed'))) {
       return 'inconclusive';

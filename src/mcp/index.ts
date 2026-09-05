@@ -9,6 +9,7 @@ import { compareRuns } from '../core/compare.js';
 import { inspectRunEvidence } from '../core/inspect.js';
 import { minimizeFailure } from '../core/minimize.js';
 import { runTrials, VERSION } from '../core/run-trials.js';
+import { assessRun } from '../core/predicates.js';
 import { verifyFix, type VerifyResult, type VerifyRunEvidence } from '../core/verify.js';
 import type { ContextSnapshot, RunContext } from '../core/verify-context.js';
 import type { RunOptions, RunSummary } from '../core/types.js';
@@ -26,6 +27,7 @@ const predicateSchema = z.discriminatedUnion('kind', [
   }).strict(),
 ]);
 const environmentSchema = z.record(z.string().min(1), z.string().nullable());
+const executionRequirementSchema = z.object({ stream: z.enum(['stdout', 'stderr']), contains: z.string().min(1).max(1_048_576) }).strict();
 const captureContextSchema = z.object({
   inputFiles: z.array(z.string().min(1)).optional(),
   setupFiles: z.array(z.string().min(1)).optional(),
@@ -39,6 +41,7 @@ const commandSchema = z.object({
   maxOutputBytes: positiveInteger.optional().describe('Combined stdout/stderr byte cap per trial; default 16 MiB. Limit outcomes are inconclusive.'),
   maxTotalOutputBytes: positiveInteger.optional().describe('Combined output byte cap for this whole experiment, including all candidates; default 256 MiB.'),
   predicate: predicateSchema.optional(),
+  executionRequirement: executionRequirementSchema.optional().describe('Optional checkpoint emitted after the intended check ran. Missing evidence makes classification/verification inconclusive; Verify inherits it from the baseline.'),
   env: environmentSchema.optional().describe('Explicit environment overrides. null unsets an inherited variable.'),
 }).strict();
 type CommandInput = z.infer<typeof commandSchema>;
@@ -53,6 +56,7 @@ function commandOptions(input: CommandInput, cwd: string, signal: AbortSignal): 
     ...(input.maxOutputBytes === undefined ? {} : { maxOutputBytes: input.maxOutputBytes }),
     ...(input.maxTotalOutputBytes === undefined ? {} : { maxTotalOutputBytes: input.maxTotalOutputBytes }),
     ...(input.predicate === undefined ? {} : { predicate: input.predicate }),
+    ...(input.executionRequirement === undefined ? {} : { executionRequirement: input.executionRequirement }),
     ...(input.env === undefined ? {} : {
       env: Object.fromEntries(Object.entries(input.env).map(([key, value]) => [key, value ?? undefined])),
     }),
@@ -105,10 +109,16 @@ function runProjection(run: RunSummary): Record<string, unknown> {
     statistics: run.statistics,
     matchedTrials: run.trials.filter((trial) => trial.failureMatched === true).length,
     predicate: run.predicate,
+    ...(run.executionRequirement === undefined ? {} : {
+      executionRequirement: run.executionRequirement,
+      assessment: assessRun(run),
+      executionEvidenceMissingTrials: run.trials.filter(trial => trial.executionMatched !== true).length,
+    }),
     startedAt: run.startedAt,
     endedAt: run.endedAt,
     trials: sample(run.trials).map((trial) => ({
       index: trial.index, status: trial.status, failureMatched: trial.failureMatched,
+      ...(run.executionRequirement === undefined ? {} : { executionMatched: trial.executionMatched ?? null }),
       exitCode: trial.exitCode, durationMs: trial.durationMs,
       terminationReason: trial.terminationReason,
       ...(trial.outputLimit === undefined ? {} : { outputLimit: trial.outputLimit }),

@@ -1,6 +1,7 @@
 import { lstat, opendir, realpath, stat } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { validatePredicate } from './predicates.js';
+import { validateExecutionRequirement } from './execution-evidence.js';
 import { MAX_METADATA_BYTES, type StoredRunSummary } from './run-metadata.js';
 import { aggregateStatistics } from './statistics.js';
 import type { RunSummary, TrialResult } from './types.js';
@@ -31,6 +32,7 @@ export async function safeArtifactPath(directory: string, path: string): Promise
 function validateTrial(value: unknown): asserts value is TrialResult {
   if (!value || typeof value !== 'object') throw new Error('Invalid trial metadata.');
   const trial = value as TrialResult;
+  if (trial.executionMatched !== undefined && typeof trial.executionMatched !== 'boolean') throw new Error('Invalid execution evidence metadata.');
   if (!Number.isSafeInteger(trial.index) || trial.index < 1 || typeof trial.command !== 'string'
     || !Number.isFinite(trial.durationMs) || trial.durationMs < 0
     || !['passed', 'failed', 'timed_out', 'spawn_error', 'interrupted', 'resource_limited', 'output_error'].includes(trial.status)
@@ -75,6 +77,7 @@ export async function loadRun(reference: string, cwd = process.cwd()): Promise<R
     throw new Error('Invalid or unsupported run metadata.');
   }
   validatePredicate(run.predicate);
+  if (run.executionRequirement !== undefined) validateExecutionRequirement(run.executionRequirement);
   outputLimits(run);
   if (run.trials.length > MAX_RECORDED_TRIALS || (run.trialCount ?? 0) > MAX_RECORDED_TRIALS) {
     throw new Error('Run exceeds the 100000 recorded trial reader limit.');

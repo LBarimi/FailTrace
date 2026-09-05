@@ -1,5 +1,9 @@
 # Compatibility contract for 1.0
 
+## Unreleased execution checkpoints
+
+The source checkout supports opt-in `executionRequirement` metadata and per-trial `executionMatched` evidence. Default behavior, existing status values and predicate statistics are preserved. A selected requirement changes classification: missing or unknown completion is inconclusive, including target-matching trials. Verify inherits the baseline condition and replay bundles include it. Use a build that supports checkpoints throughout this workflow; published 1.1.0 readers do not enforce these additional fields. See the [complete contract and example](EXECUTION-EVIDENCE.md).
+
 This contract defines the supported surfaces for FailTrace 1.x. See [migration from 0.x](MIGRATING-TO-1.md) before upgrading. Publication status and available installation routes are recorded in the [README](../README.md#quick-start); a version in a checkout does not by itself establish public registry availability.
 
 ## Supported integration surfaces

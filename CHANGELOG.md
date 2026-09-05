@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-No additional changes.
+- Add optional execution checkpoints across Core, CLI and MCP. Verify inherits the baseline checkpoint and refuses to interpret a skipped check as healthy candidate evidence; inspection, comparison, bisect, minimization and bundle replay preserve the condition. Existing behavior is unchanged when the option is absent.
+- Add an original event-import fixture with an independent checker and corrected implementation, including skipped-check and unrelated-error validation.
+- Split cumulative MCP and bundle integration tests into independent cases, preserving their assertions and execution timeouts.
 
 ## 1.1.0
 

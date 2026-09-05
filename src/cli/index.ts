@@ -65,7 +65,9 @@ async function main(): Promise<number> {
         });
         print(formatSummary(summary));
         result(summary);
-        exitCode = summary.status === 'resource_limited' || summary.status === 'error' ? 2 : summary.statistics.failed > 0 ? 1 : 0;
+        exitCode = summary.status === 'resource_limited' || summary.status === 'error'
+          || (summary.executionRequirement !== undefined && summary.trials.some(trial => trial.executionMatched !== true))
+          ? 2 : summary.statistics.failed > 0 ? 1 : 0;
         break;
       }
       case 'compare': {

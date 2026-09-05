@@ -42,6 +42,19 @@ async function repository(states: Array<{ failures: number; hang?: boolean; setu
 afterEach(async () => { vi.restoreAllMocks(); await cleanupDirectories(directories); });
 
 describe('bisectRegression', () => {
+  it('preserves execution requirements and refuses a matching bad endpoint without its checkpoint', async () => {
+    const { cwd, commits } = await repository([{ failures: 0 }, { failures: 5 }]);
+    const executionRequirement = { stream: 'stdout' as const, contains: 'healthy' };
+    const result = await bisectRegression({ cwd: join(cwd, 'suite'), command, good: commits[0]!, bad: commits[1]!, repeat: 1,
+      predicate: { kind: 'stdout_contains', value: 'target signature' }, executionRequirement });
+    expect(result).toMatchObject({ status: 'inconclusive', firstBad: null, executionRequirement });
+    expect(result.candidates[0]).toMatchObject({ assessment: 'not_reproduced', run: { executionRequirement } });
+    expect(result.candidates[1]).toMatchObject({ assessment: 'inconclusive', reason: expect.stringContaining('checkpoint') });
+    const bad = await loadRun(result.candidates[1]!.run.metadataPath);
+    expect(bad.trials[0]).toMatchObject({ failureMatched: true, executionMatched: false });
+    expect(result.cleanupError).toBeUndefined();
+  });
+
   it('does not treat a nonmatching setup failure as a good middle commit', async () => {
     const { cwd, commits } = await repository([{ failures: 0 }, { failures: 5, setupExitCode: 125 }, { failures: 5 }]);
     const result = await bisectRegression({ cwd: join(cwd, 'suite'), command, good: commits[0]!, bad: commits[2]!, repeat: 1,

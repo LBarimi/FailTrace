@@ -8,7 +8,7 @@ import { DEFAULT_TIMEOUT_MS, runTrialsWithBudget, validateRunOptions, VERSION } 
 import { OutputBudget, outputLimits, type OutputLimits } from './output-budget.js';
 import { copyBoundedFile } from './bounded-file.js';
 import { CandidateStorageBudget, CandidateStorageLimitError, inputLimits, type InputLimits, type CandidateStorageLimit } from './input-budget.js';
-import type { FailurePredicate } from './types.js';
+import type { ExecutionRequirement, FailurePredicate } from './types.js';
 import { diagnosticMessage, MAX_EVALUATIONS, MetadataBudget, MetadataLimitError, type MetadataLimit } from './metadata-budget.js';
 
 export type { MinimizeFormat } from './minimize-input.js';
@@ -24,6 +24,7 @@ export interface MinimizeOptions extends OutputLimits, InputLimits {
   /** Includes baseline and final verification; must be at least two. */
   maxEvaluations?: number;
   predicate?: FailurePredicate;
+  executionRequirement?: ExecutionRequirement;
   env?: NodeJS.ProcessEnv;
   signal?: AbortSignal;
   onCandidate?: (evaluation: MinimizeEvaluation) => void;
@@ -60,6 +61,7 @@ export interface MinimizeResult extends OutputLimits, InputLimits {
   timeoutMs: number;
   maxEvaluations: number;
   predicate: FailurePredicate;
+  executionRequirement?: ExecutionRequirement;
   finalVerified: boolean;
   storageLimit?: CandidateStorageLimit;
   metadataLimit?: MetadataLimit;
@@ -111,6 +113,7 @@ function replaceAtPath(value: JsonValue, path: (string | number)[], replacement:
 
 /** Reduce input only when the selected failure remains reproducible in completed trials. */
 export async function minimizeFailure(options: MinimizeOptions): Promise<MinimizeResult> {
+  options = { ...options, ...(options.executionRequirement === undefined ? {} : { executionRequirement: { ...options.executionRequirement } }) };
   const repeat = options.repeat ?? 1;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const minFailures = options.minFailures ?? 1;
@@ -156,6 +159,7 @@ export async function minimizeFailure(options: MinimizeOptions): Promise<Minimiz
     originalSize: candidateSize(initial), minimizedSize: candidateSize(initial),
     startedAt: new Date().toISOString(), endedAt: null, repeat, minFailures, timeoutMs, maxEvaluations,
     predicate: options.predicate ?? { kind: 'nonzero_exit' }, finalVerified: false, evaluations: [],
+    ...(options.executionRequirement === undefined ? {} : { executionRequirement: { ...options.executionRequirement } }),
   };
   const metadataPath = join(artifactDirectory, 'result.json');
   let current = initial;
@@ -183,6 +187,7 @@ export async function minimizeFailure(options: MinimizeOptions): Promise<Minimiz
       ...limits,
       stopWhenDecided: { minFailures },
       env: environment, predicate: result.predicate,
+      ...(result.executionRequirement === undefined ? {} : { executionRequirement: result.executionRequirement }),
       ...(options.signal === undefined ? {} : { signal: options.signal }),
     }, outputBudget, metadata);
     if (run.status === 'resource_limited' || run.status === 'error') {

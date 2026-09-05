@@ -4,11 +4,12 @@ import { join, resolve } from 'node:path';
 import { writeJsonAtomic } from './artifacts.js';
 import { captureEnvironment } from './environment.js';
 import { validatePredicate } from './predicates.js';
+import { matchesExecution, validateExecutionRequirement } from './execution-evidence.js';
 import { loadRun, safeArtifactPath } from './run-reader.js';
 import { runTrials, validateRunOptions } from './run-trials.js';
 import { captureContext, snapshotsEqual, validRunContext } from './verify-context.js';
 import type { ContextSnapshot, RunContext } from './verify-context.js';
-import type { EnvironmentSnapshot, FailurePredicate, RunOptions, RunSummary, TrialResult } from './types.js';
+import type { EnvironmentSnapshot, ExecutionRequirement, FailurePredicate, RunOptions, RunSummary, TrialResult } from './types.js';
 import { outputLimits, type OutputLimits } from './output-budget.js';
 
 export type VerifyChangeField = 'command' | 'source' | 'inputs' | 'setup' | 'environment' | 'timeout' | 'concurrency' | 'outputLimits';
@@ -39,6 +40,7 @@ export interface VerifyRunEvidence {
   infrastructureTrials: number;
   unrelatedFailureTrials: number;
   invalidEvidenceTrials: number;
+  executionEvidenceMissingTrials?: number;
   context?: RunContext;
 }
 export interface VerifyContextChange {
@@ -67,6 +69,7 @@ export interface VerifyResult {
     command: string; cwd: string; repeat: number; timeoutMs: number; concurrency: number;
     maxOutputBytes: number; maxTotalOutputBytes: number;
     predicate: FailurePredicate | null; captureEnv: string[];
+    executionRequirement?: ExecutionRequirement;
     healthyExitCodes: number[]; allowChanges: VerifyAllowedChange[];
   };
 }
@@ -90,12 +93,14 @@ function evidence(run: RunSummary, codes: number[]): VerifyRunEvidence {
   let infrastructureTrials = 0;
   let unrelatedFailureTrials = 0;
   let invalidEvidenceTrials = 0;
+  let executionEvidenceMissingTrials = 0;
   for (const [offset, trial] of run.trials.entries()) {
     if (['signal', 'timeout', 'spawn_error', 'interrupted', 'output_limit', 'output_error'].includes(trial.terminationReason)
       || trial.timedOut === true || trial.spawningFailed === true || (trial.signal !== null && trial.signal !== undefined)
       || trial.error !== undefined || trial.outputLimit !== undefined) infrastructureTrials++;
     else if (!cleanExit(trial) || trial.command !== run.command || trial.index !== offset + 1) invalidEvidenceTrials++;
     else if (!trial.failureMatched && !codes.includes(trial.exitCode!)) unrelatedFailureTrials++;
+    else if (run.executionRequirement !== undefined && trial.executionMatched !== true) executionEvidenceMissingTrials++;
     else healthyTrials++;
   }
   return {
@@ -104,6 +109,7 @@ function evidence(run: RunSummary, codes: number[]): VerifyRunEvidence {
     matchedTrials: run.trials.filter((trial) => trial.failureMatched === true).length,
     healthyTrials, unhealthyTrials: run.trials.length - healthyTrials,
     infrastructureTrials, unrelatedFailureTrials, invalidEvidenceTrials,
+    ...(run.executionRequirement === undefined ? {} : { executionEvidenceMissingTrials }),
     ...(run.context === undefined ? {} : { context: run.context }),
   };
 }
@@ -125,9 +131,16 @@ function healthReasons(run: RunSummary, codes: number[]): string[] {
   if (run.trials.length !== run.requestedTrials || run.trials.some((trial, index) => trial.index !== index + 1 || trial.command !== run.command)) {
     reasons.push('Run does not contain every preselected trial in index order.');
   }
-  if (evidence(run, codes).unhealthyTrials) reasons.push('Run contains an infrastructure error, unknown match data, or an unrelated unhealthy exit.');
+  const observed = evidence(run, codes);
+  if (observed.infrastructureTrials || observed.invalidEvidenceTrials || observed.unrelatedFailureTrials) {
+    reasons.push('Run contains an infrastructure error, unknown match data, or an unrelated unhealthy exit.');
+  }
   if (!run.predicate) reasons.push('Run has no explicit recorded target predicate.');
   else { try { validatePredicate(run.predicate); } catch { reasons.push('Recorded target predicate is invalid.'); } }
+  if (run.executionRequirement !== undefined) {
+    try { validateExecutionRequirement(run.executionRequirement); } catch { reasons.push('Recorded execution requirement is invalid.'); }
+    if (run.trials.some(trial => trial.executionMatched !== true)) reasons.push('Required execution checkpoint is missing or unknown in one or more trials.');
+  }
   if (!knownEnvironment(run.environment) || run.concurrency === undefined) reasons.push('Selected environment or concurrency context is unknown.');
   if (!validRunContext(run.context)) reasons.push('Declared input, setup and source context is missing or invalid; capture a fresh baseline with captureContext.');
   else if (!run.context.stable || !run.context.after || run.context.before.source.kind === 'unknown'
@@ -153,6 +166,10 @@ async function checkEvidenceFiles(run: RunSummary, signal?: AbortSignal): Promis
       if (trial.stdoutPath !== `${folder}/stdout.txt` || trial.stderrPath !== `${folder}/stderr.txt`) throw new Error('Invalid output path.');
       for (const path of [trial.stdoutPath, trial.stderrPath]) {
         if (!(await stat(await safeArtifactPath(run.artifactDirectory, path))).isFile()) throw new Error('Missing output file.');
+      }
+      if (run.executionRequirement !== undefined
+        && !await matchesExecution(trial, run.artifactDirectory, run.executionRequirement)) {
+        return ['Required execution checkpoint could not be confirmed in the saved output.'];
       }
     }
     return [];
@@ -244,6 +261,7 @@ export async function verifyFix(options: VerifyOptions): Promise<VerifyResult> {
       maxTotalOutputBytes: options.maxTotalOutputBytes ?? baseline.maxTotalOutputBytes ?? outputLimits({}).maxTotalOutputBytes,
     }));
     plan.predicate = structuredClone(baseline.predicate!);
+    if (baseline.executionRequirement !== undefined) plan.executionRequirement = { ...baseline.executionRequirement };
     plan.captureEnv = Object.keys(baseline.environment!.variables).sort();
     const environment = captureEnvironment(plan.captureEnv, options.env);
     const context = await captureContext(cwd, baseline.context!.declaration, artifactDirectory, options.signal);
@@ -264,6 +282,7 @@ export async function verifyFix(options: VerifyOptions): Promise<VerifyResult> {
         command: plan.command, cwd, repeat: plan.repeat, timeoutMs: plan.timeoutMs, concurrency: plan.concurrency,
         maxOutputBytes: plan.maxOutputBytes, maxTotalOutputBytes: plan.maxTotalOutputBytes,
         predicate: plan.predicate!, captureEnv: plan.captureEnv, captureContext: baseline.context!.declaration,
+        ...(plan.executionRequirement === undefined ? {} : { executionRequirement: plan.executionRequirement }),
         artifactsDir: candidateArtifacts,
         ...(options.env === undefined ? {} : { env: options.env }),
         ...(options.signal === undefined ? {} : { signal: options.signal }),

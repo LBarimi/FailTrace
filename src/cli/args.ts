@@ -1,7 +1,8 @@
-import type { BundleOptions, CompareOptions, FailurePredicate, InputLimits, MinimizeFormat, OutputLimits, RunOptions, VerifyOptions } from '../core/index.js';
+import { validateExecutionRequirement } from '../core/index.js';
+import type { BundleOptions, CompareOptions, ExecutionRequirement, FailurePredicate, InputLimits, MinimizeFormat, OutputLimits, RunOptions, VerifyOptions } from '../core/index.js';
 
 type Common = { cwd?: string; json?: boolean };
-type Experiment = { command: string; repeat: number; timeoutMs: number; predicate?: FailurePredicate } & OutputLimits;
+type Experiment = { command: string; repeat: number; timeoutMs: number; predicate?: FailurePredicate; executionRequirement?: ExecutionRequirement } & OutputLimits;
 export type CliInvocation =
   | { kind: 'help' }
   | { kind: 'version' }
@@ -38,10 +39,11 @@ function integer(value: string, name: string, min = 1, max = Number.MAX_SAFE_INT
 
 const predicateFlags = ['exit-code', 'stdout-contains', 'stderr-contains', 'stdout-regex', 'stderr-regex'];
 const outputFlags = ['max-output-bytes', 'max-total-output-bytes'];
-const experiments = ['command', 'repeat', 'timeout', ...predicateFlags, 'regex-flags', ...outputFlags];
+const executionFlags = ['require-stdout-contains', 'require-stderr-contains'];
+const experiments = ['command', 'repeat', 'timeout', ...predicateFlags, ...executionFlags, 'regex-flags', ...outputFlags];
 const allowed: Record<string, string[]> = {
   demo: ['cwd', 'json'],
-  run: ['repeat', 'timeout', 'concurrency', ...outputFlags, ...predicateFlags, 'regex-flags', 'capture-env', 'capture-context', 'context-input', 'context-setup', 'context-source', 'cwd', 'json'],
+  run: ['repeat', 'timeout', 'concurrency', ...outputFlags, ...predicateFlags, ...executionFlags, 'regex-flags', 'capture-env', 'capture-context', 'context-input', 'context-setup', 'context-source', 'cwd', 'json'],
   verify: ['command', 'cwd', 'repeat', 'timeout', 'concurrency', ...outputFlags, 'healthy-exit-code', 'allow-change', 'json'],
   compare: ['trial-a', 'trial-b', 'max-lines', 'max-bytes', 'cwd', 'json'],
   bisect: [...experiments, 'good', 'bad', 'min-failures', 'healthy-exit-code', 'inconclusive-exit-code', 'cwd', 'json'],
@@ -174,7 +176,14 @@ export function parseArgs(argv: string[]): CliInvocation {
   const repeat = integer(get('repeat') ?? (kind === 'run' ? '10' : kind === 'bisect' ? '5' : '1'), 'Repeat');
   const timeoutMs = parseTimeout(get('timeout') ?? '30s');
   const predicate = parsePredicate(values);
-  const experiment: Experiment = { command, repeat, timeoutMs, ...limits, ...(predicate === undefined ? {} : { predicate }) };
+  const execution = executionFlags.filter(flag => values.has(flag));
+  if (execution.length > 1) throw new Error('Choose one execution checkpoint stream.');
+  const executionRequirement: ExecutionRequirement | undefined = execution.length === 0 ? undefined : {
+    stream: execution[0] === 'require-stdout-contains' ? 'stdout' : 'stderr', contains: get(execution[0]!)!,
+  };
+  if (executionRequirement !== undefined) validateExecutionRequirement(executionRequirement);
+  const experiment: Experiment = { command, repeat, timeoutMs, ...limits, ...(predicate === undefined ? {} : { predicate }),
+    ...(executionRequirement === undefined ? {} : { executionRequirement }) };
   if (kind === 'run') {
     const captureEnv = get('capture-env')?.split(',').map((key) => key.trim());
     if (captureEnv?.some((key) => !key || key.includes('=') || key.includes('\0'))) throw new Error('Capture environment names must be non-empty and comma-separated.');

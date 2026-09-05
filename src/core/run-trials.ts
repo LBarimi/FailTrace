@@ -7,6 +7,7 @@ import { aggregateStatistics, createStatisticsAccumulator } from './statistics.j
 import { writeRunSummary } from './run-metadata.js';
 import { captureEnvironment, effectiveEnvironment } from './environment.js';
 import { DEFAULT_PREDICATE, matchesFailure, validatePredicate } from './predicates.js';
+import { matchesExecution, validateExecutionRequirement } from './execution-evidence.js';
 import { captureContext, contextDeclaration, snapshotsEqual } from './verify-context.js';
 import type { RunOptions, RunSummary } from './types.js';
 import { OutputBudget, outputLimits } from './output-budget.js';
@@ -42,6 +43,7 @@ export function validateRunOptions(options: RunOptions): void {
     throw new Error('Timeout must be a positive integer from 1 to 2147483647 milliseconds.');
   }
   validatePredicate(options.predicate);
+  if (options.executionRequirement !== undefined) validateExecutionRequirement(options.executionRequirement);
   outputLimits(options);
   captureEnvironment(options.captureEnv, options.env);
   if (options.captureContext !== undefined) contextDeclaration(options.captureContext);
@@ -64,6 +66,7 @@ export async function runTrialsWithBudget(options: RunOptions, budget: OutputBud
 async function executeRun(options: RunOptions, budget: OutputBudget, metadata: MetadataBudget, header: { bytes: number }, source?: RunSummary['source']): Promise<RunSummary> {
   options = { ...options,
     ...(options.predicate === undefined ? {} : { predicate: structuredClone(options.predicate) }),
+    ...(options.executionRequirement === undefined ? {} : { executionRequirement: { ...options.executionRequirement } }),
     ...(options.captureContext === undefined ? {} : { captureContext: contextDeclaration(options.captureContext) }),
     ...(options.captureEnv === undefined ? {} : { captureEnv: [...options.captureEnv] }),
     ...(options.stopWhenDecided === undefined ? {} : { stopWhenDecided: { ...options.stopWhenDecided } }),
@@ -100,6 +103,7 @@ async function executeRun(options: RunOptions, budget: OutputBudget, metadata: M
     trials: [],
     statistics: aggregateStatistics([]),
     predicate: structuredClone(options.predicate ?? DEFAULT_PREDICATE),
+    ...(options.executionRequirement === undefined ? {} : { executionRequirement: { ...options.executionRequirement } }),
     environment: captureEnvironment(capturedKeys, executionEnv),
     ...(source === undefined ? {} : { source: { ...source } }),
   };
@@ -146,12 +150,15 @@ async function executeRun(options: RunOptions, budget: OutputBudget, metadata: M
         let predicateError: unknown;
         try {
           trial.failureMatched = await matchesFailure(trial, directory, summary.predicate);
+          if (summary.executionRequirement !== undefined) {
+            trial.executionMatched = await matchesExecution(trial, directory, summary.executionRequirement);
+          }
           if (trial.terminationReason === 'exit' && !trial.spawningFailed) {
             trial.status = trial.failureMatched ? 'failed' : 'passed';
           }
         } catch (error) {
           predicateError = error;
-          trial.error = `Failure predicate evaluation failed: ${String(error)}`;
+          trial.error = `Failure or execution evidence evaluation failed: ${String(error)}`;
         }
         if (trial.error !== undefined) trial.error = diagnosticMessage(trial.error);
         statistics.add(trial);
@@ -171,7 +178,8 @@ async function executeRun(options: RunOptions, budget: OutputBudget, metadata: M
           controller.abort();
         }
         if (options.stopWhenDecided !== undefined && !controller.signal.aborted && !summary.metadataLimit) {
-          if (trial.terminationReason !== 'exit' || trial.spawningFailed || trial.error) {
+          if (trial.terminationReason !== 'exit' || trial.spawningFailed || trial.error
+            || (summary.executionRequirement !== undefined && trial.executionMatched !== true)) {
             stopScheduling = true; // An infrastructure outcome cannot justify classification.
           } else {
             if (trial.failureMatched) matched++;

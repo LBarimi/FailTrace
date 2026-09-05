@@ -12,6 +12,9 @@ export type FailurePredicate =
   | { kind: 'stdout_contains' | 'stderr_contains'; value: string }
   | { kind: 'stdout_regex' | 'stderr_regex'; pattern: string; flags?: string };
 
+/** An opt-in checkpoint emitted by the target after the intended check ran. */
+export interface ExecutionRequirement { stream: 'stdout' | 'stderr'; contains: string }
+
 export interface EnvironmentSnapshot {
   platform: NodeJS.Platform;
   arch: string;
@@ -39,6 +42,8 @@ export interface TrialResult {
   stderrPath: string;
   /** Whether the configured predicate matched; absent in older artifacts. */
   failureMatched?: boolean;
+  /** Checkpoint observed after a clean exit; absent means not requested or unknown. */
+  executionMatched?: boolean;
   /** Output was incomplete. A truncated stream never establishes a target nonmatch. */
   outputLimit?: OutputLimit;
 }
@@ -72,6 +77,7 @@ export interface RunSummary extends OutputLimits {
   decision?: { minFailures: number; outcome: 'reproduced' | 'not_reproduced'; completedTrials: number };
   error?: string;
   predicate?: FailurePredicate;
+  executionRequirement?: ExecutionRequirement;
   /** No further trial could be safely recorded within the investigation allowance. */
   metadataLimit?: MetadataLimit;
   environment?: EnvironmentSnapshot;
@@ -97,6 +103,7 @@ export interface RunOptions extends OutputLimits {
   /** Classification only, with concurrency one; ordinary runs always exhaust repeat. */
   stopWhenDecided?: { minFailures: number };
   predicate?: FailurePredicate;
+  executionRequirement?: ExecutionRequirement;
   captureEnv?: string[];
   captureContext?: ContextCaptureOptions;
 }

@@ -66,7 +66,31 @@ afterEach(async () => {
 });
 
 describe('official SDK stdio MCP adapter', () => {
-  it('lists typed tools and invokes the Core workflows over a real SDK connection', async () => {
+  it('carries baseline checkpoints into verification and exposes missing evidence through inspection', async () => {
+    const { client, cwd, errors, stderr } = await startClient();
+    const command = `${node} check.mjs`;
+    await writeFile(join(cwd, 'check.mjs'), 'console.log("CHECK_DONE"); console.error("TARGET"); process.exitCode = 7;');
+    const executionRequirement = { stream: 'stdout', contains: 'CHECK_DONE' };
+    const before = structured(await client.callTool({ name: 'failtrace_run', arguments: {
+      command, cwd, repeat: 1, predicate: { kind: 'stderr_contains', value: 'TARGET' }, executionRequirement,
+      captureContext: { sourceFiles: ['check.mjs'] },
+    } }));
+    expect(before).toMatchObject({ assessment: 'reproduced', executionRequirement, executionEvidenceMissingTrials: 0, trials: [{ executionMatched: true }] });
+    await writeFile(join(cwd, 'check.mjs'), 'console.log("Skipped");');
+    const after = structured(await client.callTool({ name: 'failtrace_verify', arguments: {
+      command, cwd, baseline: before.artifactDirectory, allowChanges: [{ field: 'source', reason: 'Negative control: skip the check.' }],
+    } }));
+    expect(after).toMatchObject({ status: 'inconclusive', plan: { executionRequirement }, candidate: { executionEvidenceMissingTrials: 1 } });
+    const candidate = after.candidate as { metadataPath: string };
+    const inspected = structured(await client.callTool({ name: 'failtrace_inspect_run', arguments: { view: 'trials', run: candidate.metadataPath, filter: 'unhealthy' } }));
+    expect(inspected).toMatchObject({ executionRequirement, trials: [{ executionMatched: false, unhealthy: true }] });
+    const skipped = structured(await client.callTool({ name: 'failtrace_run', arguments: { command, repeat: 1, executionRequirement } }));
+    expect(skipped).toMatchObject({ assessment: 'inconclusive', executionEvidenceMissingTrials: 1 });
+    expect(errors).toEqual([]);
+    expect(stderr.join('')).toBe('');
+  });
+
+  it('lists typed tools and records, compares and bundles evidence over a real SDK connection', async () => {
     const { client, cwd, errors, stderr } = await startClient();
     const listing = await client.listTools();
     expect(listing.tools.map((tool) => tool.name).sort()).toEqual([
@@ -114,7 +138,12 @@ describe('official SDK stdio MCP adapter', () => {
     expect(JSON.parse(await readFile(bundle.configPath as string, 'utf8')).environment).toEqual({ BUNDLE_MARKER: 'synthetic-selected-value' });
     expect(await readFile(join(bundle.directory as string, 'source', 'target.mjs'), 'utf8'))
       .toBe(await readFile(join(cwd, 'target.mjs'), 'utf8'));
+    expect(errors).toEqual([]);
+    expect(stderr.join('')).toBe('');
+  }, 30_000);
 
+  it('minimizes input through a real SDK connection while preserving the original', async () => {
+    const { client, cwd, errors, stderr } = await startClient();
     await copyFile(join(fixtures, 'minimize-command.mjs'), join(cwd, 'minimize.mjs'));
     await writeFile(join(cwd, 'input.txt'), 'xBUGy');
     const minimized = await client.callTool({
@@ -124,7 +153,12 @@ describe('official SDK stdio MCP adapter', () => {
     expect(structured(minimized)).toMatchObject({ status: 'completed', finalVerified: true, originalSize: 5, minimizedSize: 3 });
     expect(await readFile(structured(minimized).minimizedPath as string, 'utf8')).toBe('BUG');
     expect(await readFile(join(cwd, 'input.txt'), 'utf8')).toBe('xBUGy');
+    expect(errors).toEqual([]);
+    expect(stderr.join('')).toBe('');
+  }, 30_000);
 
+  it('bisects through a real SDK connection and preserves inconclusive exit policy', async () => {
+    const { client, cwd, errors, stderr } = await startClient();
     const repository = join(cwd, 'repository');
     await mkdir(repository);
     await git(repository, 'init', '-b', 'main');

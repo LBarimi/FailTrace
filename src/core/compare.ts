@@ -36,6 +36,7 @@ export interface ComparisonResult {
   commandChanged: boolean;
   concurrencyChanged: boolean;
   predicateChanged: boolean;
+  executionRequirementChanged?: boolean;
   statisticsA: RunStatistics;
   statisticsB: RunStatistics;
   failureRateDelta: number;
@@ -44,7 +45,7 @@ export interface ComparisonResult {
   stderr: OutputComparison;
 }
 
-export type ComparisonTrialEvidence = Pick<TrialResult, 'status' | 'exitCode' | 'terminationReason' | 'failureMatched'>;
+export type ComparisonTrialEvidence = Pick<TrialResult, 'status' | 'exitCode' | 'terminationReason' | 'failureMatched' | 'executionMatched'>;
 
 async function digest(path: string, signal?: AbortSignal): Promise<{ hash: string; size: number }> {
   signal?.throwIfAborted();
@@ -93,10 +94,11 @@ async function compareOutput(a: string, b: string, maxBytes: number, maxLines: n
   return result;
 }
 
-function selectTrial(trials: TrialResult[], index: number | undefined, desired: 'passed' | 'failed'): TrialResult {
+function selectTrial(trials: TrialResult[], index: number | undefined, desired: 'passed' | 'failed', requireExecution: boolean): TrialResult {
+  const eligible = requireExecution ? trials.filter(trial => trial.executionMatched === true) : trials;
   const preferred = desired === 'failed'
-    ? trials.find((item) => item.failureMatched === true)
-    : trials.find((item) => item.status === 'passed' && item.terminationReason === 'exit' && item.exitCode === 0 && !item.error);
+    ? eligible.find((item) => item.failureMatched === true)
+    : eligible.find((item) => item.status === 'passed' && item.terminationReason === 'exit' && item.exitCode === 0 && !item.error);
   const trial = index === undefined
     ? preferred ?? trials.find((item) => desired === 'passed' ? item.status === 'passed' : item.status !== 'passed')
     : trials.find((item) => item.index === index);
@@ -106,10 +108,12 @@ function selectTrial(trials: TrialResult[], index: number | undefined, desired: 
 
 function trialEvidence(trial: TrialResult): ComparisonTrialEvidence {
   return { status: trial.status, exitCode: trial.exitCode, terminationReason: trial.terminationReason,
+    ...(trial.executionMatched === undefined ? {} : { executionMatched: trial.executionMatched }),
     ...(trial.failureMatched === undefined ? {} : { failureMatched: trial.failureMatched }) };
 }
 
-function trialWarning(trial: TrialResult, label: string): string[] {
+function trialWarning(trial: TrialResult, label: string, requireExecution: boolean): string[] {
+  if (requireExecution && trial.executionMatched !== true) return [`Trial ${label} lacks the required execution checkpoint; its target match or nonmatch is inconclusive.`];
   if (trial.terminationReason !== 'exit' || trial.error || trial.outputLimit) {
     return [`Trial ${label} is an incomplete or unhealthy execution (${trial.status}); do not interpret this difference as the target failure.`];
   }
@@ -129,8 +133,8 @@ export async function compareRuns(options: CompareOptions): Promise<ComparisonRe
   }
   const first = await loadRun(options.runA, options.cwd);
   const second = options.runB === undefined ? first : await loadRun(options.runB, options.cwd);
-  const trialA = selectTrial(first.trials, options.trialA ?? (options.runB ? first.trials[0]?.index : undefined), 'passed');
-  const trialB = selectTrial(second.trials, options.trialB ?? (options.runB ? second.trials[0]?.index : undefined), 'failed');
+  const trialA = selectTrial(first.trials, options.trialA ?? (options.runB ? first.trials[0]?.index : undefined), 'passed', first.executionRequirement !== undefined);
+  const trialB = selectTrial(second.trials, options.trialB ?? (options.runB ? second.trials[0]?.index : undefined), 'failed', second.executionRequirement !== undefined);
   const paths = await Promise.all([
     safeArtifactPath(first.artifactDirectory, trialA.stdoutPath), safeArtifactPath(second.artifactDirectory, trialB.stdoutPath),
     safeArtifactPath(first.artifactDirectory, trialA.stderrPath), safeArtifactPath(second.artifactDirectory, trialB.stderrPath),
@@ -154,7 +158,10 @@ export async function compareRuns(options: CompareOptions): Promise<ComparisonRe
   return {
     runA: first.id, runB: second.id, trialA: trialA.index, trialB: trialB.index,
     selectedTrials: { a: trialEvidence(trialA), b: trialEvidence(trialB) },
-    warnings: [...trialWarning(trialA, 'A'), ...trialWarning(trialB, 'B')],
+    warnings: [...trialWarning(trialA, 'A', first.executionRequirement !== undefined), ...trialWarning(trialB, 'B', second.executionRequirement !== undefined)],
+    ...(first.executionRequirement === undefined && second.executionRequirement === undefined ? {} : {
+      executionRequirementChanged: JSON.stringify(first.executionRequirement) !== JSON.stringify(second.executionRequirement),
+    }),
     commandChanged: first.command !== second.command,
     concurrencyChanged: (first.concurrency ?? 1) !== (second.concurrency ?? 1),
     predicateChanged: JSON.stringify(first.predicate ?? { kind: 'nonzero_exit' }) !== JSON.stringify(second.predicate ?? { kind: 'nonzero_exit' }),

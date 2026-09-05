@@ -1,6 +1,8 @@
 # Verify a proposed fix
 
-Source checkout toward 1.0: candidate runs inherit the baseline output caps. Changing them requires an `outputLimits` allowance with a reason; older baselines have unknown caps. Output exhaustion or an output write error always makes evidence inconclusive. See [resource limits](RESOURCE-LIMITS.md). Published 0.6.0 does not include these caps.
+Since 1.0.0, candidate runs inherit the baseline output caps. Changing them requires an `outputLimits` allowance with a reason; older baselines have unknown caps. Output exhaustion or an output write error always makes evidence inconclusive. See [resource limits](RESOURCE-LIMITS.md).
+
+**Unreleased source addition:** a baseline can require a completed-check message. Verify inherits that requirement and treats a skipped check as inconclusive even if the target exits `0`. See the [execution checkpoint example and evidence contract](EXECUTION-EVIDENCE.md). Published 1.1.0 does not include this option.
 
 **Implemented in 0.5.0.** Core `verifyFix`, CLI `verify`, and MCP `failtrace_verify` enforce the same evidence checks. Versions through 0.4.0 can use the manual run/compare procedure below. A minimization's `finalVerified` only says the reduced input still reproduces the defect; it does not verify a code fix.
 

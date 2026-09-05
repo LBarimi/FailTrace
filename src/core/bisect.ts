@@ -6,7 +6,7 @@ import { runGit } from './git.js';
 import { assessRun, validatePredicate } from './predicates.js';
 import { DEFAULT_TIMEOUT_MS, runTrialsWithBudget, validateRunOptions, VERSION } from './run-trials.js';
 import { OutputBudget, outputLimits, type OutputLimits } from './output-budget.js';
-import type { FailurePredicate, RunSummary } from './types.js';
+import type { ExecutionRequirement, FailurePredicate, RunSummary } from './types.js';
 import { diagnosticMessage, MetadataBudget, MetadataLimitError, type MetadataLimit } from './metadata-budget.js';
 
 export interface BisectOptions extends OutputLimits {
@@ -18,6 +18,7 @@ export interface BisectOptions extends OutputLimits {
   timeoutMs?: number;
   minFailures?: number;
   predicate?: FailurePredicate;
+  executionRequirement?: ExecutionRequirement;
   /** Allowed exit codes for a completed nonmatching trial; defaults to [0]. */
   healthyExitCodes?: number[];
   /** These exits stop classification, even when the target predicate matches. */
@@ -56,6 +57,7 @@ export interface BisectResult extends OutputLimits {
   timeoutMs: number;
   minFailures: number;
   predicate?: FailurePredicate;
+  executionRequirement?: ExecutionRequirement;
   healthyExitCodes?: number[];
   inconclusiveExitCodes?: number[];
   scope: 'first-parent';
@@ -95,7 +97,10 @@ function exitCodes(value: number[], name: string, allowEmpty = false): number[] 
 function classifyCandidate(run: RunSummary, threshold: number, healthy: number[], inconclusive: number[]):
   Pick<BisectCandidate, 'assessment' | 'reason'> {
   const assessment = assessRun(run, threshold);
-  if (assessment === 'inconclusive') return { assessment };
+  if (assessment === 'inconclusive') return { assessment,
+    ...(run.executionRequirement !== undefined && run.trials.some(trial => trial.executionMatched !== true)
+      ? { reason: 'Required execution checkpoint is missing or unknown; check whether the intended check ran.' } : {}),
+  };
   for (const trial of run.trials) {
     // assessRun has already checked that every recorded trial is a clean exit.
     const code = trial.exitCode!;
@@ -124,6 +129,7 @@ async function assertOwnedWorktree(artifactDirectory: string, worktree: string):
  * assumes failure is monotonic along that history; it is not a confidence test.
  */
 export async function bisectRegression(options: BisectOptions): Promise<BisectResult> {
+  options = { ...options, ...(options.executionRequirement === undefined ? {} : { executionRequirement: { ...options.executionRequirement } }) };
   validateOptions(options);
   const healthy = exitCodes(options.healthyExitCodes ?? [0], 'healthyExitCodes');
   const inconclusive = exitCodes(options.inconclusiveExitCodes ?? [], 'inconclusiveExitCodes', true);
@@ -162,6 +168,7 @@ export async function bisectRegression(options: BisectOptions): Promise<BisectRe
     healthyExitCodes: healthy,
     inconclusiveExitCodes: inconclusive,
     ...(options.predicate === undefined ? {} : { predicate: options.predicate }),
+    ...(options.executionRequirement === undefined ? {} : { executionRequirement: { ...options.executionRequirement } }),
     scope: 'first-parent',
     status: 'running',
     startedAt: new Date().toISOString(),
@@ -195,6 +202,7 @@ export async function bisectRegression(options: BisectOptions): Promise<BisectRe
       timeoutMs: result.timeoutMs,
       artifactsDir: join(artifactDirectory, 'evidence'),
       ...(options.predicate === undefined ? {} : { predicate: options.predicate }),
+      ...(result.executionRequirement === undefined ? {} : { executionRequirement: result.executionRequirement }),
       ...(options.env === undefined ? {} : { env: options.env }),
       ...(options.signal === undefined ? {} : { signal: options.signal }),
     }, outputBudget, metadata, { kind: 'git', repository, commit, subdirectory: subdirectory.replaceAll('\\', '/') });

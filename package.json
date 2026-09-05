@@ -27,6 +27,7 @@
     "examples/advanced-demo-unrelated.js",
     "examples/advanced-demo-fixed.js",
     "examples/advanced-input.json",
+    "examples/workflows/event-import",
     "README.md",
     "CONTRIBUTING.md",
     "CHANGELOG.md",

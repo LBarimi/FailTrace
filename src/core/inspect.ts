@@ -40,6 +40,7 @@ export interface InspectedTrial {
   index: number;
   status: TrialStatus;
   failureMatched: boolean | null;
+  executionMatched?: boolean | null;
   unhealthy: boolean;
   exitCode: number | null;
   durationMs: number;
@@ -61,6 +62,7 @@ export interface RunTrialPage {
   requestedTrials: number;
   recordedTrials: number;
   matchedTrials: number;
+  executionRequirement?: RunSummary['executionRequirement'];
   statistics: RunStatistics;
   filter: RunEvidenceFilter;
   afterTrial: number;
@@ -126,9 +128,10 @@ function matchingState(trial: TrialResult): boolean | null {
 }
 
 /** This is evidence health, not an opinion about which nonmatching exit codes are acceptable. */
-function unhealthyTrial(trial: TrialResult, command: string): boolean {
+function unhealthyTrial(trial: TrialResult, run: RunSummary): boolean {
   const matched = matchingState(trial);
-  return trial.command !== command
+  return trial.command !== run.command
+    || (run.executionRequirement !== undefined && trial.executionMatched !== true)
     || trial.terminationReason !== 'exit'
     || trial.signal !== null
     || trial.timedOut !== false
@@ -145,7 +148,7 @@ function includeTrial(trial: TrialResult, run: RunSummary, filter: RunEvidenceFi
   if (filter === 'all') return true;
   if (filter === 'matched') return matchingState(trial) === true;
   if (filter === 'unmatched') return matchingState(trial) === false;
-  return unhealthyTrial(trial, run.command);
+  return unhealthyTrial(trial, run);
 }
 
 function projectTrial(trial: TrialResult, run: RunSummary): InspectedTrial {
@@ -153,8 +156,9 @@ function projectTrial(trial: TrialResult, run: RunSummary): InspectedTrial {
   return {
     index: trial.index,
     status: trial.status,
+    ...(run.executionRequirement === undefined ? {} : { executionMatched: trial.executionMatched ?? null }),
     failureMatched: matchingState(trial),
-    unhealthy: unhealthyTrial(trial, run.command),
+    unhealthy: unhealthyTrial(trial, run),
     exitCode: trial.exitCode,
     durationMs: trial.durationMs,
     terminationReason: trial.terminationReason,
@@ -250,6 +254,7 @@ export async function inspectRunEvidence(options: InspectRunEvidenceOptions): Pr
     view: 'trials', runId: run.id, status: run.status, artifactDirectory: run.artifactDirectory,
     metadataPath: join(run.artifactDirectory, 'run.json'), requestedTrials: run.requestedTrials,
     recordedTrials: run.trials.length,
+    ...(run.executionRequirement === undefined ? {} : { executionRequirement: { ...run.executionRequirement } }),
     matchedTrials: run.trials.filter((trial) => matchingState(trial) === true).length,
     statistics: aggregateStatistics(run.trials), filter, afterTrial, limit,
     trials: selected.map((trial) => projectTrial(trial, run)),

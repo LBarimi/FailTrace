@@ -28,6 +28,9 @@ Experiment options (run, bisect, minimize):
   --stdout-contains TEXT | --stderr-contains TEXT
   --stdout-regex REGEX   | --stderr-regex REGEX [--regex-flags imsu]
                      Choose one predicate; default is a non-zero exit.
+  --require-stdout-contains TEXT | --require-stderr-contains TEXT
+                     Optional completion checkpoint, separate from the failure.
+                     Missing checkpoint makes the experiment inconclusive.
   --min-failures N    Matches required per candidate (bisect/minimize: 1)
   --max-output-bytes N       Combined stdout/stderr cap per trial (16777216)
   --max-total-output-bytes N Combined output cap for all candidates (268435456)
@@ -50,7 +53,7 @@ Command-specific options:
             Fields: command, source, inputs, setup, environment, timeout,
             concurrency, outputLimits. --healthy-exit-code N (repeatable; default: 0)
             Output caps inherit baseline; changing them needs an allowance.
-            Predicate and context declarations are inherited from baseline.
+            Predicate, execution checkpoint and context inherit from baseline.
   bundle    --file PATH (repeatable), --input PATH, --command COMMAND,
             --output NEW_DIRECTORY, --env-file JSON_FILE
             --include-env KEY (repeatable selected captured values)
@@ -117,7 +120,8 @@ export function formatTrial(trial: TrialResult, requestedTrials?: number): strin
   const detail = trial.status === 'failed'
     ? trial.signal ? `  signal ${trial.signal}` : `  exit ${trial.exitCode}`
     : '';
-  return `  Trial ${index}  ${labels[trial.status].padEnd(11)} ${formatDuration(trial.durationMs)}${detail}`;
+  const checkpoint = trial.executionMatched === false ? '  required checkpoint missing' : '';
+  return `  Trial ${index}  ${labels[trial.status].padEnd(11)} ${formatDuration(trial.durationMs)}${detail}${checkpoint}`;
 }
 
 export function formatSummary(summary: RunSummary): string {
@@ -125,6 +129,7 @@ export function formatSummary(summary: RunSummary): string {
   const interrupted = summary.status === 'interrupted';
   const artifactPath = relative(process.cwd(), summary.artifactDirectory) || summary.artifactDirectory;
   const matched = summary.trials.filter((trial) => trial.failureMatched ?? trial.status === 'failed').length;
+  const missingExecution = summary.executionRequirement === undefined ? 0 : summary.trials.filter(trial => trial.executionMatched !== true).length;
   return [
     '',
     interrupted ? 'Results (partial - interrupted)' : 'Results',
@@ -133,6 +138,7 @@ export function formatSummary(summary: RunSummary): string {
     `  Passed         ${statistics.passed}`,
     `  Failed         ${statistics.failed}`,
     `  Matched        ${matched}`,
+    ...(summary.executionRequirement === undefined ? [] : [`  Checkpoint     ${statistics.total - missingExecution} / ${statistics.total} observed`]),
     `  Failure rate   ${(statistics.failureRate * 100).toFixed(1)}%`,
     '',
     'Duration',
@@ -147,6 +153,7 @@ export function formatSummary(summary: RunSummary): string {
         ? 'Run inconclusive: metadata allowance reached. Completed evidence is preserved.'
         : 'Run inconclusive: output limit reached. Partial logs are preserved.'
       : summary.status === 'error' ? 'Run inconclusive: evidence could not be fully persisted.'
+      : missingExecution > 0 ? 'Run inconclusive: required execution checkpoint missing. Check whether the intended check ran.'
       : matched > 0 ? 'Failure reproduced.' : statistics.failed > 0
         ? 'Target failure not reproduced; inspect execution failure evidence.' : 'No failure reproduced in this run.',
     '',
