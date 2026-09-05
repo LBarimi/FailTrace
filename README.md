@@ -127,4 +127,6 @@ npm run test:package
 
 Core is a reusable TypeScript API exported by `failtrace`. Algorithms live in `src/core`; CLI, demo orchestration, and MCP call it. CI checks Windows, macOS, and Linux with Node.js 22 and 24.
 
+For the source checkout toward 1.0, see the [compatibility contract](docs/COMPATIBILITY.md) and [migration from 0.x](docs/MIGRATING-TO-1.md). These document unreleased changes; the public installation examples above still target available packages.
+
 [MIT license](LICENSE)

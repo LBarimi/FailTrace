@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "failtraceVersion": "0.6.0",
+  "id": "0.6.0-completed",
+  "command": "node target.mjs",
+  "cwd": "/fixture/workspace",
+  "requestedTrials": 2,
+  "concurrency": 1,
+  "timeoutMs": 5000,
+  "startedAt": "2020-01-01T00:00:00.000Z",
+  "endedAt": "2020-01-01T00:00:00.000Z",
+  "status": "completed",
+  "artifactDirectory": "/fixture/runs/0.6.0-completed",
+  "trials": [
+    {
+      "index": 1,
+      "command": "node target.mjs",
+      "startedAt": "2020-01-01T00:00:00.000Z",
+      "endedAt": "2020-01-01T00:00:00.000Z",
+      "durationMs": 0,
+      "exitCode": 0,
+      "signal": null,
+      "status": "passed",
+      "timedOut": false,
+      "spawningFailed": false,
+      "terminationReason": "exit",
+      "stdoutPath": "trials/001/stdout.txt",
+      "stderrPath": "trials/001/stderr.txt",
+      "failureMatched": false
+    },
+    {
+      "index": 2,
+      "command": "node target.mjs",
+      "startedAt": "2020-01-01T00:00:00.000Z",
+      "endedAt": "2020-01-01T00:00:00.000Z",
+      "durationMs": 0,
+      "exitCode": 7,
+      "signal": null,
+      "status": "failed",
+      "timedOut": false,
+      "spawningFailed": false,
+      "terminationReason": "exit",
+      "stdoutPath": "trials/002/stdout.txt",
+      "stderrPath": "trials/002/stderr.txt",
+      "failureMatched": true
+    }
+  ],
+  "statistics": {
+    "total": 2,
+    "passed": 1,
+    "failed": 1,
+    "failureRate": 0.5,
+    "durationMs": {
+      "min": 0,
+      "average": 0,
+      "max": 0
+    }
+  },
+  "predicate": {
+    "kind": "stderr_contains",
+    "value": "COMPAT_TARGET"
+  },
+  "environment": {
+    "platform": "win32",
+    "arch": "x64",
+    "nodeVersion": "v24.19.0",
+    "shell": "cmd.exe",
+    "variables": {
+      "FAILTRACE_COMPAT_MODE": "fixture"
+    }
+  },
+  "context": {
+    "schemaVersion": 1,
+    "workingDirectory": "/fixture/workspace",
+    "declaration": {
+      "inputFiles": [],
+      "setupFiles": [],
+      "sourceFiles": [
+        "target.mjs"
+      ]
+    },
+    "before": {
+      "inputs": [],
+      "setup": [],
+      "sourceFiles": [
+        {
+          "path": "target.mjs",
+          "bytes": 187,
+          "sha256": "7ccb1ad51fc91723b49638d02a8a44edf301e3d6c9172160f08318b004bd8f63"
+        }
+      ],
+      "source": {
+        "kind": "files"
+      },
+      "issues": []
+    },
+    "stable": true,
+    "after": {
+      "inputs": [],
+      "setup": [],
+      "sourceFiles": [
+        {
+          "path": "target.mjs",
+          "bytes": 187,
+          "sha256": "7ccb1ad51fc91723b49638d02a8a44edf301e3d6c9172160f08318b004bd8f63"
+        }
+      ],
+      "source": {
+        "kind": "files"
+      },
+      "issues": []
+    }
+  }
+}

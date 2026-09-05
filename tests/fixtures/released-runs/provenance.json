@@ -1,0 +1,45 @@
+[
+  {
+    "version": "0.3.1",
+    "tarball": "https://registry.npmjs.org/failtrace/-/failtrace-0.3.1.tgz",
+    "integrity": "sha512-gzPnHJxNylUiQz4XDzr/k2h/hjPnyR0Mw6Fdl+JSWje8C8DDI5fHhkunbPLpSiK8ekHxxa6qggT9kEc3xaU3Lg==",
+    "sha256": "d74da5ab00533e16df2fe0ee29a2b8e6523ebcf346638b6332c2e1b49fd1f388",
+    "scenarios": [
+      "completed"
+    ],
+    "targetSha256": "7ccb1ad51fc91723b49638d02a8a44edf301e3d6c9172160f08318b004bd8f63"
+  },
+  {
+    "version": "0.4.0",
+    "tarball": "https://registry.npmjs.org/failtrace/-/failtrace-0.4.0.tgz",
+    "integrity": "sha512-6cJioNswmIW5AEwWMShdg+jDH7FJbGt2PjvI9HuNWElf2YBjzR6FD8HmB4hQq43PpKRUmIxa9Jk0uxBc0wZj/A==",
+    "sha256": "950855294fa20d1e1628e658097d98e2947907eb219552006c0344102ec87aba",
+    "scenarios": [
+      "completed",
+      "host-exit"
+    ],
+    "targetSha256": "7ccb1ad51fc91723b49638d02a8a44edf301e3d6c9172160f08318b004bd8f63"
+  },
+  {
+    "version": "0.5.0",
+    "tarball": "https://registry.npmjs.org/failtrace/-/failtrace-0.5.0.tgz",
+    "integrity": "sha512-bsM4TD+7JFtSlkyeGUhoyxWeKk7nbJphUZBaJ2TFEdgSn6nhOiiFsR38CWb4EktcGAke2MtecR29sV09gMmWPg==",
+    "sha256": "7a1104cb824bb1884ac6308ba9ad726d56307678b6a12ce3dc233b807f7f1757",
+    "scenarios": [
+      "completed",
+      "host-exit"
+    ],
+    "targetSha256": "7ccb1ad51fc91723b49638d02a8a44edf301e3d6c9172160f08318b004bd8f63"
+  },
+  {
+    "version": "0.6.0",
+    "tarball": "https://registry.npmjs.org/failtrace/-/failtrace-0.6.0.tgz",
+    "integrity": "sha512-JBAAFVHp9ft0hpdEwELRFZGuexTozXZaKydo1tPLQ++4QJV0vAVuAi4DANc+3fVirczDeyl6bNkyM9ZUKcuQyw==",
+    "sha256": "8086a4450d81e22ac148b02ca2496b3ab1aa4df5caed014c0d743f493bc8f776",
+    "scenarios": [
+      "completed",
+      "host-exit"
+    ],
+    "targetSha256": "7ccb1ad51fc91723b49638d02a8a44edf301e3d6c9172160f08318b004bd8f63"
+  }
+]

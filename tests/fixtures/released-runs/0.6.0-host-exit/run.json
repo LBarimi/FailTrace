@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 2,
+  "failtraceVersion": "0.6.0",
+  "id": "0.6.0-host-exit",
+  "command": "node target.mjs",
+  "cwd": "/fixture/workspace",
+  "requestedTrials": 2,
+  "concurrency": 1,
+  "timeoutMs": 5000,
+  "startedAt": "2020-01-01T00:00:00.000Z",
+  "endedAt": null,
+  "status": "running",
+  "artifactDirectory": "/fixture/runs/0.6.0-host-exit",
+  "trials": [],
+  "statistics": {
+    "total": 0,
+    "passed": 0,
+    "failed": 0,
+    "failureRate": 0,
+    "durationMs": {
+      "min": 0,
+      "average": 0,
+      "max": 0
+    }
+  },
+  "predicate": {
+    "kind": "stderr_contains",
+    "value": "COMPAT_TARGET"
+  },
+  "environment": {
+    "platform": "win32",
+    "arch": "x64",
+    "nodeVersion": "v24.19.0",
+    "shell": "cmd.exe",
+    "variables": {
+      "FAILTRACE_COMPAT_MODE": "fixture"
+    }
+  },
+  "context": {
+    "schemaVersion": 1,
+    "workingDirectory": "/fixture/workspace",
+    "declaration": {
+      "inputFiles": [],
+      "setupFiles": [],
+      "sourceFiles": [
+        "target.mjs"
+      ]
+    },
+    "before": {
+      "inputs": [],
+      "setup": [],
+      "sourceFiles": [
+        {
+          "path": "target.mjs",
+          "bytes": 187,
+          "sha256": "7ccb1ad51fc91723b49638d02a8a44edf301e3d6c9172160f08318b004bd8f63"
+        }
+      ],
+      "source": {
+        "kind": "files"
+      },
+      "issues": []
+    },
+    "stable": false
+  },
+  "trialStorage": "individual"
+}

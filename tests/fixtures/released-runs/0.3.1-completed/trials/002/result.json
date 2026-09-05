@@ -1,0 +1,16 @@
+{
+  "index": 2,
+  "command": "node target.mjs",
+  "startedAt": "2020-01-01T00:00:00.000Z",
+  "endedAt": "2020-01-01T00:00:00.000Z",
+  "durationMs": 0,
+  "exitCode": 7,
+  "signal": null,
+  "status": "failed",
+  "timedOut": false,
+  "spawningFailed": false,
+  "terminationReason": "exit",
+  "stdoutPath": "trials/002/stdout.txt",
+  "stderrPath": "trials/002/stderr.txt",
+  "failureMatched": true
+}
