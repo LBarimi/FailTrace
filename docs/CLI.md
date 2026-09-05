@@ -1,5 +1,7 @@
 # Command reference
 
+The source checkout also adds the **unreleased** read-only `artifacts` command. It reports bounded storage totals and known investigation references; see the [storage inventory guide](ARTIFACTS.md).
+
 The source checkout adds optional `--require-stdout-contains` / `--require-stderr-contains` checkpoints for run, bisect and minimize; Verify and bundle replay inherit the recorded condition. This is **unreleased**, unavailable in `failtrace@1.1.0`. Missing required evidence produces an inconclusive result; ordinary trial status/statistics still describe the failure predicate separately. See [execution evidence](EXECUTION-EVIDENCE.md).
 
 This guide targets FailTrace 1.1.0. See the [installation instructions](../README.md#quick-start) for verified npm and GitHub package commands.

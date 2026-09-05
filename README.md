@@ -93,6 +93,8 @@ Version 1.1.0 adds stricter Bisect exit policies, target-first comparison, and c
 
 **In this source checkout, unreleased:** [trace a lost data revision or an overlapping update](docs/WORKFLOWS.md) using original runnable examples. They reduce a reproducer and distinguish a working patch from a checker that was silently skipped using [completed-check signals](docs/EXECUTION-EVIDENCE.md). The published commands above continue to use 1.1.0.
 
+The source also provides a [read-only storage inventory](docs/ARTIFACTS.md) for retained evidence and known investigation references.
+
 **[Tell us where FailTrace helped or got stuck →](https://github.com/LBarimi/FailTrace/issues/new?template=workflow.yml)**
 
 A first-install problem, a useful investigation, or a second use on your own project helps decide what to improve. Private logs are optional. Our goal is useful, repeated adoption by people and agents.

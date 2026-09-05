@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { bisectRegression, compareRuns, createBundle, minimizeFailure, runTrials, verifyFix, VERSION } from '../core/index.js';
+import { bisectRegression, compareRuns, createBundle, inventoryArtifacts, minimizeFailure, runTrials, verifyFix, VERSION } from '../core/index.js';
 import { parseArgs } from './args.js';
 import { formatComparison, formatDemoProgress, formatDemoResult, formatHeader, formatSummary, formatTrial, formatVerification, HELP } from './presentation.js';
 
@@ -41,6 +41,16 @@ async function main(): Promise<number> {
   try {
     let exitCode: number;
     switch (invocation.kind) {
+      case 'artifacts': {
+        const inventory = await inventoryArtifacts({ ...invocation, signal: controller.signal });
+        print(`FailTrace - artifact storage\n\n${inventory.directory}\n${inventory.bytes} logical bytes in ${inventory.files} files${inventory.complete ? '' : ' (partial scan)'}\n`);
+        for (const entry of inventory.entries) print(`${entry.bytes.toString().padStart(12)}  ${entry.status ?? 'unknown'}  ${entry.path}${entry.referencedBy.length ? `  [referenced by ${entry.referencedBy.length}]` : ''}${entry.complete ? '' : '  [incomplete]'}`);
+        for (const issue of inventory.issues) print(`\n${issue}`);
+        print('\nRead-only snapshot. Reported states and missing references do not establish safe deletion.');
+        result(inventory);
+        exitCode = inventory.complete ? 0 : 2;
+        break;
+      }
       case 'demo': {
         const { runDemo } = await import('../demo/index.js');
         print('FailTrace demo\n\nMeasure a flaky failure, minimize its input, reject a false fix, and keep a replayable example.');

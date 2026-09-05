@@ -14,6 +14,7 @@ Usage:
   failtrace minimize --input PATH --command "<command>" [--format text]
   failtrace verify <baseline> --command "<command>" --cwd DIRECTORY
   failtrace bundle <run> [--file PATH ...] [--input PATH]
+  failtrace artifacts [--directory STORAGE_ROOT] [--max-entries N] [--json]
   failtrace mcp [--cwd DIRECTORY]
   failtrace --help
   failtrace --version
@@ -37,6 +38,8 @@ Experiment options (run, bisect, minimize):
                             A limit preserves partial logs; result is inconclusive.
 
 Command-specific options:
+  artifacts --directory STORAGE_ROOT (default: .failtrace)
+            --max-entries N (20000; at most 100000); read-only storage snapshot
   run       --capture-env KEY1,KEY2 (selected values only)
             --concurrency N (run default: 1; at most 64)
             --capture-context (record source identity for later verification)

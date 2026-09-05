@@ -5,6 +5,8 @@ export { validateExecutionRequirement } from './execution-evidence.js';
 export type { ExecutionRequirement } from './types.js';
 export { loadRun } from './run-reader.js';
 export { inspectRunEvidence } from './inspect.js';
+export { inventoryArtifacts } from './artifact-inventory.js';
+export type { ArtifactInventory, ArtifactInventoryEntry, ArtifactInventoryOptions } from './artifact-inventory.js';
 export type {
   InspectRunEvidenceOptions, InspectRunEvidenceResult, InspectRunOutputOptions, InspectRunTrialsOptions,
   InspectedTrial, RunEvidenceFilter, RunOutputChunk, RunOutputStream, RunTrialPage,

@@ -55,7 +55,7 @@ async function exerciseInstalledCore() {
   const within = relative(installed, imported);
   assert(!isAbsolute(within) && within !== '..' && !within.startsWith('..'), 'Core must resolve from the installed tarball');
   assert.equal(api.VERSION, process.env.FAILTRACE_SMOKE_VERSION);
-  for (const name of ['runTrials', 'compareRuns', 'bisectRegression', 'minimizeFailure', 'verifyFix', 'createBundle', 'inspectRunEvidence']) {
+  for (const name of ['runTrials', 'compareRuns', 'bisectRegression', 'minimizeFailure', 'verifyFix', 'createBundle', 'inspectRunEvidence', 'inventoryArtifacts']) {
     assert.equal(typeof api[name], 'function', `Missing public Core export: ${name}`);
   }
   const project = join(consumer, 'independent project');
@@ -120,9 +120,14 @@ async function exerciseInstalledCore() {
   assert.equal(storage.finalVerified, false);
   assert.equal(storage.evaluations.length, 0);
   assert.equal(await readFile(storage.minimizedPath, 'utf8'), 'BUG');
+  const inventory = await api.inventoryArtifacts({ cwd: project });
+  assert.equal(inventory.complete, true);
+  assert(inventory.entries.some(entry => entry.path === `runs/${run.id}` && entry.status === 'completed'));
+  assert(inventory.entries.some(entry => entry.kind === 'minimizations' && entry.status === 'limit_reached'));
+  assert(inventory.bytes > 0);
   console.log(JSON.stringify({
     total: run.statistics.total, failed: run.statistics.failed,
-    artifactDirectory: run.artifactDirectory, comparison: 'passed', inspection: 'passed',
+    artifactDirectory: run.artifactDirectory, comparison: 'passed', inspection: 'passed', inventory: 'passed',
   }));
 }
 
@@ -486,7 +491,7 @@ try {
       unrelatedErrorGuard: verification.unrelatedErrorGuard, installedSkippedCheckGuard: verification.skippedCheckGuard,
       installedOriginalWorkflows: 'passed', installedOriginalMcpWorkflows: mcpChecks.originalWorkflows },
     namedProjectActions: verification.namedProjectActions,
-    core: { total: core.total, failed: core.failed, comparison: core.comparison, inspection: core.inspection },
+    core: { total: core.total, failed: core.failed, comparison: core.comparison, inspection: core.inspection, inventory: core.inventory },
     retained: keep,
     ...(keep ? { consumerDirectory: consumer, coreRunDirectory: core.artifactDirectory,
       demoDirectory: demo.artifactDirectory, bundleDirectory: demo.bundle.directory } : {}),

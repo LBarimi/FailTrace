@@ -7,6 +7,7 @@ export type CliInvocation =
   | { kind: 'help' }
   | { kind: 'version' }
   | ({ kind: 'demo' } & Common)
+  | ({ kind: 'artifacts'; directory?: string; maxEntries?: number } & Common)
   | ({ kind: 'run'; captureEnv?: string[]; concurrency?: number; captureContext?: NonNullable<RunOptions['captureContext']> } & Common & Experiment)
   | ({ kind: 'verify'; json?: boolean } & Omit<VerifyOptions, 'signal' | 'onTrialComplete' | 'env'>)
   | ({ kind: 'compare' } & Common & CompareOptions)
@@ -43,6 +44,7 @@ const executionFlags = ['require-stdout-contains', 'require-stderr-contains'];
 const experiments = ['command', 'repeat', 'timeout', ...predicateFlags, ...executionFlags, 'regex-flags', ...outputFlags];
 const allowed: Record<string, string[]> = {
   demo: ['cwd', 'json'],
+  artifacts: ['directory', 'max-entries', 'cwd', 'json'],
   run: ['repeat', 'timeout', 'concurrency', ...outputFlags, ...predicateFlags, ...executionFlags, 'regex-flags', 'capture-env', 'capture-context', 'context-input', 'context-setup', 'context-source', 'cwd', 'json'],
   verify: ['command', 'cwd', 'repeat', 'timeout', 'concurrency', ...outputFlags, 'healthy-exit-code', 'allow-change', 'json'],
   compare: ['trial-a', 'trial-b', 'max-lines', 'max-bytes', 'cwd', 'json'],
@@ -117,6 +119,10 @@ export function parseArgs(argv: string[]): CliInvocation {
   if (positional.length > maximum) throw new Error('Unexpected argument. Quote the entire target command.');
   if (kind === 'mcp') return { kind, ...(cwd === undefined ? {} : { cwd }) };
   if (kind === 'demo') return { kind, ...common };
+  if (kind === 'artifacts') return { kind, ...common,
+    ...(get('directory') === undefined ? {} : { directory: get('directory')! }),
+    ...(get('max-entries') === undefined ? {} : { maxEntries: integer(get('max-entries')!, 'Max entries', 1, 100_000) }),
+  };
   if (kind === 'verify') {
     const baseline = positional[0];
     if (!baseline?.trim()) throw new Error('Provide a baseline run ID or path to verify.');
