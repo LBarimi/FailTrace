@@ -12,7 +12,7 @@ Core callers should check `status` or `assessRun`, and handle the additional tri
 
 If a legitimate command needs more retained output, set positive `maxOutputBytes` / `maxTotalOutputBytes` in Core or MCP, or `--max-output-bytes` / `--max-total-output-bytes` in the CLI. Zero does not disable limits. Investigations share the total output allowance across candidate runs.
 
-Minimization also bounds input and retained copies; bundle creation bounds the complete bundle. Scheduling and metadata have fixed ceilings. See [resource limits](RESOURCE-LIMITS.md) for defaults, scopes and what those counters exclude. On minimization limits, preserve `minimizedPath` and inspect `status`, `storageLimit` or `metadataLimit`; do not describe the result as finally verified when `finalVerified` is false.
+Minimization also bounds input and retained copies; bundle creation bounds the complete bundle. Scheduling, metadata and input complexity have fixed ceilings. Text is limited to 1000000 Unicode code points, JSON to 100000 containers/values/keys, environment inputs to 10000 keys and directory traversal to 10000 entries including empty directories. Raising byte allowances does not remove these ceilings. See [resource limits](RESOURCE-LIMITS.md) for defaults, scopes and what those counters exclude. On minimization limits, preserve `minimizedPath` and inspect `status`, `storageLimit` or `metadataLimit`; do not describe the result as finally verified when `finalVerified` is false.
 
 ## Load bisect candidate trials through their reference
 

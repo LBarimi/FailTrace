@@ -1,12 +1,18 @@
+import { execFile } from 'node:child_process';
 import { appendFileSync } from 'node:fs';
 import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { promisify } from 'node:util';
 import { afterEach, describe, expect, it } from 'vitest';
 import { copyBoundedFile, readBoundedFile } from '../src/core/bounded-file.js';
 import { minimizeFailure } from '../src/core/index.js';
+import { MAX_ENV_KEYS, MAX_INPUT_ENTRIES, MAX_JSON_TOKENS, MAX_TEXT_UNITS } from '../src/core/input-budget.js';
+import { candidateSize, readMinimizeInput } from '../src/core/minimize-input.js';
+import { assertJsonComplexity } from '../src/core/input-complexity.js';
 import { cleanupDirectories, quoteShellArgument, temporaryDirectory } from './helpers.js';
 
 const directories: string[] = [];
+const execute = promisify(execFile);
 async function workspace(): Promise<string> {
   const cwd = await temporaryDirectory();
   directories.push(cwd);
@@ -84,6 +90,79 @@ describe('minimization input storage budget', () => {
     await expect(minimizeFailure({ cwd, command, input: 'input.json', format: 'json' })).rejects.toThrow('depth limit');
     expect(await readdir(cwd)).not.toContain('.failtrace');
   });
+
+  it('counts text by Unicode code point and rejects excess work before creating an investigation', async () => {
+    const cwd = await workspace();
+    const path = join(cwd, 'input.txt');
+    const text = '😀'.repeat(MAX_TEXT_UNITS);
+    await writeFile(path, text);
+    expect(candidateSize(await readMinimizeInput(path, 'text', cwd))).toBe(MAX_TEXT_UNITS);
+    await writeFile(path, text + 'x');
+    await expect(minimizeFailure({ cwd, command, input: path, format: 'text' })).rejects.toThrow('Unicode code point limit');
+    expect(await readFile(path, 'utf8')).toBe(text + 'x');
+    expect(await readdir(cwd)).not.toContain('.failtrace');
+  });
+
+  it('rejects a broad JSON input inside a small heap before allocating its parsed tree', async () => {
+    const cwd = await workspace();
+    // Four MiB on disk can become millions of parsed values and traversal nodes.
+    // The isolated heap makes a post-parse-only guard insufficient.
+    const text = '[' + '0,'.repeat(1_999_999) + '0]';
+    await writeFile(join(cwd, 'input.json'), text);
+    const api = new URL('../dist/core/index.js', import.meta.url).href;
+    const driver = join(cwd, 'guard.mjs');
+    await writeFile(driver, `import assert from 'node:assert/strict';
+import { minimizeFailure } from ${JSON.stringify(api)};
+await assert.rejects(minimizeFailure({ cwd: process.cwd(), command: 'node never-run.mjs',
+  input: 'input.json', format: 'json' }), (error) => error.message.includes('100000 value/container/key limit'));
+`);
+    const result = await execute(process.execPath, ['--max-old-space-size=64', driver], { cwd, windowsHide: true, timeout: 15_000 });
+    expect(result.stdout).toBe('');
+    expect(result.stderr).toBe('');
+    expect(await readFile(join(cwd, 'input.json'), 'utf8')).toBe(text);
+    expect(await readdir(cwd)).not.toContain('.failtrace');
+  });
+
+  it('bounds JSON keys as well as values and does not count structure inside escaped strings', async () => {
+    const cwd = await workspace();
+    const path = join(cwd, 'input.json');
+    const json = { punctuation: '[[[{{{,:}}}]]]\\"\\n', literals: [-2.5e12, true, false, null, '\\u0022'] };
+    await writeFile(path, JSON.stringify(json));
+    expect(await readMinimizeInput(path, 'json', cwd)).toMatchObject({ format: 'json', value: json });
+    expect(() => assertJsonComplexity('[' + '0,'.repeat(MAX_JSON_TOKENS - 2) + '0]')).not.toThrow();
+    expect(() => assertJsonComplexity('[' + '0,'.repeat(MAX_JSON_TOKENS - 1) + '0]')).toThrow('value/container/key limit');
+    const object = Object.fromEntries(Array.from({ length: MAX_JSON_TOKENS / 2 }, (_, index) => [`key${index}`, 0]));
+    await writeFile(path, JSON.stringify(object));
+    await expect(minimizeFailure({ cwd, command, input: path, format: 'json' })).rejects.toThrow('value/container/key limit');
+    expect(await readdir(cwd)).not.toContain('.failtrace');
+  });
+
+  it('limits environment keys separately from JSON complexity', async () => {
+    const cwd = await workspace();
+    const path = join(cwd, 'input.json');
+    const values = Object.fromEntries(Array.from({ length: MAX_ENV_KEYS }, (_, index) => [`KEY_${index}`, 'fixture']));
+    await writeFile(path, JSON.stringify(values));
+    expect(candidateSize(await readMinimizeInput(path, 'env', cwd))).toBe(MAX_ENV_KEYS);
+    values.EXTRA = 'fixture';
+    await writeFile(path, JSON.stringify(values));
+    await expect(minimizeFailure({ cwd, command, input: path, format: 'env' })).rejects.toThrow('10000 key limit');
+    expect(await readdir(cwd)).not.toContain('.failtrace');
+  });
+
+  it('counts empty directories against the total traversal allowance', async () => {
+    const cwd = await workspace();
+    const input = join(cwd, 'inputs');
+    await mkdir(input);
+    let next = 0;
+    await Promise.all(Array.from({ length: 32 }, async () => {
+      while (next < MAX_INPUT_ENTRIES) await mkdir(join(input, `empty-${next++}`));
+    }));
+    expect(await readMinimizeInput(input, 'files', cwd)).toEqual({ format: 'files', files: [] });
+    await mkdir(join(input, 'one-too-many'));
+    await expect(minimizeFailure({ cwd, command, input, format: 'files' })).rejects.toThrow('directory-entry limit');
+    expect(await readdir(input)).toHaveLength(MAX_INPUT_ENTRIES + 1);
+    expect(await readdir(cwd)).not.toContain('.failtrace');
+  }, 60_000);
 });
 
 describe('bounded file snapshots', () => {

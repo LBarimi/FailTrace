@@ -2,6 +2,10 @@ export const DEFAULT_MAX_INPUT_BYTES = 16 * 1024 * 1024;
 export const DEFAULT_MAX_CANDIDATE_BYTES = 256 * 1024 * 1024;
 export const MAX_INPUT_FILES = 10_000;
 export const MAX_INPUT_DEPTH = 64;
+export const MAX_INPUT_ENTRIES = 10_000;
+export const MAX_TEXT_UNITS = 1_000_000;
+export const MAX_JSON_TOKENS = 100_000;
+export const MAX_ENV_KEYS = 10_000;
 
 export interface InputLimits {
   /** Bytes in the input file or complete input directory; default 16 MiB. */

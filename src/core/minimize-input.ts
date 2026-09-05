@@ -1,7 +1,8 @@
 import { lstat, mkdir, opendir, realpath, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { copyBoundedFile, readBoundedFile } from './bounded-file.js';
-import { DEFAULT_MAX_INPUT_BYTES, MAX_INPUT_DEPTH, MAX_INPUT_FILES, type CandidateStorageBudget } from './input-budget.js';
+import { DEFAULT_MAX_INPUT_BYTES, MAX_ENV_KEYS, MAX_INPUT_DEPTH, MAX_INPUT_ENTRIES, MAX_INPUT_FILES, type CandidateStorageBudget } from './input-budget.js';
+import { assertJsonComplexity, textUnits } from './input-complexity.js';
 
 export type MinimizeFormat = 'text' | 'json' | 'files' | 'env';
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
@@ -19,9 +20,11 @@ function contains(parent: string, child: string): boolean {
 async function collectFiles(directory: string, maxBytes: number): Promise<string[]> {
   const files: string[] = [];
   let bytes = 0;
+  let entries = 0;
   const visit = async (folder: string, prefix: string, depth: number): Promise<void> => {
     if (depth > MAX_INPUT_DEPTH) throw new Error('Input directory exceeds the 64 level depth limit.');
     for await (const { name } of await opendir(folder)) {
+      if (++entries > MAX_INPUT_ENTRIES) throw new Error('Input exceeds the 10000 directory-entry limit, including empty directories.');
       const path = join(folder, name);
       const entry = await lstat(path);
       if (entry.isSymbolicLink()) throw new Error(`Input directory contains a symbolic link: ${path}`);
@@ -61,26 +64,18 @@ export async function readMinimizeInput(inputPath: string, format: MinimizeForma
   }
   if (!entry.isFile()) throw new Error(`${format} input must be a regular file.`);
   const text = (await readBoundedFile(inputPath, maxBytes)).toString('utf8');
-  if (format === 'text') return { format, text };
+  if (format === 'text') { textUnits(text); return { format, text }; }
+  assertJsonComplexity(text);
   let value: JsonValue;
   try { value = JSON.parse(text) as JsonValue; }
   catch { throw new Error(`${format} input must contain valid JSON.`); }
-  if (format === 'json') {
-    const pending = [{ value, depth: 0 }];
-    while (pending.length) {
-      const item = pending.pop()!;
-      if (item.depth > MAX_INPUT_DEPTH) throw new Error('JSON input exceeds the 64 level depth limit.');
-      if (item.value !== null && typeof item.value === 'object') {
-        for (const child of Object.values(item.value)) pending.push({ value: child, depth: item.depth + 1 });
-      }
-    }
-    return { format, value, text };
-  }
+  if (format === 'json') return { format, value, text };
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error('Environment input must be a JSON object of string variable values.');
   }
   const names = new Set<string>();
   for (const [key, item] of Object.entries(value)) {
+    if (names.size >= MAX_ENV_KEYS) throw new Error('Environment input exceeds the 10000 key limit.');
     if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key) || typeof item !== 'string' || item.includes('\0')) {
       throw new Error('Environment input requires portable variable names and string values without null bytes.');
     }
@@ -95,7 +90,7 @@ export async function readMinimizeInput(inputPath: string, format: MinimizeForma
 }
 
 export function candidateSize(candidate: Candidate): number {
-  if (candidate.format === 'text') return Array.from(candidate.text).length;
+  if (candidate.format === 'text') return textUnits(candidate.text);
   if (candidate.format === 'files') return candidate.files.length;
   if (candidate.format === 'env') return Object.keys(candidate.values).length;
   const count = (value: JsonValue): number => value !== null && typeof value === 'object'
