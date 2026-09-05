@@ -4,7 +4,7 @@
 
 ## 1.0.0
 
-Promotes the publicly verified 1.0.0-rc.1 engine with matching package/runtime/MCP version metadata and 1.0 documentation. Distribution is tracked separately through release assets and registry verification; a changelog entry is not proof of publication.
+Promotes the publicly verified 1.0.0-rc.1 engine with matching package/runtime/MCP version metadata and 1.0 documentation. The [1.0.0 release](https://github.com/LBarimi/FailTrace/releases/tag/v1.0.0) records the reviewed archive and checksum; public npm installation and the matching MCP Registry record were verified.
 
 - Preserve the six OS/Node CI gates and add an installed-package check pinned to the declared minimum Node.js 22.12.0. Release preparation also requires this minimum-runtime gate.
 

@@ -1,6 +1,6 @@
 # Command reference
 
-This guide targets FailTrace 1.0. Check [installation and publication status](../README.md#quick-start) before using a version-pinned package; during release preparation, use an available package or the documented source fallback.
+This guide targets FailTrace 1.0.0. See the [installation instructions](../README.md#quick-start) for verified npm and GitHub package commands.
 
 See the [README](../README.md) for installation and the guided demo, and [agent workflows](AGENT-WORKFLOWS.md) for client setup.
 

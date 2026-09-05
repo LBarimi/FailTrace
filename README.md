@@ -9,7 +9,7 @@ Turn a flaky command into measured failures, a smaller reproducer, and evidence 
 
 ## Quick start
 
-**1.0 release preparation:** version-pinned instructions below target 1.0.0 as its channels are published. Until then, the verified [1.0.0-rc.1 GitHub archive](https://github.com/LBarimi/FailTrace/releases/tag/v1.0.0-rc.1) is available, and stable npm installs can use `failtrace@0.6.0`. A source version alone does not establish registry availability.
+**FailTrace 1.0.0 is available on npm and as a verified [GitHub release](https://github.com/LBarimi/FailTrace/releases/tag/v1.0.0).** See the [1.x compatibility contract](docs/COMPATIBILITY.md) and [migration guide](docs/MIGRATING-TO-1.md) when upgrading.
 
 Requires **Node.js 22.12+ and npm**. Run the guided demo from any directory:
 
@@ -32,7 +32,7 @@ Prefer a project dependency? Use `npm install --save-dev failtrace` and run `npx
 
 ### GitHub release alternative
 
-Release archives include compiled code and a checksum. After [v1.0.0 is published on GitHub](https://github.com/LBarimi/FailTrace/releases/tag/v1.0.0), run that exact package with:
+The verified [v1.0.0 archive and checksum](https://github.com/LBarimi/FailTrace/releases/tag/v1.0.0) include compiled code. Run that exact GitHub package with:
 
 ```sh
 npm exec --yes --allow-remote=root --package=https://github.com/LBarimi/FailTrace/releases/download/v1.0.0/failtrace-1.0.0.tgz -- failtrace demo

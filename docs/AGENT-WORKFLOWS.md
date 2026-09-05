@@ -1,6 +1,6 @@
 # Use FailTrace with a coding agent
 
-This guide targets FailTrace 1.0. Check [installation and publication status](../README.md#quick-start) before using a version-pinned package; during release preparation, use an available package or the documented source fallback.
+This guide targets FailTrace 1.0.0. See the [installation instructions](../README.md#quick-start) for verified npm and GitHub package commands.
 
 Ask your agent to measure a flaky command, compare the saved evidence, or reduce a reproducing input. FailTrace performs the repeated experiments locally and returns inspectable results; the agent uses those results to investigate the code.
 
