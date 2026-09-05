@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Tighten Bisect candidate health: nonmatching exits must be healthy (default `0`); unrelated failures stop with an inconclusive result and a trial-specific reason. Core, CLI and MCP can declare other healthy exits or explicit inconclusive exits, which take precedence over target matches. See the compatibility migration note before upgrading workflows that deliberately use nonzero healthy exits.
+
 ## 1.0.0
 
 Promotes the publicly verified 1.0.0-rc.1 engine with matching package/runtime/MCP version metadata and 1.0 documentation. The [1.0.0 release](https://github.com/LBarimi/FailTrace/releases/tag/v1.0.0) records the reviewed archive and checksum; public npm installation and the matching MCP Registry record were verified.

@@ -19,7 +19,7 @@ async function git(cwd: string, ...args: string[]): Promise<string> {
   return stdout.trim();
 }
 
-async function repository(states: Array<{ failures: number; hang?: boolean }>): Promise<{ cwd: string; commits: string[] }> {
+async function repository(states: Array<{ failures: number; hang?: boolean; setupExitCode?: number; healthyExitCode?: number }>): Promise<{ cwd: string; commits: string[] }> {
   const cwd = await temporaryDirectory();
   directories.push(cwd);
   await mkdir(join(cwd, 'suite'));
@@ -42,6 +42,48 @@ async function repository(states: Array<{ failures: number; hang?: boolean }>): 
 afterEach(async () => { vi.restoreAllMocks(); await cleanupDirectories(directories); });
 
 describe('bisectRegression', () => {
+  it('does not treat a nonmatching setup failure as a good middle commit', async () => {
+    const { cwd, commits } = await repository([{ failures: 0 }, { failures: 5, setupExitCode: 125 }, { failures: 5 }]);
+    const result = await bisectRegression({ cwd: join(cwd, 'suite'), command, good: commits[0]!, bad: commits[2]!, repeat: 1,
+      predicate: { kind: 'stdout_contains', value: 'target signature' } });
+    expect(result).toMatchObject({ status: 'inconclusive', firstBad: null, lastGood: commits[0], healthyExitCodes: [0], inconclusiveExitCodes: [] });
+    expect(result.candidates.at(-1)).toMatchObject({ commit: commits[1], assessment: 'inconclusive', reason: expect.stringContaining('exited 125 without matching') });
+    const run = await loadRun(result.candidates.at(-1)!.run.metadataPath);
+    expect(run.trials[0]).toMatchObject({ exitCode: 125, failureMatched: false });
+    expect(result.reason).toContain('Check setup');
+    expect(result.cleanupError).toBeUndefined();
+  });
+
+  it('honors declared inconclusive exits before the default nonzero predicate', async () => {
+    const { cwd, commits } = await repository([{ failures: 0 }, { failures: 5, setupExitCode: 125 }, { failures: 5 }]);
+    const result = await bisectRegression({ cwd: join(cwd, 'suite'), command, good: commits[0]!, bad: commits[2]!, repeat: 1,
+      inconclusiveExitCodes: [125] });
+    expect(result).toMatchObject({ status: 'inconclusive', firstBad: null, lastGood: commits[0], inconclusiveExitCodes: [125] });
+    expect(result.candidates.at(-1)).toMatchObject({ assessment: 'inconclusive', reason: expect.stringContaining('declared inconclusive') });
+    expect((await loadRun(result.candidates.at(-1)!.run.metadataPath)).trials[0]).toMatchObject({ exitCode: 125, failureMatched: true });
+  });
+
+  it('requires explicitly allowed nonzero healthy exits without suppressing target matches', async () => {
+    const { cwd, commits } = await repository([{ failures: 0, healthyExitCode: 2 }, { failures: 5 }]);
+    const options = { cwd: join(cwd, 'suite'), command, good: commits[0]!, bad: commits[1]!, repeat: 1,
+      predicate: { kind: 'stdout_contains' as const, value: 'target signature' } };
+    const rejected = await bisectRegression(options);
+    expect(rejected).toMatchObject({ status: 'inconclusive', firstBad: null });
+    expect(rejected.candidates).toHaveLength(1);
+    const allowed = await bisectRegression({ ...options, healthyExitCodes: [2, 0, 2, 7] });
+    expect(allowed).toMatchObject({ status: 'found', firstBad: commits[1], healthyExitCodes: [0, 2, 7] });
+    expect(allowed.candidates[1]!.assessment).toBe('reproduced');
+  });
+
+  it('validates bounded, nonoverlapping exit policies before inspecting Git', async () => {
+    const options = { command: 'unused', good: 'good', bad: 'bad', cwd: 'nonexistent-workspace' };
+    for (const codes of [[], [-1], [1.5], [0x1_0000_0000], new Array<number>(257).fill(0)]) {
+      await expect(bisectRegression({ ...options, healthyExitCodes: codes })).rejects.toThrow('healthyExitCodes');
+    }
+    await expect(bisectRegression({ ...options, inconclusiveExitCodes: [-1] })).rejects.toThrow('inconclusiveExitCodes');
+    await expect(bisectRegression({ ...options, inconclusiveExitCodes: [0] })).rejects.toThrow('must not overlap');
+  });
+
   it('preserves a classified endpoint and cleans up when the next candidate cannot reserve metadata', async () => {
     const { cwd, commits } = await repository([{ failures: 0 }, { failures: 5 }]);
     const details = { limitBytes: MAX_METADATA_BYTES, usedBytes: 1, reservedBytes: 0, requiredBytes: MAX_METADATA_BYTES };

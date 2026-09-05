@@ -9,7 +9,7 @@ export type CliInvocation =
   | ({ kind: 'run'; captureEnv?: string[]; concurrency?: number; captureContext?: NonNullable<RunOptions['captureContext']> } & Common & Experiment)
   | ({ kind: 'verify'; json?: boolean } & Omit<VerifyOptions, 'signal' | 'onTrialComplete' | 'env'>)
   | ({ kind: 'compare' } & Common & CompareOptions)
-  | ({ kind: 'bisect'; good: string; bad: string; minFailures: number } & Common & Experiment)
+  | ({ kind: 'bisect'; good: string; bad: string; minFailures: number; healthyExitCodes?: number[]; inconclusiveExitCodes?: number[] } & Common & Experiment)
   | ({ kind: 'minimize'; input: string; format: MinimizeFormat; minFailures: number; maxEvaluations: number } & Common & Experiment & InputLimits)
   | ({ kind: 'bundle'; envFile?: string } & Common & Omit<BundleOptions, 'env' | 'signal'>)
   | { kind: 'mcp'; cwd?: string };
@@ -44,7 +44,7 @@ const allowed: Record<string, string[]> = {
   run: ['repeat', 'timeout', 'concurrency', ...outputFlags, ...predicateFlags, 'regex-flags', 'capture-env', 'capture-context', 'context-input', 'context-setup', 'context-source', 'cwd', 'json'],
   verify: ['command', 'cwd', 'repeat', 'timeout', 'concurrency', ...outputFlags, 'healthy-exit-code', 'allow-change', 'json'],
   compare: ['trial-a', 'trial-b', 'max-lines', 'max-bytes', 'cwd', 'json'],
-  bisect: [...experiments, 'good', 'bad', 'min-failures', 'cwd', 'json'],
+  bisect: [...experiments, 'good', 'bad', 'min-failures', 'healthy-exit-code', 'inconclusive-exit-code', 'cwd', 'json'],
   minimize: [...experiments, 'input', 'format', 'min-failures', 'max-evaluations', 'max-input-bytes', 'max-candidate-bytes', 'cwd', 'json'],
   bundle: ['file', 'input', 'command', 'output', 'env-file', 'include-env', 'include-evidence', 'max-bundle-bytes', 'cwd', 'json'],
   mcp: ['cwd'],
@@ -84,7 +84,7 @@ export function parseArgs(argv: string[]): CliInvocation {
     const equals = argument.indexOf('=');
     const flag = argument.slice(2, equals === -1 ? undefined : equals);
     if (!flags.includes(flag)) throw new Error(`Unexpected option: --${flag}.`);
-    if (values.has(flag) && !['file', 'include-env', 'context-input', 'context-setup', 'context-source', 'healthy-exit-code', 'allow-change'].includes(flag)) throw new Error(`Option --${flag} may only be provided once.`);
+    if (values.has(flag) && !['file', 'include-env', 'context-input', 'context-setup', 'context-source', 'healthy-exit-code', 'inconclusive-exit-code', 'allow-change'].includes(flag)) throw new Error(`Option --${flag} may only be provided once.`);
     if (flag === 'json' || flag === 'capture-context' || flag === 'include-evidence') {
       if (equals !== -1) throw new Error(`--${flag} does not take a value.`);
       values.set(flag, ['true']);
@@ -187,7 +187,10 @@ export function parseArgs(argv: string[]): CliInvocation {
     };
   }
   const minFailures = integer(get('min-failures') ?? '1', 'Minimum failures', 1, repeat);
-  if (kind === 'bisect') return { kind, ...experiment, ...common, good: required('good'), bad: required('bad'), minFailures };
+  if (kind === 'bisect') return { kind, ...experiment, ...common, good: required('good'), bad: required('bad'), minFailures,
+    ...(values.has('healthy-exit-code') ? { healthyExitCodes: values.get('healthy-exit-code')!.map((code) => integer(code, 'Healthy exit code', 0, 0xffff_ffff)) } : {}),
+    ...(values.has('inconclusive-exit-code') ? { inconclusiveExitCodes: values.get('inconclusive-exit-code')!.map((code) => integer(code, 'Inconclusive exit code', 0, 0xffff_ffff)) } : {}),
+  };
   const format = get('format') ?? 'text';
   if (!['text', 'json', 'files', 'env'].includes(format)) throw new Error('Format must be text, json, files, or env.');
   return { kind: 'minimize', ...experiment, ...common, input: required('input'), format: format as MinimizeFormat, minFailures,

@@ -271,18 +271,26 @@ function createServer(cwd: string, shutdown: AbortSignal, pending: Set<Promise<C
   server.registerTool('failtrace_bisect', {
     title: 'Isolate a regression',
     description: 'Validate good/bad commits and bisect first-parent history in an isolated Git worktree. Sequential candidate trials stop when the failure threshold is decided. Assumes a monotonic failure boundary; observed rates are not full-budget estimates.',
-    inputSchema: commandSchema.extend({ good: z.string().min(1), bad: z.string().min(1), minFailures: positiveInteger.optional() }),
+    inputSchema: commandSchema.extend({ good: z.string().min(1), bad: z.string().min(1), minFailures: positiveInteger.optional(),
+      healthyExitCodes: z.array(nonnegativeInteger.max(0xffff_ffff)).min(1).max(256).optional()
+        .describe('Allowed exits when the target does not match; default [0]. Other nonmatching exits make the candidate inconclusive.'),
+      inconclusiveExitCodes: z.array(nonnegativeInteger.max(0xffff_ffff)).max(256).optional()
+        .describe('Explicit setup/untestable exit codes. These make the candidate inconclusive even if the target matches; default [].'),
+    }),
     annotations: executesCommand,
   }, (input, context) => invoke(context, async (signal) => {
     const result = await bisectRegression({
       ...commandOptions(input, cwd, signal), good: input.good, bad: input.bad,
       ...(input.minFailures === undefined ? {} : { minFailures: input.minFailures }),
+      ...(input.healthyExitCodes === undefined ? {} : { healthyExitCodes: input.healthyExitCodes }),
+      ...(input.inconclusiveExitCodes === undefined ? {} : { inconclusiveExitCodes: input.inconclusiveExitCodes }),
     });
     const { candidates, ...metadata } = result;
     return toolResult({
       ...metadata, metadataPath: join(result.artifactDirectory, 'bisect.json'),
       candidates: sample(candidates).map((candidate) => ({
         commit: candidate.commit, role: candidate.role, assessment: candidate.assessment,
+        ...(candidate.reason === undefined ? {} : { reason: candidate.reason }),
         statistics: candidate.run.statistics, runDirectory: candidate.run.artifactDirectory,
         metadataPath: candidate.run.metadataPath, recordedTrials: candidate.run.trialCount, matchedTrials: candidate.run.matchedTrials,
         status: candidate.run.status,

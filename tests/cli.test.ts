@@ -28,6 +28,12 @@ function runCli(args: string[], cwd: string): Promise<{ code: number | null; std
 }
 
 describe('CLI argument parsing', () => {
+  it('passes repeatable bisect exit policies to Core', () => {
+    expect(parseArgs(['bisect', '--good', 'GOOD', '--bad', 'BAD', '--command', 'node check.mjs',
+      '--healthy-exit-code', '0', '--healthy-exit-code', '2', '--inconclusive-exit-code', '125']))
+      .toMatchObject({ kind: 'bisect', healthyExitCodes: [0, 2], inconclusiveExitCodes: [125] });
+  });
+
   it('supports help, version, and sensible run defaults', () => {
     expect(parseArgs(['--help'])).toEqual({ kind: 'help' });
     expect(parseArgs(['--version'])).toEqual({ kind: 'version' });

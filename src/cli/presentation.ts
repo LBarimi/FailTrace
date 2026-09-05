@@ -40,6 +40,9 @@ Command-specific options:
             --context-input FILE, --context-setup FILE, --context-source FILE
             (repeatable regular files; each implies --capture-context)
   compare   --max-lines N (200), --max-bytes N (65536)
+  bisect    --healthy-exit-code N (repeatable; default: 0 for target nonmatches)
+            --inconclusive-exit-code N (repeatable; default: none)
+            Inconclusive exits take precedence over target matches and stop search.
   minimize  --format text|json|files|env, --max-evaluations N (200; range 2..10000)
             --max-input-bytes N (16777216), --max-candidate-bytes N (268435456)
   verify    --repeat N, --timeout DURATION, --concurrency N (inherit baseline)

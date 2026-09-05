@@ -19,6 +19,12 @@ During 1.x, compatible optional fields, commands and tools may be added. Removin
 
 Default changes that alter sampling, evidence interpretation or sharing behavior also require migration review. Safety fixes may reject malformed, redirected or unsafe inputs that previously slipped through; describe such changes explicitly. Resource limits are part of the documented behavior, not a promise to accept unlimited historical files. Do not equate patch compatibility with accepting corrupted evidence.
 
+## Migration review for unreleased Bisect safety changes
+
+The next source version rejects nonmatching nonzero exits as inconclusive by default. In 1.0.0, such an exit could become a negative predicate observation and advance `lastGood`, even when setup had prevented the test from running. Existing result statuses and saved run formats remain unchanged; the stricter candidate assessment and additive exit-policy/reason fields are intentional safety changes. This affects completion of searches that relied on that earlier interpretation.
+
+If a completed, valid nonmatch intentionally exits with another code, explicitly supply `healthyExitCodes` / repeat `--healthy-exit-code`, including `0` if needed. Use `inconclusiveExitCodes` / `--inconclusive-exit-code` for known preparation failures that must never classify a commit. Do not allow a setup error merely to restore a green result. An unrelated error matching a broad predicate still requires a more specific predicate or an explicit inconclusive code. The old `assessRun` and regular run predicate contracts are unchanged; candidate health belongs to the Bisect result.
+
 ## Evidence formats at the 1.0 boundary
 
 | Result or file | Version and interpretation |

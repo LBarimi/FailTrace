@@ -18,6 +18,10 @@ export interface BisectOptions extends OutputLimits {
   timeoutMs?: number;
   minFailures?: number;
   predicate?: FailurePredicate;
+  /** Allowed exit codes for a completed nonmatching trial; defaults to [0]. */
+  healthyExitCodes?: number[];
+  /** These exits stop classification, even when the target predicate matches. */
+  inconclusiveExitCodes?: number[];
   env?: NodeJS.ProcessEnv;
   signal?: AbortSignal;
   onCandidate?: (candidate: BisectCandidate) => void | Promise<void>;
@@ -34,6 +38,7 @@ export interface BisectCandidate {
   commit: string;
   role: 'good' | 'bad' | 'candidate';
   assessment: 'reproduced' | 'not_reproduced' | 'inconclusive';
+  reason?: string;
   run: BisectRunEvidence;
 }
 
@@ -51,6 +56,8 @@ export interface BisectResult extends OutputLimits {
   timeoutMs: number;
   minFailures: number;
   predicate?: FailurePredicate;
+  healthyExitCodes?: number[];
+  inconclusiveExitCodes?: number[];
   scope: 'first-parent';
   status: 'running' | 'found' | 'inconclusive' | 'interrupted' | 'error';
   startedAt: string;
@@ -77,6 +84,29 @@ function validateOptions(options: BisectOptions): void {
   }
 }
 
+function exitCodes(value: number[], name: string, allowEmpty = false): number[] {
+  if (!Array.isArray(value) || (!allowEmpty && value.length === 0) || value.length > 256
+    || value.some((code) => !Number.isSafeInteger(code) || code < 0 || code > 0xffff_ffff)) {
+    throw new Error(`${name} must contain ${allowEmpty ? '0' : '1'} to 256 integer exit codes from 0 to 4294967295.`);
+  }
+  return [...new Set(value)].sort((a, b) => a - b);
+}
+
+function classifyCandidate(run: RunSummary, threshold: number, healthy: number[], inconclusive: number[]):
+  Pick<BisectCandidate, 'assessment' | 'reason'> {
+  const assessment = assessRun(run, threshold);
+  if (assessment === 'inconclusive') return { assessment };
+  for (const trial of run.trials) {
+    // assessRun has already checked that every recorded trial is a clean exit.
+    const code = trial.exitCode!;
+    if (inconclusive.includes(code)) return { assessment: 'inconclusive',
+      reason: `Trial ${trial.index} exited ${code}, declared inconclusive; no boundary is claimed.` };
+    if (!trial.failureMatched && !healthy.includes(code)) return { assessment: 'inconclusive',
+      reason: `Trial ${trial.index} exited ${code} without matching the target. Expected a healthy exit (${healthy.join(', ')}). Check setup or unrelated failures before retrying.` };
+  }
+  return { assessment };
+}
+
 /** Check the exact generated target before destructive Git worktree operations. */
 async function assertOwnedWorktree(artifactDirectory: string, worktree: string): Promise<void> {
   if (relative(artifactDirectory, worktree) !== 'worktree') {
@@ -95,6 +125,9 @@ async function assertOwnedWorktree(artifactDirectory: string, worktree: string):
  */
 export async function bisectRegression(options: BisectOptions): Promise<BisectResult> {
   validateOptions(options);
+  const healthy = exitCodes(options.healthyExitCodes ?? [0], 'healthyExitCodes');
+  const inconclusive = exitCodes(options.inconclusiveExitCodes ?? [], 'inconclusiveExitCodes', true);
+  if (healthy.some((code) => inconclusive.includes(code))) throw new Error('Healthy and inconclusive exit codes must not overlap.');
   const limits = outputLimits(options);
   const outputBudget = new OutputBudget(limits.maxTotalOutputBytes);
   const metadata = new MetadataBudget();
@@ -126,6 +159,8 @@ export async function bisectRegression(options: BisectOptions): Promise<BisectRe
     repeat: options.repeat ?? 5,
     timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
     minFailures: options.minFailures ?? 1,
+    healthyExitCodes: healthy,
+    inconclusiveExitCodes: inconclusive,
     ...(options.predicate === undefined ? {} : { predicate: options.predicate }),
     scope: 'first-parent',
     status: 'running',
@@ -166,7 +201,7 @@ export async function bisectRegression(options: BisectOptions): Promise<BisectRe
     const { trials, context: _context, ...runMetadata } = run;
     if (run.metadataLimit) result.metadataLimit = run.metadataLimit;
     const candidate: BisectCandidate = {
-      commit, role, assessment: assessRun(run, result.minFailures),
+      commit, role, ...classifyCandidate(run, result.minFailures, healthy, inconclusive),
       run: { ...runMetadata, trialCount: trials.length, matchedTrials: trials.filter((trial) => trial.failureMatched === true).length,
         metadataPath: join(run.artifactDirectory, 'run.json') },
     };
@@ -207,7 +242,7 @@ export async function bisectRegression(options: BisectOptions): Promise<BisectRe
       result.status = 'inconclusive';
       result.reason = good.assessment === 'reproduced'
         ? 'The supplied good commit reproduces the failure at the configured threshold.'
-        : 'The supplied good commit could not be classified from valid trial evidence.';
+        : good.reason ?? 'The supplied good commit could not be classified from valid trial evidence.';
       return result;
     }
     result.lastGood = result.good;
@@ -217,7 +252,7 @@ export async function bisectRegression(options: BisectOptions): Promise<BisectRe
       result.status = 'inconclusive';
       result.reason = bad.assessment === 'not_reproduced'
         ? 'The supplied bad commit does not reproduce the failure at the configured threshold.'
-        : 'The supplied bad commit could not be classified from valid trial evidence.';
+        : bad.reason ?? 'The supplied bad commit could not be classified from valid trial evidence.';
       return result;
     }
 
@@ -232,7 +267,7 @@ export async function bisectRegression(options: BisectOptions): Promise<BisectRe
       if (interrupted()) return result;
       if (candidate.assessment === 'inconclusive') {
         result.status = 'inconclusive';
-        result.reason = `Commit ${commit} could not be classified from valid trial evidence; no culprit is claimed.`;
+        result.reason = `Commit ${commit} could not be classified from valid trial evidence; no culprit is claimed.${candidate.reason ? ` ${candidate.reason}` : ''}`;
         return result;
       }
       if (candidate.assessment === 'reproduced') high = middle;

@@ -77,6 +77,10 @@ Inspect `status`, `baselineEligibility`, `reasons`, `changes`, `plan`, and both 
 
 ## Isolate a regression
 
+**Unreleased source behavior:** Bisect now accepts `--healthy-exit-code N` and `--inconclusive-exit-code N` (both repeatable). A target nonmatch must exit `0` by default; an unrelated nonzero exit makes the candidate inconclusive. Supplying healthy codes replaces `[0]`. Explicit inconclusive codes stop the search even when the failure predicate matches. The two code lists cannot overlap. These options are not in the published 1.0.0 package.
+
+For a wrapper that exits `125` when preparation fails, use `--inconclusive-exit-code 125`. This is an explicit convention, not a reserved global exit code. A broad nonzero predicate alone cannot distinguish the target defect from a failed install. Target matches otherwise take precedence over healthy exits. No skipped-commit search or semantic proof that a test ran is implied. The report records both code lists and any candidate-specific `reason`; a candidate run's raw predicate `decision` must not override its health-aware `assessment`.
+
 ```sh
 failtrace bisect --good v1.0.0 --bad HEAD --command "npm test" --repeat 10 --min-failures 3 --stderr-contains "checkout failed"
 ```

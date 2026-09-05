@@ -139,15 +139,21 @@ describe('official SDK stdio MCP adapter', () => {
     await git(repository, '-c', 'commit.gpgsign=false', 'commit', '-m', 'bad');
     const bad = await git(repository, 'rev-parse', 'HEAD');
     const bisected = await client.callTool({
-      name: 'failtrace_bisect', arguments: { command: `${node} target.mjs`, cwd: 'repository', good, bad, repeat: 2 },
+      name: 'failtrace_bisect', arguments: { command: `${node} target.mjs`, cwd: 'repository', good, bad, repeat: 2, healthyExitCodes: [0, 7] },
     }, { timeout: 30_000 });
     expect(bisected.isError).toBe(false);
-    expect(structured(bisected)).toMatchObject({ schemaVersion: 2, status: 'found', firstBad: bad, lastGood: good,
+    expect(structured(bisected)).toMatchObject({ schemaVersion: 2, status: 'found', firstBad: bad, lastGood: good, healthyExitCodes: [0, 7],
       candidates: [
         expect.objectContaining({ recordedTrials: 2, matchedTrials: 0, metadataPath: expect.any(String) }),
         expect.objectContaining({ recordedTrials: 1, matchedTrials: 1, metadataPath: expect.any(String) }),
       ],
     });
+    expect(errors).toEqual([]);
+    const unavailable = structured(await client.callTool({ name: 'failtrace_bisect', arguments: {
+      command: `${node} target.mjs`, cwd: 'repository', good, bad, repeat: 1, inconclusiveExitCodes: [7],
+    } }, { timeout: 30_000 }));
+    expect(unavailable).toMatchObject({ status: 'inconclusive', firstBad: null, inconclusiveExitCodes: [7],
+      candidates: [expect.any(Object), expect.objectContaining({ assessment: 'inconclusive', reason: expect.stringContaining('declared inconclusive') })] });
     expect(errors).toEqual([]);
     // Target stdout/stderr belong to evidence files, never MCP stdout or server diagnostics.
     expect(stderr.join('')).toBe('');

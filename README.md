@@ -72,6 +72,8 @@ Paths in angle brackets come from the preceding result. If a failed outcome is a
 
 ## Product priorities
 
+The unreleased source tightens Bisect's handling of unrelated nonzero exits and adds explicit healthy/inconclusive exit policies. See the [migration note](docs/COMPATIBILITY.md#migration-review-for-unreleased-bisect-safety-changes); the published 1.0.0 package retains its original behavior.
+
 **Predicate → Compare → Bisect → Minimize → Verify → Bundle → MCP**
 
 All seven capabilities are implemented through reusable Core and the CLI/MCP adapters. Verify requires a baseline with captured context, checks healthy completion, and reports finite target observations without claiming elimination. Saved-run inspection pages complete trial evidence without executing the command. Version 1.0 adds bounded experiments, explicit bundle sharing choices and a [public compatibility contract](docs/COMPATIBILITY.md). The sequence expresses product emphasis; see the [roadmap](docs/ROADMAP.md) and [verification workflow and limits](docs/VERIFY.md).
