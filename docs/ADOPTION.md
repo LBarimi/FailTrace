@@ -54,6 +54,8 @@ The final [1.0.0 release](https://github.com/LBarimi/FailTrace/releases/tag/v1.0
 
 ## Evidence to collect
 
+Use the [voluntary debugging-session guide](WORKFLOW-OBSERVATION.md) to record time to useful evidence, help needed, agent tool choices, and observed second use. It is an observation plan; no independent sessions or usage gains are implied by its existence.
+
 | Question | Useful evidence | Interpretation limit |
 | --- | --- | --- |
 | Can a new user get value? | Fresh-directory install and demo; voluntary reports of time to first result | Maintainer smoke tests establish functionality, not adoption |

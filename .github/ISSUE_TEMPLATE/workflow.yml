@@ -29,3 +29,16 @@ body:
     attributes:
       label: Was the evidence useful?
       description: Did it change your next debugging step? Would you use it again? What would make that easier?
+  - type: input
+    id: first_result
+    attributes:
+      label: Time to useful evidence (optional)
+      description: Roughly how long did it take, and did you need help? If you got stuck, say where.
+  - type: dropdown
+    id: repeat_use
+    attributes:
+      label: Have you used FailTrace on a different problem? (optional)
+      options:
+        - First use only
+        - Yes, used again on another problem
+        - Not sure yet
