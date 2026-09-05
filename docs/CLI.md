@@ -1,6 +1,6 @@
 # Command reference
 
-This guide describes the 1.1.0 source being prepared for publication. See the [installation instructions](../README.md#quick-start) for verified public package commands; 1.1.0 changes below require this source until that package is published.
+This guide targets FailTrace 1.1.0. See the [installation instructions](../README.md#quick-start) for verified npm and GitHub package commands.
 
 See the [README](../README.md) for installation and the guided demo, and [agent workflows](AGENT-WORKFLOWS.md) for client setup.
 
@@ -160,7 +160,7 @@ Use `--command "node relative-script.js"` when the original command contains mac
 ## MCP for coding agents
 
 ```sh
-npx --yes failtrace@1.0.0 mcp --cwd "/absolute/path/to/project"
+npx --yes failtrace@1.1.0 mcp --cwd "/absolute/path/to/project"
 ```
 
 The stdio adapter uses the official Model Context Protocol SDK and exposes these tools:
@@ -186,7 +186,7 @@ For clients using an `mcpServers` configuration, launch the pinned registry pack
       "command": "npx",
       "args": [
         "--yes",
-        "failtrace@1.0.0",
+        "failtrace@1.1.0",
         "mcp",
         "--cwd",
         "/absolute/path/to/project"
@@ -196,7 +196,7 @@ For clients using an `mcpServers` configuration, launch the pinned registry pack
 }
 ```
 
-Use an absolute project path. Pinning the version prevents an unnoticed schema change, and `--yes` prevents an interactive npm prompt from blocking stdio startup. Use `npx.cmd` when a native Windows client does not resolve npm's command shim. For a preinstalled fallback, run `npm install --global failtrace@1.0.0` and configure `failtrace` (`failtrace.cmd` on Windows) with the remaining arguments. The CLI and Core work independently of MCP. Algorithms live in Core, and the adapter makes direct Core calls. See the [client-specific setup and inspection examples](AGENT-WORKFLOWS.md).
+Use an absolute project path. Pinning the version prevents an unnoticed schema change, and `--yes` prevents an interactive npm prompt from blocking stdio startup. Use `npx.cmd` when a native Windows client does not resolve npm's command shim. For a preinstalled fallback, run `npm install --global failtrace@1.1.0` and configure `failtrace` (`failtrace.cmd` on Windows) with the remaining arguments. The CLI and Core work independently of MCP. Algorithms live in Core, and the adapter makes direct Core calls. See the [client-specific setup and inspection examples](AGENT-WORKFLOWS.md).
 
 ## Artifacts and exit codes
 

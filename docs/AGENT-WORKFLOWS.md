@@ -1,6 +1,6 @@
 # Use FailTrace with a coding agent
 
-This guide targets FailTrace 1.0.0. See the [installation instructions](../README.md#quick-start) for verified npm and GitHub package commands.
+This guide targets FailTrace 1.1.0. See the [installation instructions](../README.md#quick-start) for verified npm and GitHub package commands.
 
 Ask your agent to measure a flaky command, compare the saved evidence, or reduce a reproducing input. FailTrace performs the repeated experiments locally and returns inspectable results; the agent uses those results to investigate the code.
 
@@ -13,10 +13,10 @@ Install FailTrace from the npm registry, connect the local server, and try an ex
 With Node.js **22.12 or newer**, no checkout or global install is required:
 
 ```sh
-npx --yes failtrace@1.0.0 mcp --cwd "/absolute/path/to/project"
+npx --yes failtrace@1.1.0 mcp --cwd "/absolute/path/to/project"
 ```
 
-Replace the project path with an absolute path. Relative paths can resolve from a client-specific launch directory. Pinning `1.0.0` keeps tool names and schemas stable across reconnects. `--yes` accepts npm's first-use package installation without an interactive prompt that could block the MCP handshake; see the [official npm `npx` command reference](https://docs.npmjs.com/cli/v12/commands/npx/). FailTrace reserves stdout for protocol messages; npm notices and server diagnostics use stderr, while target-command stdout/stderr is written into run evidence.
+Replace the project path with an absolute path. Relative paths can resolve from a client-specific launch directory. Pinning `1.1.0` keeps tool names and schemas stable across reconnects. `--yes` accepts npm's first-use package installation without an interactive prompt that could block the MCP handshake; see the [official npm `npx` command reference](https://docs.npmjs.com/cli/v12/commands/npx/). FailTrace reserves stdout for protocol messages; npm notices and server diagnostics use stderr, while target-command stdout/stderr is written into run evidence.
 
 The client starts and owns this stdio process. Running it directly in a terminal waits for MCP requests; it is not an interactive prompt.
 
@@ -25,7 +25,7 @@ The client starts and owns this stdio process. Running it directly in a terminal
 If repeated `npx` startup or registry access is unsuitable, install the same exact version once:
 
 ```sh
-npm install --global failtrace@1.0.0
+npm install --global failtrace@1.1.0
 failtrace mcp --cwd "/absolute/path/to/project"
 ```
 
@@ -36,7 +36,7 @@ Use `failtrace` as the configured command and `mcp`, `--cwd`, and the absolute p
 Register the pinned package with the Codex CLI:
 
 ```sh
-codex mcp add failtrace -- npx --yes failtrace@1.0.0 mcp --cwd "/absolute/path/to/project"
+codex mcp add failtrace -- npx --yes failtrace@1.1.0 mcp --cwd "/absolute/path/to/project"
 codex mcp list
 ```
 
@@ -45,7 +45,7 @@ For a longer but bounded investigation, edit the existing server table in `~/.co
 ```toml
 [mcp_servers.failtrace]
 command = "npx"
-args = ["--yes", "failtrace@1.0.0", "mcp", "--cwd", "/absolute/path/to/project"]
+args = ["--yes", "failtrace@1.1.0", "mcp", "--cwd", "/absolute/path/to/project"]
 cwd = "/absolute/path/to/project"
 startup_timeout_sec = 60
 tool_timeout_sec = 600
@@ -58,14 +58,14 @@ Replace the path with your own. On Windows, set `command = "npx.cmd"` if the nat
 From the project you want to investigate, register the server with its explicit absolute path:
 
 ```sh
-claude mcp add --transport stdio --scope local failtrace -- npx --yes failtrace@1.0.0 mcp --cwd "/absolute/path/to/project"
+claude mcp add --transport stdio --scope local failtrace -- npx --yes failtrace@1.1.0 mcp --cwd "/absolute/path/to/project"
 claude mcp get failtrace
 ```
 
 For native Windows PowerShell, call npm's command shim explicitly:
 
 ```powershell
-claude mcp add --transport stdio --scope local failtrace -- npx.cmd --yes failtrace@1.0.0 mcp --cwd "C:/work/my-project"
+claude mcp add --transport stdio --scope local failtrace -- npx.cmd --yes failtrace@1.1.0 mcp --cwd "C:/work/my-project"
 ```
 
 Local scope keeps this registration private to the current project. Project scope instead writes a shareable `.mcp.json`; review machine-specific paths before choosing that scope. In Claude Code, use `/mcp` to check the connection and available tools. Follow the client's normal server approval flow if it requests one. These registration and scope details follow the [official Claude Code MCP reference](https://code.claude.com/docs/en/mcp).
@@ -82,7 +82,7 @@ For a project configuration, merge this entry into that project's `.cursor/mcp.j
       "command": "npx",
       "args": [
         "--yes",
-        "failtrace@1.0.0",
+        "failtrace@1.1.0",
         "mcp",
         "--cwd",
         "${workspaceFolder}"
@@ -106,7 +106,7 @@ Clients that accept `mcpServers` JSON can use this configuration shape with thei
       "command": "npx",
       "args": [
         "--yes",
-        "failtrace@1.0.0",
+        "failtrace@1.1.0",
         "mcp",
         "--cwd",
         "/absolute/path/to/project"
@@ -130,7 +130,7 @@ Ask the agent:
 
 > List the available FailTrace tools, then run the inline Node experiment below with `failtrace_run`. Use five trials and a 5-second timeout. The fifth trial prints `FAILTRACE_DEMO` on stderr and exits with code 7. Report the actual `matchedTrials`, pass/fail counts, and artifact directory; inspect the matching trial's stderr before calling the setup successful.
 
-Version 1.0.0 exposes seven tools: `failtrace_run`, `failtrace_compare`, `failtrace_bisect`, `failtrace_minimize`, `failtrace_verify`, `failtrace_bundle`, and `failtrace_inspect_run`. A client may add a server prefix to their displayed names.
+Version 1.1.0 exposes seven tools: `failtrace_run`, `failtrace_compare`, `failtrace_bisect`, `failtrace_minimize`, `failtrace_verify`, `failtrace_bundle`, and `failtrace_inspect_run`. A client may add a server prefix to their displayed names.
 
 `failtrace_verify` and `captureContext` on `failtrace_run` require version 0.5.0 or later. List the installed server's tools before assuming the selected package provides them.
 

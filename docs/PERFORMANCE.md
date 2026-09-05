@@ -51,7 +51,7 @@ $env:npm_config_cache = 'C:/cache/failtrace-npm'
 failtrace bisect --good GOOD_REF --bad BAD_REF --command "npm ci --prefer-offline && npm test" --repeat 5 --min-failures 2
 ```
 
-This reuses package downloads while each candidate installs dependencies for its own lockfile. It does not preserve `node_modules`, guarantee offline availability, or cache build output. Setup inside the command runs for every executed trial and counts toward its timeout. Select a timeout that includes setup, and use a specific failure predicate so a setup failure is not mistaken for the target defect. No setup lifecycle or automatic dependency cache is implemented. In the unreleased source, Bisect also requires healthy exits for nonmatching trials and supports explicitly declared inconclusive exits; see the [exit-policy migration note](COMPATIBILITY.md#migration-review-for-unreleased-bisect-safety-changes).
+This reuses package downloads while each candidate installs dependencies for its own lockfile. It does not preserve `node_modules`, guarantee offline availability, or cache build output. Setup inside the command runs for every executed trial and counts toward its timeout. Select a timeout that includes setup, and use a specific failure predicate so a setup failure is not mistaken for the target defect. No setup lifecycle or automatic dependency cache is implemented. Since 1.1.0, Bisect also requires healthy exits for nonmatching trials and supports explicitly declared inconclusive exits; see the [exit-policy migration note](COMPATIBILITY.md#migration-review-for-110-bisect-safety-changes).
 
 ## Run the benchmarks
 

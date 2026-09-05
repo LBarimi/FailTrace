@@ -16,7 +16,7 @@ Use FailTrace from the **CLI or an MCP client** to repeat commands, compare fail
 Requires **Node.js 22.12+ and npm**. Run from any directory:
 
 ```sh
-npx --yes failtrace@1.0.0 demo
+npx --yes failtrace@1.1.0 demo
 ```
 
 ![Animated FailTrace demo: record failures, shrink the input, reject an unrelated crash, and check the next patch](docs/assets/demo.gif)
@@ -36,7 +36,7 @@ Give your agent a consistent way to run debugging experiments and return the evi
 Connect the local stdio MCP server through your client's configuration:
 
 ```sh
-npx --yes failtrace@1.0.0 mcp --cwd "/absolute/path/to/your/project"
+npx --yes failtrace@1.1.0 mcp --cwd "/absolute/path/to/your/project"
 ```
 
 **[Setup for Codex, Claude Code, Cursor, and other MCP clients →](docs/AGENT-WORKFLOWS.md)**
@@ -56,7 +56,7 @@ An installed MCP server makes the tools available; the agent still chooses when 
 Run this from your project, replacing the command and error message with your own:
 
 ```sh
-npx --yes failtrace@1.0.0 run "npm test -- checkout" --repeat 20 --stderr-contains "checkout failed"
+npx --yes failtrace@1.1.0 run "npm test -- checkout" --repeat 20 --stderr-contains "checkout failed"
 ```
 
 FailTrace saves each trial's output and prints an investigation ID. Exit `1` can mean the failure you are investigating was recorded. Add `--json` for automation, and use the [command reference](docs/CLI.md) to inspect or continue that investigation.
@@ -85,9 +85,9 @@ The target command can use any runtime; FailTrace itself requires Node.js. Input
 
 ## Availability and contributing
 
-**1.0.0 is published on npm and as a [GitHub release](https://github.com/LBarimi/FailTrace/releases/tag/v1.0.0).** The commands above use that exact package. See [installation alternatives](docs/INSTALL.md), the [1.x compatibility contract](docs/COMPATIBILITY.md), and [migration from 0.x](docs/MIGRATING-TO-1.md).
+**1.1.0 is published on npm and as a [GitHub release](https://github.com/LBarimi/FailTrace/releases/tag/v1.1.0).** The commands above use that exact package. See [installation alternatives](docs/INSTALL.md), the [1.x compatibility contract](docs/COMPATIBILITY.md), and [migration from 0.x](docs/MIGRATING-TO-1.md).
 
-The 1.1.0 source is prepared for publication with stricter Bisect exit policies, target-first comparison, and clearer CLI diagnostics. These changes are not yet in the npm package. [Changes and migration notes](CHANGELOG.md#110) · [Product roadmap](docs/ROADMAP.md)
+Version 1.1.0 adds stricter Bisect exit policies, target-first comparison, and clearer CLI diagnostics. Review the migration notes when upgrading existing workflows. [Changes and migration notes](CHANGELOG.md#110) · [Product roadmap](docs/ROADMAP.md)
 
 **[Tell us where FailTrace helped or got stuck →](https://github.com/LBarimi/FailTrace/issues/new?template=workflow.yml)**
 

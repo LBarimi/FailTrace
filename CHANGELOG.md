@@ -6,7 +6,7 @@ No additional changes.
 
 ## 1.1.0
 
-This version is prepared for publication. See the [README](README.md#availability-and-contributing) for verified public installation routes.
+Published on npm and as the [1.1.0 GitHub release](https://github.com/LBarimi/FailTrace/releases/tag/v1.1.0), with verified public archive bytes, independent installation and an active MCP Registry record. See the [README](README.md#availability-and-contributing) for installation.
 
 - Prefer recorded target matches over infrastructure failures in automatic same-run comparisons, and expose selected trial status, exit code, match evidence and interpretation warnings through Core, CLI and MCP. Explicit trial choices and first-trial selection between two runs are preserved. Unknown Verify options now show an executable syntax hint.
 
