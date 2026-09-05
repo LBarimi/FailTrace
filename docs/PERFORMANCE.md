@@ -77,6 +77,29 @@ Use `--output <new-directory>` to measure a selected local or CI filesystem; the
 
 `--experiments` compares full-budget classification with threshold stopping and concurrency 1 with 4. `--hash` compares repeated full-log comparisons against a measurement-only eager-hash/cache prototype; the prototype is not a Core feature. CI uses four representative cases and checks logical metadata bytes `<= 40,000 + 8,192 × trials`, fsync count `<= 8 + trials`, a 100-versus-10-trial metadata growth ratio `<= 15`, and Core wall time `<= 8 ×` its direct-shell baseline `+ 3,000 ms`. These broad regression guards catch scaling mistakes without asserting a portable latency guarantee.
 
+## Three-sample 1.0.0 cost check — 2026-09-05
+
+Three sequential runs used the unchanged 1.0.0 Core from source revision `7ff75fc533969812ad3854f7d809fbe7692b7347`. Before timing, all 28 Core JavaScript files were compared byte-for-byte with a fresh installation of the public npm 1.0.0 package. The benchmark's Core digest was `7871fc97f742aa485714f1f9f0da3c97d6501f6744a79179c15f16e5d22ad3c3` in every sample.
+
+The environment was Windows x64 with Node.js 24.19.0. Each invocation used `--suite ci --check --experiments` with the verified Core snapshot and a new output directory. No FailTrace test suite or package installation ran during timing. Case order was fixed; filesystem cache state and background system load were not controlled. These are small synthetic implementation checks, not an isolated production benchmark.
+
+The [sanitized three-sample record](benchmarks/core-1.0.0-windows-node24-3-samples.json) includes every observation and min/median/max for wall time, parent CPU/RSS, logical metadata writes, fsync calls, artifact bytes, and completed trials. The median is the second sorted observation. Paths, command strings, target logs, environment values and host identifiers remain private.
+
+Selected sequential cases, with no intentional target delay:
+
+| Workload | Direct shell median (min–max) | FailTrace median (min–max) |
+| --- | ---: | ---: |
+| 10 trials, no output, nonzero-exit predicate | 0.875 s (0.838–0.891) | 1.227 s (1.131–1.248) |
+| 100 trials, no output, nonzero-exit predicate | 8.349 s (8.265–8.889) | 11.535 s (11.161–12.306) |
+| 10 trials, 10 KiB output each, substring predicate | 0.842 s (0.820–0.936) | 1.195 s (1.167–1.211) |
+| 10 trials, 1 MiB output each, regex predicate | 0.826 s (0.819–0.940) | 1.536 s (1.477–1.586) |
+
+The direct-shell reference captures output through file descriptors but does not evaluate FailTrace predicates or write durable trial metadata. For 100 no-output trials, the difference between medians was 3.186 seconds, about 32 ms per trial or 38% additional wall time. That is noticeable for very short targets and does not support a blanket claim of negligible overhead. It is not an evidence-equivalent comparison with another debugging product.
+
+For that 100-trial Core case, medians were 111,389 logical metadata bytes, 102 fsync calls, 1,126 ms of parent CPU and 57.1 MiB of parent peak RSS. The 1 MiB regex case used 470 ms of parent CPU and 70.5 MiB of parent peak RSS. CPU excludes shell/target subprocesses; RSS is a process-lifetime peak, not the whole process tree. Wall times exclude CLI, MCP, npm and dependency-install startup. API write/fsync counts are not physical device I/O.
+
+All three reports passed the broad existing regression budgets, including metadata growth from 10 to 100 trials. The record also retains threshold and concurrency controls, with their different completed-work and experiment semantics. Passing those budgets does not prove acceptable latency for every workload. Measure your actual target and filesystem before applying repeated evidence capture to every test; no Core optimization or competing-tool superiority is claimed from these samples.
+
 ## Five-sample 0.5.0 measurement — 2026-09-05
 
 These implementation measurements come from five complete benchmark reports run sequentially on the same Windows x64 host, OS release 10.0.19045, with Node.js 24.19.0. Every report used the same snapshotted Core JavaScript digest and passed the CI budget checks. Each run used this shape with a new output directory and label:

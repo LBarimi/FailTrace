@@ -1,0 +1,1579 @@
+{
+  "schemaVersion": 1,
+  "measuredVersion": "1.0.0",
+  "date": "2026-09-05",
+  "sourceCommit": "7ff75fc533969812ad3854f7d809fbe7692b7347",
+  "coreJavaScriptSha256": "7871fc97f742aa485714f1f9f0da3c97d6501f6744a79179c15f16e5d22ad3c3",
+  "baselineMatchesPublicNpmCore": true,
+  "coreJavaScriptFilesChecked": 28,
+  "platform": "Windows x64",
+  "node": "24.19.0",
+  "sampleCount": 3,
+  "allBudgetChecksPassed": true,
+  "recipe": "node scripts/bench.mjs --suite ci --check --experiments --core <1.0.0-core-index> --output <new-directory> --label <sample-label>",
+  "method": {
+    "order": "Three sequential invocations, fixed case order, one Windows host. Cache state and background system load were not controlled. No concurrent FailTrace test suite or package installation during timing.",
+    "wall": "Inside isolated workers after module import and fixture setup; includes target shell/startup/execution, capture, predicates and metadata. Excludes CLI/MCP/npm startup and dependency installation.",
+    "parentCpu": "Measured runner process and its worker threads; excludes target and shell subprocesses.",
+    "parentRss": "Process lifetime peak including startup/import, excluding target and shell subprocesses. Not complete process-tree peak memory.",
+    "io": "Instrumented successful logical metadata writes and fsync/datasync API calls; not physical device I/O. Artifact bytes are logical on-disk file lengths.",
+    "baseline": "Same target and file-descriptor output capture, with no FailTrace predicates or durable trial metadata. Different evidence work; not a competitor comparison.",
+    "target": "Every target exits 1. Positive output contains a matching sentinel. Configured delay excludes target Node startup.",
+    "controls": "Threshold and concurrency controls are different experiments: threshold omits unused trials and overlap can change failure behavior. They do not establish equivalent statistical evidence.",
+    "limits": "Three same-host synthetic samples; no statistical confidence, portable latency, comparative-product superiority or independent adoption claim.",
+    "privacy": "Only whitelisted configurations and aggregate measurements are retained. Local paths, commands, target logs, environment values and host identifiers remain private."
+  },
+  "results": [
+    {
+      "id": "direct-argv-0ms-10x-0b-nonzero_exit",
+      "mode": "direct-argv",
+      "configuration": {
+        "durationMs": 0,
+        "repeat": 10,
+        "outputBytes": 0,
+        "predicate": "nonzero_exit"
+      },
+      "wallMs": {
+        "samples": [
+          599.4349,
+          662.7432,
+          655.6022999999999
+        ],
+        "min": 599.4349,
+        "median": 655.6022999999999,
+        "max": 662.7432
+      },
+      "parentCpuMs": {
+        "samples": [
+          109,
+          78,
+          47
+        ],
+        "min": 47,
+        "median": 78,
+        "max": 109
+      },
+      "parentPeakRssBytes": {
+        "samples": [
+          45768704,
+          46411776,
+          46178304
+        ],
+        "min": 45768704,
+        "median": 46178304,
+        "max": 46411776
+      },
+      "logicalMetadataBytes": {
+        "samples": [
+          0,
+          0,
+          0
+        ],
+        "min": 0,
+        "median": 0,
+        "max": 0
+      },
+      "fsyncCalls": {
+        "samples": [
+          0,
+          0,
+          0
+        ],
+        "min": 0,
+        "median": 0,
+        "max": 0
+      },
+      "artifactBytes": {
+        "samples": [
+          0,
+          0,
+          0
+        ],
+        "min": 0,
+        "median": 0,
+        "max": 0
+      },
+      "completedTrials": {
+        "samples": [
+          10,
+          10,
+          10
+        ],
+        "min": 10,
+        "median": 10,
+        "max": 10
+      }
+    },
+    {
+      "id": "direct-shell-0ms-10x-0b-nonzero_exit",
+      "mode": "direct-shell",
+      "configuration": {
+        "durationMs": 0,
+        "repeat": 10,
+        "outputBytes": 0,
+        "predicate": "nonzero_exit"
+      },
+      "wallMs": {
+        "samples": [
+          837.937,
+          891.1056000000001,
+          875.1138
+        ],
+        "min": 837.937,
+        "median": 875.1138,
+        "max": 891.1056000000001
+      },
+      "parentCpuMs": {
+        "samples": [
+          125,
+          78,
+          94
+        ],
+        "min": 78,
+        "median": 94,
+        "max": 125
+      },
+      "parentPeakRssBytes": {
+        "samples": [
+          46280704,
+          46280704,
+          46231552
+        ],
+        "min": 46231552,
+        "median": 46280704,
+        "max": 46280704
+      },
+      "logicalMetadataBytes": {
+        "samples": [
+          0,
+          0,
+          0
+        ],
+        "min": 0,
+        "median": 0,
+        "max": 0
+      },
+      "fsyncCalls": {
+        "samples": [
+          0,
+          0,
+          0
+        ],
+        "min": 0,
+        "median": 0,
+        "max": 0
+      },
+      "artifactBytes": {
+        "samples": [
+          0,
+          0,
+          0
+        ],
+        "min": 0,
+        "median": 0,
+        "max": 0
+      },
+      "completedTrials": {
+        "samples": [
+          10,
+          10,
+          10
+        ],
+        "min": 10,
+        "median": 10,
+        "max": 10
+      }
+    },
+    {
+      "id": "failtrace-0ms-10x-0b-nonzero_exit",
+      "mode": "failtrace",
+      "configuration": {
+        "durationMs": 0,
+        "repeat": 10,
+        "outputBytes": 0,
+        "predicate": "nonzero_exit"
+      },
+      "wallMs": {
+        "samples": [
+          1131.4905999999999,
+          1226.6682,
+          1247.947
+        ],
+        "min": 1131.4905999999999,
+        "median": 1226.6682,
+        "max": 1247.947
+      },
+      "parentCpuMs": {
+        "samples": [
+          110,
+          63,
+          188
+        ],
+        "min": 63,
+        "median": 110,
+        "max": 188
+      },
+      "parentPeakRssBytes": {
+        "samples": [
+          51408896,
+          52023296,
+          51773440
+        ],
+        "min": 51408896,
+        "median": 51773440,
+        "max": 52023296
+      },
+      "logicalMetadataBytes": {
+        "samples": [
+          13467,
+          13470,
+          13470
+        ],
+        "min": 13467,
+        "median": 13470,
+        "max": 13470
+      },
+      "fsyncCalls": {
+        "samples": [
+          12,
+          12,
+          12
+        ],
+        "min": 12,
+        "median": 12,
+        "max": 12
+      },
+      "artifactBytes": {
+        "samples": [
+          12177,
+          12180,
+          12180
+        ],
+        "min": 12177,
+        "median": 12180,
+        "max": 12180
+      },
+      "completedTrials": {
+        "samples": [
+          10,
+          10,
+          10
+        ],
+        "min": 10,
+        "median": 10,
+        "max": 10
+      },
+      "matchedTrials": {
+        "samples": [
+          10,
+          10,
+          10
+        ],
+        "min": 10,
+        "median": 10,
+        "max": 10
+      }
+    },
+    {
+      "id": "direct-argv-0ms-100x-0b-nonzero_exit",
+      "mode": "direct-argv",
+      "configuration": {
+        "durationMs": 0,
+        "repeat": 100,
+        "outputBytes": 0,
+        "predicate": "nonzero_exit"
+      },
+      "wallMs": {
+        "samples": [
+          6022.0599999999995,
+          6922.6185,
+          6769.2334
+        ],
+        "min": 6022.0599999999995,
+        "median": 6769.2334,
+        "max": 6922.6185
+      },
+      "parentCpuMs": {
+        "samples": [
+          500,
+          594,
+          735
+        ],
+        "min": 500,
+        "median": 594,
+        "max": 735
+      },
+      "parentPeakRssBytes": {
+        "samples": [
+          48607232,
+          49086464,
+          50245632
+        ],
+        "min": 48607232,
+        "median": 49086464,
+        "max": 50245632
+      },
+      "logicalMetadataBytes": {
+        "samples": [
+          0,
+          0,
+          0
+        ],
+        "min": 0,
+        "median": 0,
+        "max": 0
+      },
+      "fsyncCalls": {
+        "samples": [
+          0,
+          0,
+          0
+        ],
+        "min": 0,
+        "median": 0,
+        "max": 0
+      },
+      "artifactBytes": {
+        "samples": [
+          0,
+          0,
+          0
+        ],
+        "min": 0,
+        "median": 0,
+        "max": 0
+      },
+      "completedTrials": {
+        "samples": [
+          100,
+          100,
+          100
+        ],
+        "min": 100,
+        "median": 100,
+        "max": 100
+      }
+    },
+    {
+      "id": "direct-shell-0ms-100x-0b-nonzero_exit",
+      "mode": "direct-shell",
+      "configuration": {
+        "durationMs": 0,
+        "repeat": 100,
+        "outputBytes": 0,
+        "predicate": "nonzero_exit"
+      },
+      "wallMs": {
+        "samples": [
+          8265.1369,
+          8348.9611,
+          8888.688600000001
+        ],
+        "min": 8265.1369,
+        "median": 8348.9611,
+        "max": 8888.688600000001
+      },
+      "parentCpuMs": {
+        "samples": [
+          438,
+          407,
+          626
+        ],
+        "min": 407,
+        "median": 438,
+        "max": 626
+      },
+      "parentPeakRssBytes": {
+        "samples": [
+          49348608,
+          51957760,
+          48013312
+        ],
+        "min": 48013312,
+        "median": 49348608,
+        "max": 51957760
+      },
+      "logicalMetadataBytes": {
+        "samples": [
+          0,
+          0,
+          0
+        ],
+        "min": 0,
+        "median": 0,
+        "max": 0
+      },
+      "fsyncCalls": {
+        "samples": [
+          0,
+          0,
+          0
+        ],
+        "min": 0,
+        "median": 0,
+        "max": 0
+      },
+      "artifactBytes": {
+        "samples": [
+          0,
+          0,
+          0
+        ],
+        "min": 0,
+        "median": 0,
+        "max": 0
+      },
+      "completedTrials": {
+        "samples": [
+          100,
+          100,
+          100
+        ],
+        "min": 100,
+        "median": 100,
+        "max": 100
+      }
+    },
+    {
+      "id": "failtrace-0ms-100x-0b-nonzero_exit",
+      "mode": "failtrace",
+      "configuration": {
+        "durationMs": 0,
+        "repeat": 100,
+        "outputBytes": 0,
+        "predicate": "nonzero_exit"
+      },
+      "wallMs": {
+        "samples": [
+          11161.231099999999,
+          11535.3693,
+          12306.4855
+        ],
+        "min": 11161.231099999999,
+        "median": 11535.3693,
+        "max": 12306.4855
+      },
+      "parentCpuMs": {
+        "samples": [
+          1126,
+          1140,
+          969
+        ],
+        "min": 969,
+        "median": 1126,
+        "max": 1140
+      },
+      "parentPeakRssBytes": {
+        "samples": [
+          57483264,
+          59854848,
+          62107648
+        ],
+        "min": 57483264,
+        "median": 59854848,
+        "max": 62107648
+      },
+      "logicalMetadataBytes": {
+        "samples": [
+          111364,
+          111419,
+          111389
+        ],
+        "min": 111364,
+        "median": 111389,
+        "max": 111419
+      },
+      "fsyncCalls": {
+        "samples": [
+          102,
+          102,
+          102
+        ],
+        "min": 102,
+        "median": 102,
+        "max": 102
+      },
+      "artifactBytes": {
+        "samples": [
+          110071,
+          110126,
+          110096
+        ],
+        "min": 110071,
+        "median": 110096,
+        "max": 110126
+      },
+      "completedTrials": {
+        "samples": [
+          100,
+          100,
+          100
+        ],
+        "min": 100,
+        "median": 100,
+        "max": 100
+      },
+      "matchedTrials": {
+        "samples": [
+          100,
+          100,
+          100
+        ],
+        "min": 100,
+        "median": 100,
+        "max": 100
+      }
+    },
+    {
+      "id": "direct-argv-0ms-10x-10240b-substring",
+      "mode": "direct-argv",
+      "configuration": {
+        "durationMs": 0,
+        "repeat": 10,
+        "outputBytes": 10240,
+        "predicate": "substring"
+      },
+      "wallMs": {
+        "samples": [
+          599.9271,
+          619.5159,
+          696.4095000000001
+        ],
+        "min": 599.9271,
+        "median": 619.5159,
+        "max": 696.4095000000001
+      },
+      "parentCpuMs": {
+        "samples": [
+          62,
+          78,
+          47
+        ],
+        "min": 47,
+        "median": 62,
+        "max": 78
+      },
+      "parentPeakRssBytes": {
+        "samples": [
+          46239744,
+          46170112,
+          51855360
+        ],
+        "min": 46170112,
+        "median": 46239744,
+        "max": 51855360
+      },
+      "logicalMetadataBytes": {
+        "samples": [
+          0,
+          0,
+          0
+        ],
+        "min": 0,
+        "median": 0,
+        "max": 0
+      },
+      "fsyncCalls": {
+        "samples": [
+          0,
+          0,
+          0
+        ],
+        "min": 0,
+        "median": 0,
+        "max": 0
+      },
+      "artifactBytes": {
+        "samples": [
+          102400,
+          102400,
+          102400
+        ],
+        "min": 102400,
+        "median": 102400,
+        "max": 102400
+      },
+      "completedTrials": {
+        "samples": [
+          10,
+          10,
+          10
+        ],
+        "min": 10,
+        "median": 10,
+        "max": 10
+      }
+    },
+    {
+      "id": "direct-shell-0ms-10x-10240b-substring",
+      "mode": "direct-shell",
+      "configuration": {
+        "durationMs": 0,
+        "repeat": 10,
+        "outputBytes": 10240,
+        "predicate": "substring"
+      },
+      "wallMs": {
+        "samples": [
+          841.6743,
+          820.2174,
+          935.716
+        ],
+        "min": 820.2174,
+        "median": 841.6743,
+        "max": 935.716
+      },
+      "parentCpuMs": {
+        "samples": [
+          110,
+          46,
+          16
+        ],
+        "min": 16,
+        "median": 46,
+        "max": 110
+      },
+      "parentPeakRssBytes": {
+        "samples": [
+          46403584,
+          46403584,
+          51810304
+        ],
+        "min": 46403584,
+        "median": 46403584,
+        "max": 51810304
+      },
+      "logicalMetadataBytes": {
+        "samples": [
+          0,
+          0,
+          0
+        ],
+        "min": 0,
+        "median": 0,
+        "max": 0
+      },
+      "fsyncCalls": {
+        "samples": [
+          0,
+          0,
+          0
+        ],
+        "min": 0,
+        "median": 0,
+        "max": 0
+      },
+      "artifactBytes": {
+        "samples": [
+          102400,
+          102400,
+          102400
+        ],
+        "min": 102400,
+        "median": 102400,
+        "max": 102400
+      },
+      "completedTrials": {
+        "samples": [
+          10,
+          10,
+          10
+        ],
+        "min": 10,
+        "median": 10,
+        "max": 10
+      }
+    },
+    {
+      "id": "failtrace-0ms-10x-10240b-substring",
+      "mode": "failtrace",
+      "configuration": {
+        "durationMs": 0,
+        "repeat": 10,
+        "outputBytes": 10240,
+        "predicate": "substring"
+      },
+      "wallMs": {
+        "samples": [
+          1195.1455999999998,
+          1166.8225000000002,
+          1211.451
+        ],
+        "min": 1166.8225000000002,
+        "median": 1195.1455999999998,
+        "max": 1211.451
+      },
+      "parentCpuMs": {
+        "samples": [
+          111,
+          79,
+          125
+        ],
+        "min": 79,
+        "median": 111,
+        "max": 125
+      },
+      "parentPeakRssBytes": {
+        "samples": [
+          53035008,
+          52621312,
+          57831424
+        ],
+        "min": 52621312,
+        "median": 53035008,
+        "max": 57831424
+      },
+      "logicalMetadataBytes": {
+        "samples": [
+          13515,
+          13542,
+          13531
+        ],
+        "min": 13515,
+        "median": 13531,
+        "max": 13542
+      },
+      "fsyncCalls": {
+        "samples": [
+          12,
+          12,
+          12
+        ],
+        "min": 12,
+        "median": 12,
+        "max": 12
+      },
+      "artifactBytes": {
+        "samples": [
+          114582,
+          114609,
+          114598
+        ],
+        "min": 114582,
+        "median": 114598,
+        "max": 114609
+      },
+      "completedTrials": {
+        "samples": [
+          10,
+          10,
+          10
+        ],
+        "min": 10,
+        "median": 10,
+        "max": 10
+      },
+      "matchedTrials": {
+        "samples": [
+          10,
+          10,
+          10
+        ],
+        "min": 10,
+        "median": 10,
+        "max": 10
+      }
+    },
+    {
+      "id": "direct-argv-0ms-10x-1048576b-regex",
+      "mode": "direct-argv",
+      "configuration": {
+        "durationMs": 0,
+        "repeat": 10,
+        "outputBytes": 1048576,
+        "predicate": "regex"
+      },
+      "wallMs": {
+        "samples": [
+          619.5188,
+          641.3810000000001,
+          682.8783999999999
+        ],
+        "min": 619.5188,
+        "median": 641.3810000000001,
+        "max": 682.8783999999999
+      },
+      "parentCpuMs": {
+        "samples": [
+          16,
+          46,
+          62
+        ],
+        "min": 16,
+        "median": 46,
+        "max": 62
+      },
+      "parentPeakRssBytes": {
+        "samples": [
+          46383104,
+          46559232,
+          52002816
+        ],
+        "min": 46383104,
+        "median": 46559232,
+        "max": 52002816
+      },
+      "logicalMetadataBytes": {
+        "samples": [
+          0,
+          0,
+          0
+        ],
+        "min": 0,
+        "median": 0,
+        "max": 0
+      },
+      "fsyncCalls": {
+        "samples": [
+          0,
+          0,
+          0
+        ],
+        "min": 0,
+        "median": 0,
+        "max": 0
+      },
+      "artifactBytes": {
+        "samples": [
+          10485760,
+          10485760,
+          10485760
+        ],
+        "min": 10485760,
+        "median": 10485760,
+        "max": 10485760
+      },
+      "completedTrials": {
+        "samples": [
+          10,
+          10,
+          10
+        ],
+        "min": 10,
+        "median": 10,
+        "max": 10
+      }
+    },
+    {
+      "id": "direct-shell-0ms-10x-1048576b-regex",
+      "mode": "direct-shell",
+      "configuration": {
+        "durationMs": 0,
+        "repeat": 10,
+        "outputBytes": 1048576,
+        "predicate": "regex"
+      },
+      "wallMs": {
+        "samples": [
+          818.5579,
+          826.0913,
+          939.8892000000001
+        ],
+        "min": 818.5579,
+        "median": 826.0913,
+        "max": 939.8892000000001
+      },
+      "parentCpuMs": {
+        "samples": [
+          16,
+          78,
+          31
+        ],
+        "min": 16,
+        "median": 31,
+        "max": 78
+      },
+      "parentPeakRssBytes": {
+        "samples": [
+          46350336,
+          46157824,
+          52060160
+        ],
+        "min": 46157824,
+        "median": 46350336,
+        "max": 52060160
+      },
+      "logicalMetadataBytes": {
+        "samples": [
+          0,
+          0,
+          0
+        ],
+        "min": 0,
+        "median": 0,
+        "max": 0
+      },
+      "fsyncCalls": {
+        "samples": [
+          0,
+          0,
+          0
+        ],
+        "min": 0,
+        "median": 0,
+        "max": 0
+      },
+      "artifactBytes": {
+        "samples": [
+          10485760,
+          10485760,
+          10485760
+        ],
+        "min": 10485760,
+        "median": 10485760,
+        "max": 10485760
+      },
+      "completedTrials": {
+        "samples": [
+          10,
+          10,
+          10
+        ],
+        "min": 10,
+        "median": 10,
+        "max": 10
+      }
+    },
+    {
+      "id": "failtrace-0ms-10x-1048576b-regex",
+      "mode": "failtrace",
+      "configuration": {
+        "durationMs": 0,
+        "repeat": 10,
+        "outputBytes": 1048576,
+        "predicate": "regex"
+      },
+      "wallMs": {
+        "samples": [
+          1536.3266,
+          1476.701,
+          1585.7135
+        ],
+        "min": 1476.701,
+        "median": 1536.3266,
+        "max": 1585.7135
+      },
+      "parentCpuMs": {
+        "samples": [
+          470,
+          515,
+          453
+        ],
+        "min": 453,
+        "median": 470,
+        "max": 515
+      },
+      "parentPeakRssBytes": {
+        "samples": [
+          73420800,
+          73973760,
+          78880768
+        ],
+        "min": 73420800,
+        "median": 73973760,
+        "max": 78880768
+      },
+      "logicalMetadataBytes": {
+        "samples": [
+          13495,
+          13535,
+          13496
+        ],
+        "min": 13495,
+        "median": 13496,
+        "max": 13535
+      },
+      "fsyncCalls": {
+        "samples": [
+          12,
+          12,
+          12
+        ],
+        "min": 12,
+        "median": 12,
+        "max": 12
+      },
+      "artifactBytes": {
+        "samples": [
+          10497927,
+          10497967,
+          10497928
+        ],
+        "min": 10497927,
+        "median": 10497928,
+        "max": 10497967
+      },
+      "completedTrials": {
+        "samples": [
+          10,
+          10,
+          10
+        ],
+        "min": 10,
+        "median": 10,
+        "max": 10
+      },
+      "matchedTrials": {
+        "samples": [
+          10,
+          10,
+          10
+        ],
+        "min": 10,
+        "median": 10,
+        "max": 10
+      }
+    },
+    {
+      "id": "failtrace-10ms-10x-0b-nonzero_exit-full",
+      "mode": "failtrace",
+      "configuration": {
+        "durationMs": 10,
+        "repeat": 10,
+        "outputBytes": 0,
+        "predicate": "nonzero_exit",
+        "experiment": "full"
+      },
+      "wallMs": {
+        "samples": [
+          1309.9995999999999,
+          1312.035,
+          1478.4832999999999
+        ],
+        "min": 1309.9995999999999,
+        "median": 1312.035,
+        "max": 1478.4832999999999
+      },
+      "parentCpuMs": {
+        "samples": [
+          140,
+          157,
+          108
+        ],
+        "min": 108,
+        "median": 140,
+        "max": 157
+      },
+      "parentPeakRssBytes": {
+        "samples": [
+          52031488,
+          51884032,
+          57290752
+        ],
+        "min": 51884032,
+        "median": 52031488,
+        "max": 57290752
+      },
+      "logicalMetadataBytes": {
+        "samples": [
+          13503,
+          13471,
+          13483
+        ],
+        "min": 13471,
+        "median": 13483,
+        "max": 13503
+      },
+      "fsyncCalls": {
+        "samples": [
+          12,
+          12,
+          12
+        ],
+        "min": 12,
+        "median": 12,
+        "max": 12
+      },
+      "artifactBytes": {
+        "samples": [
+          12201,
+          12169,
+          12181
+        ],
+        "min": 12169,
+        "median": 12181,
+        "max": 12201
+      },
+      "completedTrials": {
+        "samples": [
+          10,
+          10,
+          10
+        ],
+        "min": 10,
+        "median": 10,
+        "max": 10
+      },
+      "matchedTrials": {
+        "samples": [
+          10,
+          10,
+          10
+        ],
+        "min": 10,
+        "median": 10,
+        "max": 10
+      }
+    },
+    {
+      "id": "failtrace-10ms-10x-0b-nonzero_exit-decision",
+      "mode": "failtrace",
+      "configuration": {
+        "durationMs": 10,
+        "repeat": 10,
+        "outputBytes": 0,
+        "predicate": "nonzero_exit",
+        "experiment": "decision",
+        "minFailures": 1
+      },
+      "wallMs": {
+        "samples": [
+          147.0804,
+          146.8237,
+          167.9915
+        ],
+        "min": 146.8237,
+        "median": 147.0804,
+        "max": 167.9915
+      },
+      "parentCpuMs": {
+        "samples": [
+          31,
+          0,
+          31
+        ],
+        "min": 0,
+        "median": 31,
+        "max": 31
+      },
+      "parentPeakRssBytes": {
+        "samples": [
+          51294208,
+          51355648,
+          56610816
+        ],
+        "min": 51294208,
+        "median": 51355648,
+        "max": 56610816
+      },
+      "logicalMetadataBytes": {
+        "samples": [
+          3799,
+          3849,
+          3799
+        ],
+        "min": 3799,
+        "median": 3799,
+        "max": 3849
+      },
+      "fsyncCalls": {
+        "samples": [
+          3,
+          3,
+          3
+        ],
+        "min": 3,
+        "median": 3,
+        "max": 3
+      },
+      "artifactBytes": {
+        "samples": [
+          2489,
+          2539,
+          2489
+        ],
+        "min": 2489,
+        "median": 2489,
+        "max": 2539
+      },
+      "completedTrials": {
+        "samples": [
+          1,
+          1,
+          1
+        ],
+        "min": 1,
+        "median": 1,
+        "max": 1
+      },
+      "matchedTrials": {
+        "samples": [
+          1,
+          1,
+          1
+        ],
+        "min": 1,
+        "median": 1,
+        "max": 1
+      }
+    },
+    {
+      "id": "failtrace-100ms-10x-0b-nonzero_exit-sequential",
+      "mode": "failtrace",
+      "configuration": {
+        "durationMs": 100,
+        "repeat": 10,
+        "outputBytes": 0,
+        "predicate": "nonzero_exit",
+        "experiment": "sequential",
+        "concurrency": 1
+      },
+      "wallMs": {
+        "samples": [
+          2243.3669,
+          2214.2864,
+          2514.7607000000003
+        ],
+        "min": 2214.2864,
+        "median": 2243.3669,
+        "max": 2514.7607000000003
+      },
+      "parentCpuMs": {
+        "samples": [
+          140,
+          124,
+          140
+        ],
+        "min": 124,
+        "median": 140,
+        "max": 140
+      },
+      "parentPeakRssBytes": {
+        "samples": [
+          52199424,
+          51924992,
+          57569280
+        ],
+        "min": 51924992,
+        "median": 52199424,
+        "max": 57569280
+      },
+      "logicalMetadataBytes": {
+        "samples": [
+          13499,
+          13469,
+          13508
+        ],
+        "min": 13469,
+        "median": 13499,
+        "max": 13508
+      },
+      "fsyncCalls": {
+        "samples": [
+          12,
+          12,
+          12
+        ],
+        "min": 12,
+        "median": 12,
+        "max": 12
+      },
+      "artifactBytes": {
+        "samples": [
+          12183,
+          12153,
+          12192
+        ],
+        "min": 12153,
+        "median": 12183,
+        "max": 12192
+      },
+      "completedTrials": {
+        "samples": [
+          10,
+          10,
+          10
+        ],
+        "min": 10,
+        "median": 10,
+        "max": 10
+      },
+      "matchedTrials": {
+        "samples": [
+          10,
+          10,
+          10
+        ],
+        "min": 10,
+        "median": 10,
+        "max": 10
+      }
+    },
+    {
+      "id": "failtrace-100ms-10x-0b-nonzero_exit-parallel",
+      "mode": "failtrace",
+      "configuration": {
+        "durationMs": 100,
+        "repeat": 10,
+        "outputBytes": 0,
+        "predicate": "nonzero_exit",
+        "experiment": "parallel",
+        "concurrency": 4
+      },
+      "wallMs": {
+        "samples": [
+          722.6492,
+          770.9232000000001,
+          787.1711
+        ],
+        "min": 722.6492,
+        "median": 770.9232000000001,
+        "max": 787.1711
+      },
+      "parentCpuMs": {
+        "samples": [
+          126,
+          172,
+          141
+        ],
+        "min": 126,
+        "median": 141,
+        "max": 172
+      },
+      "parentPeakRssBytes": {
+        "samples": [
+          52133888,
+          52109312,
+          52375552
+        ],
+        "min": 52109312,
+        "median": 52133888,
+        "max": 52375552
+      },
+      "logicalMetadataBytes": {
+        "samples": [
+          13467,
+          13503,
+          13443
+        ],
+        "min": 13443,
+        "median": 13467,
+        "max": 13503
+      },
+      "fsyncCalls": {
+        "samples": [
+          12,
+          12,
+          12
+        ],
+        "min": 12,
+        "median": 12,
+        "max": 12
+      },
+      "artifactBytes": {
+        "samples": [
+          12155,
+          12191,
+          12131
+        ],
+        "min": 12131,
+        "median": 12155,
+        "max": 12191
+      },
+      "completedTrials": {
+        "samples": [
+          10,
+          10,
+          10
+        ],
+        "min": 10,
+        "median": 10,
+        "max": 10
+      },
+      "matchedTrials": {
+        "samples": [
+          10,
+          10,
+          10
+        ],
+        "min": 10,
+        "median": 10,
+        "max": 10
+      }
+    },
+    {
+      "id": "failtrace-1000ms-10x-0b-nonzero_exit-sequential",
+      "mode": "failtrace",
+      "configuration": {
+        "durationMs": 1000,
+        "repeat": 10,
+        "outputBytes": 0,
+        "predicate": "nonzero_exit",
+        "experiment": "sequential",
+        "concurrency": 1
+      },
+      "wallMs": {
+        "samples": [
+          11232.8469,
+          11307.6476,
+          11404.4953
+        ],
+        "min": 11232.8469,
+        "median": 11307.6476,
+        "max": 11404.4953
+      },
+      "parentCpuMs": {
+        "samples": [
+          188,
+          62,
+          235
+        ],
+        "min": 62,
+        "median": 188,
+        "max": 235
+      },
+      "parentPeakRssBytes": {
+        "samples": [
+          52113408,
+          52473856,
+          51933184
+        ],
+        "min": 51933184,
+        "median": 52113408,
+        "max": 52473856
+      },
+      "logicalMetadataBytes": {
+        "samples": [
+          13457,
+          13501,
+          13463
+        ],
+        "min": 13457,
+        "median": 13463,
+        "max": 13501
+      },
+      "fsyncCalls": {
+        "samples": [
+          12,
+          12,
+          12
+        ],
+        "min": 12,
+        "median": 12,
+        "max": 12
+      },
+      "artifactBytes": {
+        "samples": [
+          12139,
+          12183,
+          12145
+        ],
+        "min": 12139,
+        "median": 12145,
+        "max": 12183
+      },
+      "completedTrials": {
+        "samples": [
+          10,
+          10,
+          10
+        ],
+        "min": 10,
+        "median": 10,
+        "max": 10
+      },
+      "matchedTrials": {
+        "samples": [
+          10,
+          10,
+          10
+        ],
+        "min": 10,
+        "median": 10,
+        "max": 10
+      }
+    },
+    {
+      "id": "failtrace-1000ms-10x-0b-nonzero_exit-parallel",
+      "mode": "failtrace",
+      "configuration": {
+        "durationMs": 1000,
+        "repeat": 10,
+        "outputBytes": 0,
+        "predicate": "nonzero_exit",
+        "experiment": "parallel",
+        "concurrency": 4
+      },
+      "wallMs": {
+        "samples": [
+          3460.9581000000003,
+          3484.6779,
+          3426.3844
+        ],
+        "min": 3426.3844,
+        "median": 3460.9581000000003,
+        "max": 3484.6779
+      },
+      "parentCpuMs": {
+        "samples": [
+          110,
+          140,
+          157
+        ],
+        "min": 110,
+        "median": 140,
+        "max": 157
+      },
+      "parentPeakRssBytes": {
+        "samples": [
+          52154368,
+          52441088,
+          55406592
+        ],
+        "min": 52154368,
+        "median": 52441088,
+        "max": 55406592
+      },
+      "logicalMetadataBytes": {
+        "samples": [
+          13454,
+          13401,
+          13401
+        ],
+        "min": 13401,
+        "median": 13401,
+        "max": 13454
+      },
+      "fsyncCalls": {
+        "samples": [
+          12,
+          12,
+          12
+        ],
+        "min": 12,
+        "median": 12,
+        "max": 12
+      },
+      "artifactBytes": {
+        "samples": [
+          12140,
+          12087,
+          12087
+        ],
+        "min": 12087,
+        "median": 12087,
+        "max": 12140
+      },
+      "completedTrials": {
+        "samples": [
+          10,
+          10,
+          10
+        ],
+        "min": 10,
+        "median": 10,
+        "max": 10
+      },
+      "matchedTrials": {
+        "samples": [
+          10,
+          10,
+          10
+        ],
+        "min": 10,
+        "median": 10,
+        "max": 10
+      }
+    }
+  ]
+}
