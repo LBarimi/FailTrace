@@ -1,10 +1,11 @@
 import { join } from 'node:path';
 import { writeTextAtomic } from './artifacts.js';
 import type { RunSummary } from './types.js';
+import { MAX_METADATA_BYTES } from './metadata-budget.js';
 
 /** Keep small final summaries compatible while bounding the run-level document. */
 export const EMBEDDED_TRIALS_LIMIT = 1024 * 1024;
-export const MAX_METADATA_BYTES = 32 * 1024 * 1024;
+export { MAX_METADATA_BYTES } from './metadata-budget.js';
 
 export interface StoredRunSummary extends Omit<RunSummary, 'schemaVersion'> {
   schemaVersion: 1 | 2;
@@ -13,7 +14,7 @@ export interface StoredRunSummary extends Omit<RunSummary, 'schemaVersion'> {
 }
 
 /** Per-trial result.json files are committed before a terminal summary is written. */
-export async function writeRunSummary(summary: RunSummary): Promise<void> {
+export async function writeRunSummary(summary: RunSummary): Promise<number> {
   // Running/error snapshots have no count: a crash or failed metadata write can
   // leave only a subset of concurrent trial records durable on disk.
   const compact: StoredRunSummary = {
@@ -35,4 +36,5 @@ export async function writeRunSummary(summary: RunSummary): Promise<void> {
   if (Buffer.byteLength(text) > EMBEDDED_TRIALS_LIMIT) text = compactText;
   if (Buffer.byteLength(text) > MAX_METADATA_BYTES) throw new Error('Run configuration exceeds the 32 MiB metadata limit.');
   await writeTextAtomic(join(summary.artifactDirectory, 'run.json'), text);
+  return Buffer.byteLength(text);
 }

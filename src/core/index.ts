@@ -10,7 +10,7 @@ export type {
 export { compareRuns } from './compare.js';
 export type { CompareOptions, ComparisonResult, OutputComparison } from './compare.js';
 export { bisectRegression } from './bisect.js';
-export type { BisectOptions, BisectResult, BisectCandidate } from './bisect.js';
+export type { BisectOptions, BisectResult, BisectCandidate, BisectRunEvidence } from './bisect.js';
 export { minimizeFailure } from './minimize.js';
 export type { MinimizeOptions, MinimizeResult, MinimizeEvaluation, MinimizeFormat } from './minimize.js';
 export { createBundle } from './bundle.js';
@@ -23,3 +23,5 @@ export { DEFAULT_MAX_OUTPUT_BYTES, DEFAULT_MAX_TOTAL_OUTPUT_BYTES } from './outp
 export type { OutputLimits, OutputLimit } from './output-budget.js';
 export { DEFAULT_MAX_INPUT_BYTES, DEFAULT_MAX_CANDIDATE_BYTES } from './input-budget.js';
 export type { InputLimits, CandidateStorageLimit } from './input-budget.js';
+export { MAX_INVESTIGATION_METADATA_BYTES, MAX_RECORDED_TRIALS, MAX_CONCURRENCY, MAX_COMMAND_BYTES, MAX_EVALUATIONS } from './metadata-budget.js';
+export type { MetadataLimit } from './metadata-budget.js';

@@ -1,11 +1,12 @@
 import { execFile } from 'node:child_process';
-import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { bisectRegression } from '../src/core/bisect.js';
 import { loadRun } from '../src/core/run-reader.js';
+import { MAX_METADATA_BYTES, MetadataBudget, MetadataLimitError } from '../src/core/metadata-budget.js';
 import { cleanupDirectories, quoteShellArgument, temporaryDirectory, waitForFile } from './helpers.js';
 
 const exec = promisify(execFile);
@@ -38,9 +39,25 @@ async function repository(states: Array<{ failures: number; hang?: boolean }>): 
   return { cwd, commits };
 }
 
-afterEach(async () => cleanupDirectories(directories));
+afterEach(async () => { vi.restoreAllMocks(); await cleanupDirectories(directories); });
 
 describe('bisectRegression', () => {
+  it('preserves a classified endpoint and cleans up when the next candidate cannot reserve metadata', async () => {
+    const { cwd, commits } = await repository([{ failures: 0 }, { failures: 5 }]);
+    const details = { limitBytes: MAX_METADATA_BYTES, usedBytes: 1, reservedBytes: 0, requiredBytes: MAX_METADATA_BYTES };
+    const result = await bisectRegression({ cwd: join(cwd, 'suite'), command, good: commits[0]!, bad: commits[1]!, repeat: 1,
+      onCandidate: () => {
+        vi.spyOn(MetadataBudget.prototype, 'reserve').mockImplementationOnce(() => { throw new MetadataLimitError(details); });
+      },
+    });
+    expect(result).toMatchObject({ status: 'inconclusive', firstBad: null, metadataLimit: details });
+    expect(result.candidates).toHaveLength(1);
+    expect(result.candidates[0]!.assessment).toBe('not_reproduced');
+    expect((await loadRun(result.candidates[0]!.run.metadataPath)).trials).toHaveLength(1);
+    expect(result.cleanupError).toBeUndefined();
+    expect((await git(cwd, 'worktree', 'list', '--porcelain')).match(/^worktree /gm)).toHaveLength(1);
+  });
+
   it('shares an output allowance across endpoints and declines to claim a culprit after exhaustion', async () => {
     const { cwd, commits } = await repository([{ failures: 0 }, { failures: 5 }]);
     const result = await bisectRegression({ cwd: join(cwd, 'suite'), command, good: commits[0]!, bad: commits[1]!,
@@ -50,7 +67,8 @@ describe('bisectRegression', () => {
     expect(result.candidates).toHaveLength(2);
     expect(result.candidates[0]!.run.status).toBe('completed');
     expect(result.candidates[1]!.run.status).toBe('resource_limited');
-    expect(result.candidates[1]!.run.trials[0]!.outputLimit?.scope).toBe('experiment');
+    const limitedRun = await loadRun(result.candidates[1]!.run.metadataPath);
+    expect(limitedRun.trials[0]!.outputLimit?.scope).toBe('experiment');
     expect(result.cleanupError).toBeUndefined();
   });
 
@@ -72,15 +90,24 @@ describe('bisectRegression', () => {
     expect(result.scope).toBe('first-parent');
     expect(result.cleanupError).toBeUndefined();
     expect(result.candidates.map((candidate) => candidate.run.statistics.failed)).toEqual([0, 3, 1, 3]);
-    expect(result.candidates.map((candidate) => candidate.run.trials.length)).toEqual([3, 3, 4, 3]);
+    expect(result.schemaVersion).toBe(2);
+    expect(result.candidates.map((candidate) => candidate.run.trialCount)).toEqual([3, 3, 4, 3]);
     for (const candidate of result.candidates) {
       expect(candidate.run.requestedTrials).toBe(5);
       expect(candidate.run.decision).toEqual({ minFailures: 3, outcome: candidate.assessment,
-        completedTrials: candidate.run.trials.length });
-      expect(await loadRun(candidate.run.artifactDirectory)).toEqual(candidate.run);
+        completedTrials: candidate.run.trialCount });
+      expect(candidate.run).not.toHaveProperty('trials');
+      expect(candidate.run).not.toHaveProperty('context');
+      const completeRun = await loadRun(candidate.run.metadataPath);
+      const { trialCount, matchedTrials, metadataPath: _metadataPath, ...metadata } = candidate.run;
+      expect(completeRun).toEqual({ ...metadata, artifactDirectory: await realpath(candidate.run.artifactDirectory),
+        trials: completeRun.trials });
+      expect(completeRun.trials).toHaveLength(trialCount);
+      expect(completeRun.trials.filter((trial) => trial.failureMatched).length).toBe(matchedTrials);
+      expect(completeRun.source?.commit).toBe(candidate.commit);
       expect(candidate.run.cwd).toBe(join(result.artifactDirectory, 'worktree', 'suite'));
       await expect(readFile(join(candidate.run.artifactDirectory, 'run.json'), 'utf8')).resolves.toContain(candidate.run.id);
-      await expect(readFile(join(candidate.run.artifactDirectory, candidate.run.trials[0]!.stdoutPath), 'utf8'))
+      await expect(readFile(join(candidate.run.artifactDirectory, completeRun.trials[0]!.stdoutPath), 'utf8'))
         .resolves.toMatch(/healthy|target signature/);
     }
     expect(JSON.parse(await readFile(join(result.artifactDirectory, 'bisect.json'), 'utf8'))).toEqual(result);
@@ -104,7 +131,7 @@ describe('bisectRegression', () => {
     expect(result.good).toBe(commits[0]);
     expect(result.bad).toBe(commits[1]);
     expect(result.firstBad).toBe(commits[1]);
-    expect(result.candidates[1]!.run.trials[0]!.failureMatched).toBe(true);
+    expect(result.candidates[1]!.run.matchedTrials).toBe(1);
   });
 
   it('refuses a supplied good endpoint that reproduces', async () => {
@@ -135,7 +162,7 @@ describe('bisectRegression', () => {
     expect(result.status).toBe('inconclusive');
     expect(result.firstBad).toBeNull();
     expect(result.candidates.at(-1)!.assessment).toBe('inconclusive');
-    expect(result.candidates.at(-1)!.run.trials[0]!.timedOut).toBe(true);
+    expect((await loadRun(result.candidates.at(-1)!.run.metadataPath)).trials[0]!.timedOut).toBe(true);
     expect(result.cleanupError).toBeUndefined();
   });
 
@@ -172,7 +199,7 @@ describe('bisectRegression', () => {
     expect(result.candidates).toHaveLength(2);
     expect(result.candidates[0]!.assessment).toBe('not_reproduced');
     expect(result.candidates[1]!.run.status).toBe('interrupted');
-    expect(result.candidates[1]!.run.trials[0]!.status).toBe('interrupted');
+    expect((await loadRun(result.candidates[1]!.run.metadataPath)).trials[0]!.status).toBe('interrupted');
     expect(result.cleanupError).toBeUndefined();
     expect((await git(cwd, 'worktree', 'list', '--porcelain')).match(/^worktree /gm)).toHaveLength(1);
   });

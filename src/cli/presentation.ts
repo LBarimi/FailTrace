@@ -19,7 +19,7 @@ Usage:
   failtrace --version
 
 Experiment options (run, bisect, minimize):
-  --repeat N          Trial count (run: 10, bisect: 5, minimize: 1)
+  --repeat N          Trial count, at most 100000 (run: 10, bisect: 5, minimize: 1)
                      Bisect/minimize stop once the threshold is decided.
   --timeout DURATION  Per-trial limit (default: 30s); ms, s, or m
                      Bare numbers are milliseconds; fractional units are
@@ -35,12 +35,12 @@ Experiment options (run, bisect, minimize):
 
 Command-specific options:
   run       --capture-env KEY1,KEY2 (selected values only)
-            --concurrency N (run default: 1)
+            --concurrency N (run default: 1; at most 64)
             --capture-context (record source identity for later verification)
             --context-input FILE, --context-setup FILE, --context-source FILE
             (repeatable regular files; each implies --capture-context)
   compare   --max-lines N (200), --max-bytes N (65536)
-  minimize  --format text|json|files|env, --max-evaluations N (200)
+  minimize  --format text|json|files|env, --max-evaluations N (200; range 2..10000)
             --max-input-bytes N (16777216), --max-candidate-bytes N (268435456)
   verify    --repeat N, --timeout DURATION, --concurrency N (inherit baseline)
             --allow-change FIELD:REASON (repeatable; declare interventions)
@@ -65,6 +65,7 @@ Examples:
   failtrace minimize --input examples/advanced-input.json --format json --command "node examples/advanced-demo.js" --stderr-contains "BUG reproduced"
 
 The command runs in the current directory using the platform shell.
+Commands are limited to 64 KiB UTF-8; use a project-owned script for longer commands.
 Concurrent run trials can change failure behavior through shared resources.
 Progress uses completion order with trial indices; JSON trials use index order.
 Artifacts: .failtrace/ (runs, bisects, minimizations, verifications, reproduction, demos).
@@ -135,7 +136,9 @@ export function formatSummary(summary: RunSummary): string {
     '',
     interrupted
       ? 'Run interrupted. Saved trials include interrupted trials that were active.'
-      : summary.status === 'resource_limited' ? 'Run inconclusive: output limit reached. Partial logs are preserved.'
+      : summary.status === 'resource_limited' ? summary.metadataLimit
+        ? 'Run inconclusive: metadata allowance reached. Completed evidence is preserved.'
+        : 'Run inconclusive: output limit reached. Partial logs are preserved.'
       : summary.status === 'error' ? 'Run inconclusive: evidence could not be fully persisted.'
       : matched > 0 ? 'Failure reproduced.' : statistics.failed > 0
         ? 'Target failure not reproduced; inspect execution failure evidence.' : 'No failure reproduced in this run.',

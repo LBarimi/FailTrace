@@ -6,6 +6,8 @@ Concurrency, classification early stopping, and metadata reconstruction below re
 
 Verify and baseline context capture require version 0.5.0 or later.
 
+The source checkout toward 1.0 limits commands to 64 KiB UTF-8, `--repeat` to 100000, `--concurrency` to 64 and minimization `--max-evaluations` to 10000. It also bounds metadata creation and reconstruction. Metadata exhaustion preserves recorded trials and returns incomplete evidence with exit 2; see [resource scope](RESOURCE-LIMITS.md#metadata-and-scheduling).
+
 The source checkout toward 1.0 adds `--max-output-bytes` (16 MiB per trial) and `--max-total-output-bytes` (256 MiB across an investigation) to run, bisect, minimize and verify. These flags are not in published 0.6.0. Output exhaustion preserves partial evidence and is inconclusive, with CLI exit 2. Verify inherits the baseline caps; an override requires `--allow-change outputLimits:reason`. See [resource scopes and result semantics](RESOURCE-LIMITS.md).
 
 ## Repeat and identify a failure
@@ -84,6 +86,8 @@ Candidate trials remain sequential. `--repeat` is their maximum trial budget: ev
 The search assumes a **monotonic sampled failure boundary** on that history. Repeated trials help measure flaky behavior but do not provide statistical confidence or detect every intermittent regression. Invalid endpoints, execution problems, or interruption produce an inconclusive/partial result instead of a claimed first bad commit.
 
 Candidate runs and `bisect.json` remain under `.failtrace/bisects/<id>/`. Git worktrees do not include ignored dependencies or uncommitted source changes. Each candidate resets and cleans its temporary worktree, including ignored dependencies and build output. Include setup in the command as needed, and use an [external package-manager cache](PERFORMANCE.md#dependency-setup-during-bisect) to reuse downloads while preserving isolation. The temporary worktree is removed on clean completion, and cleanup errors are reported.
+
+In the source checkout toward 1.0, bisect JSON uses `schemaVersion: 2`. Each `candidates[].run` contains `trialCount`, `matchedTrials` and `metadataPath`, replacing its embedded `trials` array. Core callers read full details with `await loadRun(candidate.run.metadataPath)`; MCP clients can pass that path to `failtrace_inspect_run`. Trial files and source provenance remain in the candidate run directory after worktree cleanup. This changes the parent bisect result shape; it does not change the stored run schemas.
 
 ## Minimize a reproduction
 

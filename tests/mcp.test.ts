@@ -137,7 +137,12 @@ describe('official SDK stdio MCP adapter', () => {
       name: 'failtrace_bisect', arguments: { command: `${node} target.mjs`, cwd: 'repository', good, bad, repeat: 2 },
     }, { timeout: 30_000 });
     expect(bisected.isError).toBe(false);
-    expect(structured(bisected)).toMatchObject({ status: 'found', firstBad: bad, lastGood: good });
+    expect(structured(bisected)).toMatchObject({ schemaVersion: 2, status: 'found', firstBad: bad, lastGood: good,
+      candidates: [
+        expect.objectContaining({ recordedTrials: 2, matchedTrials: 0, metadataPath: expect.any(String) }),
+        expect.objectContaining({ recordedTrials: 1, matchedTrials: 1, metadataPath: expect.any(String) }),
+      ],
+    });
     expect(errors).toEqual([]);
     // Target stdout/stderr belong to evidence files, never MCP stdout or server diagnostics.
     expect(stderr.join('')).toBe('');
@@ -176,7 +181,7 @@ describe('official SDK stdio MCP adapter', () => {
     const invalidInput = await client.callTool({ name: 'failtrace_run', arguments: { command: 'exit 0', repeat: 0 } });
     expect(invalidInput.isError).toBe(true);
     expect(invalidInput.content).toEqual([expect.objectContaining({ type: 'text', text: expect.stringContaining('Input validation error') })]);
-    for (const concurrency of [0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+    for (const concurrency of [0, -1, 1.5, 65, Number.MAX_SAFE_INTEGER + 1]) {
       const invalidConcurrency = await client.callTool({ name: 'failtrace_run', arguments: { command: 'exit 0', concurrency } });
       expect(invalidConcurrency.isError).toBe(true);
     }

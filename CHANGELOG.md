@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Bound generated run metadata and saved-run reconstruction, with scheduling limits and explicit inconclusive evidence when the metadata allowance is exhausted. Existing recorded trials remain readable; unstarted trials are not invented. Diagnostic strings are bounded without discarding failure status.
+- Bisect results now use schema 2: candidate summaries contain complete trial/match counts and a `metadataPath`, without duplicating full trial arrays. Core callers that need individual trials must call `loadRun(candidate.run.metadataPath)`. Stored run schemas 1 and 2 remain readable within the documented resource limits.
 - Bound minimization input size and cumulative retained input copies. Storage exhaustion preserves the best available input and existing evidence without claiming a final verification. Bounded snapshot copies reject changing sources and preserve original files; JSON/directory depth limits prevent recursive stack exhaustion.
 
 - Bound retained command output by default: 16 MiB combined stdout/stderr per trial and 256 MiB across a run or all candidates in a bisect/minimization. Core, CLI and MCP accept explicit byte caps. Limits preserve partial evidence and stop inconclusively; output write failures cannot become healthy predicate nonmatches.

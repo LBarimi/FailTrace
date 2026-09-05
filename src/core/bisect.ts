@@ -4,10 +4,10 @@ import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { writeJsonAtomic } from './artifacts.js';
 import { runGit } from './git.js';
 import { assessRun, validatePredicate } from './predicates.js';
-import { writeRunSummary } from './run-metadata.js';
 import { DEFAULT_TIMEOUT_MS, runTrialsWithBudget, validateRunOptions, VERSION } from './run-trials.js';
 import { OutputBudget, outputLimits, type OutputLimits } from './output-budget.js';
 import type { FailurePredicate, RunSummary } from './types.js';
+import { diagnosticMessage, MetadataBudget, MetadataLimitError, type MetadataLimit } from './metadata-budget.js';
 
 export interface BisectOptions extends OutputLimits {
   command: string;
@@ -23,15 +23,22 @@ export interface BisectOptions extends OutputLimits {
   onCandidate?: (candidate: BisectCandidate) => void | Promise<void>;
 }
 
+/** Complete counts and settings; loadRun(metadataPath) retrieves individual trials. */
+export interface BisectRunEvidence extends Omit<RunSummary, 'trials' | 'context'> {
+  trialCount: number;
+  matchedTrials: number;
+  metadataPath: string;
+}
+
 export interface BisectCandidate {
   commit: string;
   role: 'good' | 'bad' | 'candidate';
   assessment: 'reproduced' | 'not_reproduced' | 'inconclusive';
-  run: RunSummary;
+  run: BisectRunEvidence;
 }
 
 export interface BisectResult extends OutputLimits {
-  schemaVersion: 1;
+  schemaVersion: 2;
   failtraceVersion: string;
   id: string;
   artifactDirectory: string;
@@ -52,6 +59,7 @@ export interface BisectResult extends OutputLimits {
   lastGood: string | null;
   candidates: BisectCandidate[];
   reason?: string;
+  metadataLimit?: MetadataLimit;
   cleanupError?: string;
 }
 
@@ -89,6 +97,7 @@ export async function bisectRegression(options: BisectOptions): Promise<BisectRe
   validateOptions(options);
   const limits = outputLimits(options);
   const outputBudget = new OutputBudget(limits.maxTotalOutputBytes);
+  const metadata = new MetadataBudget();
   const cwd = await realpath(resolve(options.cwd ?? process.cwd()));
   // Resolve the repository without the caller's abort signal so even a
   // pre-cancelled invocation can persist a valid interrupted report.
@@ -104,7 +113,7 @@ export async function bisectRegression(options: BisectOptions): Promise<BisectRe
   await mkdir(artifactDirectory);
   const worktree = join(artifactDirectory, 'worktree');
   const result: BisectResult = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     ...limits,
     failtraceVersion: VERSION,
     id,
@@ -153,10 +162,14 @@ export async function bisectRegression(options: BisectOptions): Promise<BisectRe
       ...(options.predicate === undefined ? {} : { predicate: options.predicate }),
       ...(options.env === undefined ? {} : { env: options.env }),
       ...(options.signal === undefined ? {} : { signal: options.signal }),
-    }, outputBudget);
-    run.source = { kind: 'git', repository, commit, subdirectory: subdirectory.replaceAll('\\', '/') };
-    await writeRunSummary(run);
-    const candidate: BisectCandidate = { commit, role, assessment: assessRun(run, result.minFailures), run };
+    }, outputBudget, metadata, { kind: 'git', repository, commit, subdirectory: subdirectory.replaceAll('\\', '/') });
+    const { trials, context: _context, ...runMetadata } = run;
+    if (run.metadataLimit) result.metadataLimit = run.metadataLimit;
+    const candidate: BisectCandidate = {
+      commit, role, assessment: assessRun(run, result.minFailures),
+      run: { ...runMetadata, trialCount: trials.length, matchedTrials: trials.filter((trial) => trial.failureMatched === true).length,
+        metadataPath: join(run.artifactDirectory, 'run.json') },
+    };
     result.candidates.push(candidate);
     await writeJsonAtomic(metadataPath, result);
     await options.onCandidate?.(structuredClone(candidate));
@@ -235,8 +248,9 @@ export async function bisectRegression(options: BisectOptions): Promise<BisectRe
     return result;
   } catch (error) {
     if (!interrupted()) {
-      result.status = 'error';
-      result.reason = error instanceof Error ? error.message : String(error);
+      result.status = error instanceof MetadataLimitError ? 'inconclusive' : 'error';
+      if (error instanceof MetadataLimitError) result.metadataLimit = error.details;
+      result.reason = diagnosticMessage(error);
     }
     return result;
   } finally {

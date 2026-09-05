@@ -12,6 +12,7 @@ import { runTrials, VERSION } from '../core/run-trials.js';
 import { verifyFix, type VerifyResult, type VerifyRunEvidence } from '../core/verify.js';
 import type { ContextSnapshot, RunContext } from '../core/verify-context.js';
 import type { RunOptions, RunSummary } from '../core/types.js';
+import { MAX_COMMAND_BYTES, MAX_CONCURRENCY, MAX_EVALUATIONS, MAX_RECORDED_TRIALS } from '../core/metadata-budget.js';
 
 const positiveInteger = z.number().int().min(1).max(Number.MAX_SAFE_INTEGER);
 const nonnegativeInteger = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
@@ -31,9 +32,9 @@ const captureContextSchema = z.object({
   sourceFiles: z.array(z.string().min(1)).optional(),
 }).strict();
 const commandSchema = z.object({
-  command: z.string().min(1).describe('Command for the platform shell, executed with your local permissions.'),
+  command: z.string().min(1).max(MAX_COMMAND_BYTES).describe('Command for the platform shell, at most 64 KiB UTF-8; use a project-owned script for longer commands. Executed with your local permissions.'),
   cwd: z.string().min(1).optional().describe('Working directory; relative paths resolve from the server working directory.'),
-  repeat: positiveInteger.optional(),
+  repeat: positiveInteger.max(MAX_RECORDED_TRIALS).optional(),
   timeoutMs: positiveInteger.max(2_147_483_647).optional(),
   maxOutputBytes: positiveInteger.optional().describe('Combined stdout/stderr byte cap per trial; default 16 MiB. Limit outcomes are inconclusive.'),
   maxTotalOutputBytes: positiveInteger.optional().describe('Combined output byte cap for this whole experiment, including all candidates; default 256 MiB.'),
@@ -118,6 +119,7 @@ function runProjection(run: RunSummary): Record<string, unknown> {
     ...(run.decision === undefined ? {} : { decision: run.decision }),
     ...(run.context === undefined ? {} : { context: contextProjection(run.context) }),
     ...(run.error === undefined ? {} : { error: run.error }),
+    ...(run.metadataLimit === undefined ? {} : { metadataLimit: run.metadataLimit }),
   };
 }
 
@@ -159,7 +161,7 @@ function createServer(cwd: string, shutdown: AbortSignal, pending: Set<Promise<C
     inputSchema: commandSchema.extend({
       artifactsDir: z.string().min(1).optional(),
       captureEnv: z.array(z.string().min(1)).optional().describe('Only these selected environment variables are recorded in metadata.'),
-      concurrency: positiveInteger.optional().describe('Maximum active run trials; default 1. Shared ports, files, databases and resource contention can change failure probability.'),
+      concurrency: positiveInteger.max(MAX_CONCURRENCY).optional().describe('Maximum active run trials; default 1, at most 64. Shared ports, files, databases and resource contention can change failure probability.'),
       captureContext: captureContextSchema.optional().describe('Capture declared regular input/setup/source file identities for verification. Source files select a files-only scope; without them, capture Git identity. Use captureEnv separately for relevant variable names.'),
     }),
     annotations: executesCommand,
@@ -223,13 +225,13 @@ function createServer(cwd: string, shutdown: AbortSignal, pending: Set<Promise<C
     description: 'Check baseline eligibility and captured context, then run a fixed candidate budget using the original predicate. Requires explicit current command/cwd. Reports target_observed, target_not_observed, inconclusive or interrupted; zero matches with unrelated errors is inconclusive, never proof of a fix.',
     inputSchema: z.object({
       baseline: z.string().min(1).describe('Saved baseline run ID, directory or run.json; relative references resolve from the explicit cwd.'),
-      command: z.string().min(1).describe('Explicit current command to authorize local execution; the saved command is never executed implicitly.'),
+      command: z.string().min(1).max(MAX_COMMAND_BYTES).describe('Explicit current command, at most 64 KiB UTF-8, to authorize local execution; the saved command is never executed implicitly.'),
       cwd: z.string().min(1).describe('Required current working directory; relative paths resolve from the server directory.'),
-      repeat: positiveInteger.optional().describe('Full candidate trial budget; defaults to the baseline requested count. No classification early stopping.'),
+      repeat: positiveInteger.max(MAX_RECORDED_TRIALS).optional().describe('Full candidate trial budget, at most 100000; defaults to the baseline requested count. No classification early stopping.'),
       timeoutMs: positiveInteger.max(2_147_483_647).optional(),
       maxOutputBytes: positiveInteger.optional().describe('Inherits baseline. Changing it requires an outputLimits allowance.'),
       maxTotalOutputBytes: positiveInteger.optional().describe('Inherits baseline. Changing it requires an outputLimits allowance.'),
-      concurrency: positiveInteger.optional(),
+      concurrency: positiveInteger.max(MAX_CONCURRENCY).optional(),
       env: environmentSchema.optional(),
       healthyExitCodes: z.array(z.number().int().min(0).max(0xffff_ffff)).min(1).optional().describe('Normal exit codes accepted for nonmatching trials; default [0].'),
       allowChanges: z.array(z.object({
@@ -282,6 +284,9 @@ function createServer(cwd: string, shutdown: AbortSignal, pending: Set<Promise<C
       candidates: sample(candidates).map((candidate) => ({
         commit: candidate.commit, role: candidate.role, assessment: candidate.assessment,
         statistics: candidate.run.statistics, runDirectory: candidate.run.artifactDirectory,
+        metadataPath: candidate.run.metadataPath, recordedTrials: candidate.run.trialCount, matchedTrials: candidate.run.matchedTrials,
+        status: candidate.run.status,
+        ...(candidate.run.metadataLimit === undefined ? {} : { metadataLimit: candidate.run.metadataLimit }),
         requestedTrials: candidate.run.requestedTrials,
         ...(candidate.run.decision === undefined ? {} : { decision: candidate.run.decision }),
       })),
@@ -294,7 +299,7 @@ function createServer(cwd: string, shutdown: AbortSignal, pending: Set<Promise<C
     description: 'Deterministically reduce text, JSON, file sets or environment selections. Sequential baseline, candidate and final trials stop when the failure threshold is decided. Accept only reproducing reductions; preserve originals and candidate evidence.',
     inputSchema: commandSchema.extend({
       input: z.string().min(1), format: z.enum(['text', 'json', 'files', 'env']),
-      minFailures: positiveInteger.optional(), maxEvaluations: positiveInteger.min(2).optional(),
+      minFailures: positiveInteger.optional(), maxEvaluations: positiveInteger.min(2).max(MAX_EVALUATIONS).optional(),
       maxInputBytes: positiveInteger.optional().describe('Input file or directory byte cap; default 16 MiB.'),
       maxCandidateBytes: positiveInteger.optional().describe('Cumulative retained input copy byte cap; default 256 MiB. Exhaustion preserves best available input without claiming final verification.'),
     }),

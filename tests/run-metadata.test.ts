@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { runTrials } from '../src/core/run-trials.js';
 import { loadRun } from '../src/core/run-reader.js';
 import { EMBEDDED_TRIALS_LIMIT, writeRunSummary } from '../src/core/run-metadata.js';
+import { MAX_RECORDED_TRIALS } from '../src/core/metadata-budget.js';
 import { writeJsonAtomic } from '../src/core/artifacts.js';
 import { aggregateStatistics } from '../src/core/statistics.js';
 import { cleanupDirectories, fixtureCommand, temporaryDirectory } from './helpers.js';
@@ -91,5 +92,33 @@ await runTrials({ command: ${JSON.stringify(fixtureCommand('pass'))}, repeat: 10
     run.statistics = aggregateStatistics([]);
     await writeRunSummary(run);
     expect((await loadRun(run.artifactDirectory)).statistics).toEqual(expected);
+  });
+
+  it('rejects aggregate reconstruction beyond the allowance even when every file fits the per-document limit', async () => {
+    const run = await runTrials({ command: fixtureCommand('pass'), cwd: await workspace(), repeat: 4 });
+    // Older producers could retain arbitrary diagnostics. Each record is below
+    // 32 MiB; four together exceed the new 96 MiB reconstruction allowance.
+    const diagnostic = 'x'.repeat(25 * 1024 * 1024);
+    for (const trial of run.trials) {
+      await writeJsonAtomic(join(run.artifactDirectory, `trials/${String(trial.index).padStart(3, '0')}/result.json`),
+        { ...trial, error: diagnostic });
+    }
+    run.status = 'running';
+    run.endedAt = null;
+    await writeRunSummary(run);
+    await expect(loadRun(run.artifactDirectory)).rejects.toThrow('96 MiB aggregate limit');
+  }, 30_000);
+
+  it('bounds stored counts but still reads an older unfinished run with a larger requested schedule', async () => {
+    const run = await runTrials({ command: fixtureCommand('pass'), cwd: await workspace(), repeat: 1 });
+    run.status = 'running';
+    run.endedAt = null;
+    run.requestedTrials = MAX_RECORDED_TRIALS + 1;
+    await writeRunSummary(run);
+    expect((await loadRun(run.artifactDirectory)).trials).toHaveLength(1);
+    const file = join(run.artifactDirectory, 'run.json');
+    const stored = JSON.parse(await readFile(file, 'utf8'));
+    await writeJsonAtomic(file, { ...stored, trialCount: MAX_RECORDED_TRIALS + 1 });
+    await expect(loadRun(file)).rejects.toThrow('100000 recorded trial');
   });
 });

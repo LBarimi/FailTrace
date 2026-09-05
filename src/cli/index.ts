@@ -91,7 +91,7 @@ async function main(): Promise<number> {
         const search = await bisectRegression({
           ...invocation, signal: controller.signal,
           onCandidate: (candidate) => {
-            const matched = candidate.run.trials.filter((trial) => trial.failureMatched ?? trial.status === 'failed').length;
+            const matched = candidate.run.matchedTrials;
             print(`  ${candidate.commit.slice(0, 12)}  ${candidate.role.padEnd(9)} ${candidate.assessment}  (${candidate.run.statistics.total}/${candidate.run.requestedTrials} trials, ${matched} matches${candidate.run.decision ? '; threshold decided' : ''})`);
           },
         });

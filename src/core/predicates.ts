@@ -90,7 +90,7 @@ export function assessRun(summary: RunSummary, minFailures = 1): 'reproduced' | 
   }
   const completed = summary.trials.length;
   if (!Number.isSafeInteger(summary.requestedTrials) || summary.requestedTrials < 1
-    || summary.status !== 'completed' || summary.error !== undefined
+    || summary.status !== 'completed' || summary.error !== undefined || summary.metadataLimit !== undefined
     || completed === 0 || completed > summary.requestedTrials) {
     return 'inconclusive';
   }

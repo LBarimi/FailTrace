@@ -48,6 +48,6 @@ Our product hypothesis is that reusable, local failure experiments and trustwort
 ## Supporting work and boundaries
 
 - Statistical uncertainty belongs with a defined sampling plan. Sequential trials are not automatically independent; zero observed failures do not prove elimination. Do not reuse bisect's classification stopping rule for an ordinary failure-rate confidence claim.
-- Trial reset/isolation needs and resource limits should be driven by real workflows. The current runner has no general before/after-trial reset hooks, artifact budget or automatic retention. Project-owned wrapper scripts can perform setup/reset today.
+- The source checkout toward 1.0 adds [bounded output, input copies and metadata](RESOURCE-LIMITS.md), preserving inconclusive outcomes when evidence is incomplete. Published 0.6.0 does not have these controls. There are no general before/after-trial reset hooks, total filesystem quota or automatic retention. Project-owned wrapper scripts can perform setup/reset today.
 - Further predicate modes, environment matrices, reducers and performance paths remain candidates, not committed releases. The syntax `--fail-when`, bisect/minimize `--run`, and `matrix` is not currently supported.
 - Keep Core independent of the CLI, MCP, AI providers and cloud services. Maintain the existing adapter while prioritizing the quality of the experiments it exposes.

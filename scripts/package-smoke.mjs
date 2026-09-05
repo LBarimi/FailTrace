@@ -60,6 +60,8 @@ async function exerciseInstalledCore() {
   }
   const project = join(consumer, 'independent project');
   await mkdir(project);
+  await assert.rejects(api.runTrials({ cwd: project, command: 'unused', repeat: 100001 }), /100000/);
+  await assert.rejects(api.runTrials({ cwd: project, command: 'unused', concurrency: 65 }), /64/);
   const target = join(project, 'target.mjs');
   await writeFile(target, 'process.stdout.write("trial " + process.env.FAILTRACE_TRIAL_INDEX + "\\n");\n'
     + 'process.stderr.write("captured evidence\\n");\n'

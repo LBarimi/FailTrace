@@ -9,6 +9,7 @@ import { OutputBudget, outputLimits, type OutputLimits } from './output-budget.j
 import { copyBoundedFile } from './bounded-file.js';
 import { CandidateStorageBudget, CandidateStorageLimitError, inputLimits, type InputLimits, type CandidateStorageLimit } from './input-budget.js';
 import type { FailurePredicate } from './types.js';
+import { diagnosticMessage, MAX_EVALUATIONS, MetadataBudget, MetadataLimitError, type MetadataLimit } from './metadata-budget.js';
 
 export type { MinimizeFormat } from './minimize-input.js';
 
@@ -61,6 +62,7 @@ export interface MinimizeResult extends OutputLimits, InputLimits {
   predicate: FailurePredicate;
   finalVerified: boolean;
   storageLimit?: CandidateStorageLimit;
+  metadataLimit?: MetadataLimit;
   evaluations: MinimizeEvaluation[];
   baseline?: MinimizeEvaluation;
   final?: MinimizeEvaluation;
@@ -116,14 +118,15 @@ export async function minimizeFailure(options: MinimizeOptions): Promise<Minimiz
   validateRunOptions({ ...options, repeat, timeoutMs });
   const limits = outputLimits(options);
   const outputBudget = new OutputBudget(limits.maxTotalOutputBytes);
+  const metadata = new MetadataBudget();
   const inputBounds = inputLimits(options);
   const storageBudget = new CandidateStorageBudget(inputBounds.maxCandidateBytes);
   validatePredicate(options.predicate);
   if (!Number.isSafeInteger(minFailures) || minFailures < 1 || minFailures > repeat) {
     throw new Error('minFailures must be an integer between one and repeat.');
   }
-  if (!Number.isSafeInteger(maxEvaluations) || maxEvaluations < 2) {
-    throw new Error('maxEvaluations must be a safe integer of at least two, including baseline and final verification.');
+  if (!Number.isSafeInteger(maxEvaluations) || maxEvaluations < 2 || maxEvaluations > MAX_EVALUATIONS) {
+    throw new Error('maxEvaluations must be a safe integer from 2 to 10000, including baseline and final verification.');
   }
   if (!['text', 'json', 'files', 'env'].includes(options.format)) throw new Error('Unsupported minimization format.');
   if (typeof options.input !== 'string' || !options.input.trim()) throw new Error('Provide an input path.');
@@ -181,11 +184,12 @@ export async function minimizeFailure(options: MinimizeOptions): Promise<Minimiz
       stopWhenDecided: { minFailures },
       env: environment, predicate: result.predicate,
       ...(options.signal === undefined ? {} : { signal: options.signal }),
-    }, outputBudget);
+    }, outputBudget, metadata);
     if (run.status === 'resource_limited' || run.status === 'error') {
       outputLimited = true;
       limited = true;
-      result.error = 'Output could not be captured completely; no further candidates or final verification were executed.';
+      result.error = 'Run evidence could not be captured completely; no further candidates or final verification were executed.';
+      if (run.metadataLimit) result.metadataLimit = run.metadataLimit;
     }
     const assessment = assessRun(run, minFailures);
     const evaluation: MinimizeEvaluation = {
@@ -260,10 +264,11 @@ export async function minimizeFailure(options: MinimizeOptions): Promise<Minimiz
           : limited ? 'limit_reached'
             : sawInconclusive ? 'inconclusive' : 'completed';
   } catch (error) {
-    result.error = error instanceof Error ? error.message : String(error);
-    if (error instanceof CandidateStorageLimitError) {
+    result.error = diagnosticMessage(error);
+    if (error instanceof CandidateStorageLimitError || error instanceof MetadataLimitError) {
       result.status = options.signal?.aborted ? 'interrupted' : 'limit_reached';
-      result.storageLimit = error.details;
+      if (error instanceof CandidateStorageLimitError) result.storageLimit = error.details;
+      else result.metadataLimit = error.details;
       result.finalVerified = false;
       result.minimizedPath = bestPath;
       result.minimizedSize = candidateSize(current);

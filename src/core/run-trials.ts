@@ -1,7 +1,7 @@
 import { realpath, stat } from 'node:fs/promises';
 import { setMaxListeners } from 'node:events';
 import { dirname, join, resolve } from 'node:path';
-import { createRunDirectory, writeJsonAtomic } from './artifacts.js';
+import { createRunDirectory, writeTextAtomic } from './artifacts.js';
 import { runTrial } from './runner.js';
 import { aggregateStatistics, createStatisticsAccumulator } from './statistics.js';
 import { writeRunSummary } from './run-metadata.js';
@@ -10,6 +10,8 @@ import { DEFAULT_PREDICATE, matchesFailure, validatePredicate } from './predicat
 import { captureContext, contextDeclaration, snapshotsEqual } from './verify-context.js';
 import type { RunOptions, RunSummary } from './types.js';
 import { OutputBudget, outputLimits } from './output-budget.js';
+import { diagnosticMessage, MAX_COMMAND_BYTES, MAX_CONCURRENCY, MAX_METADATA_BYTES, MAX_RECORDED_TRIALS,
+  MetadataBudget, MetadataLimitError, trialMetadataAllowance } from './metadata-budget.js';
 
 export const VERSION = '0.6.0';
 export const DEFAULT_REPEAT = 10;
@@ -19,13 +21,14 @@ export function validateRunOptions(options: RunOptions): void {
   if (typeof options.command !== 'string' || options.command.trim().length === 0 || options.command.includes('\0')) {
     throw new Error('Command must be a non-empty string without null bytes.');
   }
+  if (Buffer.byteLength(options.command) > MAX_COMMAND_BYTES) throw new Error('Command exceeds the 64 KiB limit; use a project-owned script.');
   const repeat = options.repeat ?? DEFAULT_REPEAT;
-  if (!Number.isSafeInteger(repeat) || repeat < 1) {
-    throw new Error('Repeat must be a positive safe integer.');
+  if (!Number.isSafeInteger(repeat) || repeat < 1 || repeat > MAX_RECORDED_TRIALS) {
+    throw new Error('Repeat must be a positive safe integer no greater than 100000.');
   }
   const concurrency = options.concurrency ?? 1;
-  if (!Number.isSafeInteger(concurrency) || concurrency < 1) {
-    throw new Error('Concurrency must be a positive safe integer.');
+  if (!Number.isSafeInteger(concurrency) || concurrency < 1 || concurrency > MAX_CONCURRENCY) {
+    throw new Error('Concurrency must be a positive safe integer no greater than 64.');
   }
   if (options.stopWhenDecided !== undefined) {
     const threshold = options.stopWhenDecided.minFailures;
@@ -49,9 +52,16 @@ export async function runTrials(options: RunOptions): Promise<RunSummary> {
   return runTrialsWithBudget(options, new OutputBudget(outputLimits(options).maxTotalOutputBytes));
 }
 
-/** Internal: investigations share one output allowance across candidate runs. */
-export async function runTrialsWithBudget(options: RunOptions, budget: OutputBudget): Promise<RunSummary> {
+/** Internal: investigations share output and metadata allowances across candidate runs. */
+export async function runTrialsWithBudget(options: RunOptions, budget: OutputBudget, metadata = new MetadataBudget(), source?: RunSummary['source']): Promise<RunSummary> {
   validateRunOptions(options);
+  metadata.reserve(MAX_METADATA_BYTES);
+  const header = { bytes: 0 };
+  try { return await executeRun(options, budget, metadata, header, source); }
+  finally { metadata.commit(MAX_METADATA_BYTES, header.bytes); }
+}
+
+async function executeRun(options: RunOptions, budget: OutputBudget, metadata: MetadataBudget, header: { bytes: number }, source?: RunSummary['source']): Promise<RunSummary> {
   options = { ...options,
     ...(options.predicate === undefined ? {} : { predicate: structuredClone(options.predicate) }),
     ...(options.captureContext === undefined ? {} : { captureContext: contextDeclaration(options.captureContext) }),
@@ -91,8 +101,10 @@ export async function runTrialsWithBudget(options: RunOptions, budget: OutputBud
     statistics: aggregateStatistics([]),
     predicate: structuredClone(options.predicate ?? DEFAULT_PREDICATE),
     environment: captureEnvironment(capturedKeys, executionEnv),
+    ...(source === undefined ? {} : { source: { ...source } }),
   };
-  await writeRunSummary(summary);
+  const persistHeader = async (): Promise<void> => { header.bytes = await writeRunSummary(summary); };
+  await persistHeader();
   const controller = new AbortController();
   // This signal is owned by this run and has one listener per active process.
   setMaxListeners(0, controller.signal);
@@ -106,8 +118,18 @@ export async function runTrialsWithBudget(options: RunOptions, budget: OutputBud
   let failed = false;
   let firstError: unknown;
   const worker = async (): Promise<void> => {
+    let reservation = 0;
     try {
       while (!controller.signal.aborted && !stopScheduling && nextIndex <= summary.requestedTrials) {
+        const allowance = trialMetadataAllowance(summary.command);
+        try { metadata.reserve(allowance); } catch (error) {
+          if (!(error instanceof MetadataLimitError)) throw error;
+          summary.metadataLimit = error.details;
+          delete summary.decision;
+          stopScheduling = true;
+          return;
+        }
+        reservation = allowance;
         const index = nextIndex++;
         const trial = await runTrial({
           index,
@@ -131,9 +153,15 @@ export async function runTrialsWithBudget(options: RunOptions, budget: OutputBud
           predicateError = error;
           trial.error = `Failure predicate evaluation failed: ${String(error)}`;
         }
+        if (trial.error !== undefined) trial.error = diagnosticMessage(trial.error);
         statistics.add(trial);
         summary.statistics = statistics.snapshot();
-        await writeJsonAtomic(join(directory, dirname(trial.stdoutPath), 'result.json'), trial);
+        const trialText = `${JSON.stringify(trial, null, 2)}\n`;
+        const trialBytes = Buffer.byteLength(trialText);
+        if (trialBytes > allowance) throw new Error('Trial record exceeded its reserved metadata allowance.');
+        await writeTextAtomic(join(directory, dirname(trial.stdoutPath), 'result.json'), trialText);
+        metadata.commit(allowance, trialBytes);
+        reservation = 0;
         if (predicateError) throw predicateError;
         await options.onTrialComplete?.(structuredClone(trial));
         if (trial.status === 'interrupted') { stopScheduling = true; controller.abort(); }
@@ -142,7 +170,7 @@ export async function runTrialsWithBudget(options: RunOptions, budget: OutputBud
           delete summary.decision;
           controller.abort();
         }
-        if (options.stopWhenDecided !== undefined && !controller.signal.aborted) {
+        if (options.stopWhenDecided !== undefined && !controller.signal.aborted && !summary.metadataLimit) {
           if (trial.terminationReason !== 'exit' || trial.spawningFailed || trial.error) {
             stopScheduling = true; // An infrastructure outcome cannot justify classification.
           } else {
@@ -159,6 +187,9 @@ export async function runTrialsWithBudget(options: RunOptions, budget: OutputBud
         }
       }
     } catch (error) {
+      // An unsuccessful persistence attempt may have left partial evidence.
+      // Charge its full reservation conservatively, then stop this run.
+      if (reservation) metadata.commit(reservation, reservation);
       if (!failed) { failed = true; firstError = error; }
       stopScheduling = true;
       controller.abort();
@@ -170,7 +201,7 @@ export async function runTrialsWithBudget(options: RunOptions, budget: OutputBud
         schemaVersion: 1, workingDirectory: await realpath(cwd), declaration,
         before: await captureContext(cwd, declaration, directory, controller.signal), stable: false,
       };
-      await writeRunSummary(summary);
+      await persistHeader();
     }
     // Workers absorb errors so all active trials finish cleanup and durable
     // persistence before the terminal summary (or caller rejection) is exposed.
@@ -178,6 +209,7 @@ export async function runTrialsWithBudget(options: RunOptions, budget: OutputBud
     if (failed) throw firstError;
     summary.status = options.signal?.aborted ? 'interrupted'
       : summary.trials.some((trial) => trial.status === 'output_error') ? 'error'
+      : summary.metadataLimit ? 'resource_limited'
       : summary.trials.some((trial) => trial.status === 'resource_limited') ? 'resource_limited'
       : summary.trials.some((trial) => trial.status === 'interrupted')
       ? 'interrupted'
@@ -186,7 +218,7 @@ export async function runTrialsWithBudget(options: RunOptions, budget: OutputBud
   } catch (error) {
     summary.status = 'error';
     delete summary.decision;
-    summary.error = error instanceof Error ? error.message : String(error);
+    summary.error = diagnosticMessage(error);
     throw new Error(`Run failed: ${summary.error}\nArtifacts: ${directory}`, { cause: error });
   } finally {
     summary.trials.sort((a, b) => a.index - b.index);
@@ -199,7 +231,7 @@ export async function runTrialsWithBudget(options: RunOptions, budget: OutputBud
     if (options.signal?.aborted && summary.status !== 'error') summary.status = 'interrupted';
     options.signal?.removeEventListener('abort', interrupt);
     summary.endedAt = new Date().toISOString();
-    await writeRunSummary(summary);
+    await persistHeader();
   }
   return summary;
 }

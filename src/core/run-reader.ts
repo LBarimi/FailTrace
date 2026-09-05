@@ -1,10 +1,12 @@
-import { lstat, opendir, readFile, realpath, stat } from 'node:fs/promises';
+import { lstat, opendir, realpath, stat } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { validatePredicate } from './predicates.js';
 import { MAX_METADATA_BYTES, type StoredRunSummary } from './run-metadata.js';
 import { aggregateStatistics } from './statistics.js';
 import type { RunSummary, TrialResult } from './types.js';
 import { outputLimits } from './output-budget.js';
+import { readBoundedFile } from './bounded-file.js';
+import { MAX_INVESTIGATION_METADATA_BYTES, MAX_RECORDED_TRIALS } from './metadata-budget.js';
 
 /** Resolve a referenced artifact without accepting escapes or symbolic links. */
 export async function safeArtifactPath(directory: string, path: string): Promise<string> {
@@ -56,7 +58,9 @@ export async function loadRun(reference: string, cwd = process.cwd()): Promise<R
   if (info.isDirectory()) path = join(path, 'run.json');
   path = await realpath(path);
   if ((await stat(path)).size > MAX_METADATA_BYTES) throw new Error('Run metadata exceeds the 32 MiB reader limit.');
-  const value: unknown = JSON.parse(await readFile(path, 'utf8'));
+  const header = await readBoundedFile(path, MAX_METADATA_BYTES);
+  let totalMetadataBytes = header.length;
+  const value: unknown = JSON.parse(header.toString('utf8'));
   if (!value || typeof value !== 'object') throw new Error('Invalid run metadata.');
   const run = value as StoredRunSummary;
   if (![1, 2].includes(run.schemaVersion) || (run.schemaVersion === 2 && run.trialStorage !== 'individual')
@@ -72,6 +76,14 @@ export async function loadRun(reference: string, cwd = process.cwd()): Promise<R
   }
   validatePredicate(run.predicate);
   outputLimits(run);
+  if (run.trials.length > MAX_RECORDED_TRIALS || (run.trialCount ?? 0) > MAX_RECORDED_TRIALS) {
+    throw new Error('Run exceeds the 100000 recorded trial reader limit.');
+  }
+  if (run.metadataLimit !== undefined && (!run.metadataLimit || typeof run.metadataLimit !== 'object'
+    || !['limitBytes', 'usedBytes', 'reservedBytes', 'requiredBytes'].every((key) => {
+      const value = run.metadataLimit![key as keyof NonNullable<RunSummary['metadataLimit']>];
+      return Number.isSafeInteger(value) && value >= (key === 'limitBytes' || key === 'requiredBytes' ? 1 : 0);
+    }))) throw new Error('Invalid metadata allowance evidence.');
   run.artifactDirectory = dirname(path);
   if (run.trialStorage !== undefined) {
     if (run.trialStorage !== 'individual' || run.trials.length !== 0
@@ -84,8 +96,10 @@ export async function loadRun(reference: string, cwd = process.cwd()): Promise<R
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
     if (trialsDirectory) {
+      let directories = 0;
       for await (const entry of await opendir(trialsDirectory)) {
         if (!/^\d+$/.test(entry.name)) continue;
+        if (++directories > MAX_RECORDED_TRIALS) throw new Error('Run exceeds the 100000 trial directory reader limit.');
         const index = Number(entry.name);
         if (!Number.isSafeInteger(index) || index < 1 || index > run.requestedTrials
           || entry.name !== String(index).padStart(3, '0') || !entry.isDirectory()) {
@@ -99,7 +113,12 @@ export async function loadRun(reference: string, cwd = process.cwd()): Promise<R
         }
         const trialInfo = await stat(trialPath);
         if (!trialInfo.isFile() || trialInfo.size > MAX_METADATA_BYTES) throw new Error('Invalid or oversized trial metadata.');
-        const trial: unknown = JSON.parse(await readFile(trialPath, 'utf8'));
+        if (trialInfo.size > MAX_INVESTIGATION_METADATA_BYTES - totalMetadataBytes) {
+          throw new Error('Run metadata reconstruction exceeds the 96 MiB aggregate limit.');
+        }
+        const bytes = await readBoundedFile(trialPath, Math.min(MAX_METADATA_BYTES, MAX_INVESTIGATION_METADATA_BYTES - totalMetadataBytes));
+        totalMetadataBytes += bytes.length;
+        const trial: unknown = JSON.parse(bytes.toString('utf8'));
         validateTrial(trial);
         if (trial.index !== index || trial.stdoutPath !== `trials/${entry.name}/stdout.txt`
           || trial.stderrPath !== `trials/${entry.name}/stderr.txt`) throw new Error('Trial record does not match its directory.');

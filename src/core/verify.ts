@@ -120,6 +120,7 @@ function knownEnvironment(value: unknown): value is EnvironmentSnapshot {
 function healthReasons(run: RunSummary, codes: number[]): string[] {
   const reasons: string[] = [];
   if (run.status !== 'completed' || run.error !== undefined || !run.endedAt) reasons.push('Run did not complete cleanly.');
+  if (run.metadataLimit !== undefined) reasons.push('Run exceeded its metadata allowance; the preselected sample is incomplete.');
   if (run.decision !== undefined) reasons.push('Threshold-stopped runs are not fixed-budget verification evidence.');
   if (run.trials.length !== run.requestedTrials || run.trials.some((trial, index) => trial.index !== index + 1 || trial.command !== run.command)) {
     reasons.push('Run does not contain every preselected trial in index order.');

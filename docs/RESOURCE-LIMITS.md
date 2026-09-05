@@ -37,9 +37,9 @@ node dist/cli/index.js verify <baseline> --command "node reproduce.js" --cwd . -
 
 Bundles record the source run's caps and replay with them. Older source runs use the new finite defaults. Replay returns 2 when evidence is inconclusive, including output exhaustion. No target command executes while creating a bundle.
 
-## Scope and remaining storage work
+## Resource scope
 
-Output byte budgets do not account for metadata, copied minimization inputs, Git worktrees, dependency installations, files written directly by the target, or previous investigations. The input budgets below separately bound copies managed by minimization. Metadata reconstruction still needs separate controls before the planned 1.0 release. No automatic deletion or retention schedule is applied.
+Output byte budgets do not account for metadata, copied minimization inputs, Git worktrees, dependency installations, files written directly by the target, or previous investigations. The budgets below separately bound managed input copies and run metadata. They are not a total filesystem quota. No automatic deletion or retention schedule is applied.
 
 Commands still run with local permissions. Timeout and descendant cleanup remain best effort, and a target can use files or processes outside these output pipes. Review sensitive output before sharing evidence.
 
@@ -55,3 +55,27 @@ Both values are positive safe integers. File-set inputs have at most 10000 files
 Exhausting the copy allowance returns `status: "limit_reached"`, `finalVerified: false`, and `storageLimit` with the allowance, bytes reserved and rejected request. CLI exits 2. `minimizedPath` points to an existing best available input: the last accepted candidate, or the preserved original when no reduction was accepted. An independent final check is not claimed. Previously completed candidate evidence and the original user input remain intact; even partial rejected copies count against the allowance.
 
 If the original input itself is larger than the requested input or copy allowance, validation fails before creating an investigation. Target-written files, later modifications by the target, metadata and output logs are outside this copy counter; output has its own budget. Limits do not grant filesystem isolation or automatically delete earlier investigations.
+
+## Metadata and scheduling
+
+These fixed limits apply to the source checkout toward 1.0:
+
+| Limit | Maximum | Scope |
+| --- | --- | --- |
+| Command | 64 KiB UTF-8 | One command; use a project-owned script for longer commands |
+| Requested trials | 100000 | One run or candidate run |
+| Concurrency | 64 | Active trials in a run; the default remains 1 |
+| Minimization evaluations | 10000 | Baseline, reductions and final check combined; the default remains 200 |
+| Metadata document | 32 MiB | Each atomic JSON write and each run/trial document read |
+| Generated run metadata | 96 MiB | Retained run headers and individual trial records across a run, bisect or minimization |
+| Reconstructed metadata | 96 MiB and 100000 trials | One saved run, including the header and all loaded individual records |
+
+Before a run starts, the writer reserves 32 MiB for its terminal header. Each trial reserves its maximum encoded record before command execution. After persistence, unused reservation is returned and stored bytes remain charged. This means scheduling can stop before 96 MiB is actually written: reserved headroom is required to preserve a terminal checkpoint. Already reserved concurrent trials may finish normally. Failed persistence attempts conservatively consume their reservation.
+
+When another trial cannot be reserved, the run records `status: "resource_limited"` and `metadataLimit: { limitBytes, usedBytes, reservedBytes, requiredBytes }`. Existing observations remain valid individually, but `assessRun` and Verify cannot classify the incomplete sample as healthy evidence. There is no synthetic failed trial for work that never started. CLI exits 2 and MCP includes the limit details. If the next candidate cannot reserve a run header, bisect returns `inconclusive`; minimization returns `limit_reached`, retains its best existing input and cannot claim final verification.
+
+The counter measures encoded bytes, not process RSS or filesystem allocation. Reconstructing JavaScript objects and printing CLI JSON require additional memory. Atomic replacement temporarily retains both the old document and its replacement. Investigation-level reports have their own 32 MiB per-document ceiling; they are outside the run-record counter. No writer can guarantee a final checkpoint if the filesystem itself stops accepting writes.
+
+Bisect schema 2 records compact candidate evidence with `trialCount`, `matchedTrials`, settings, statistics and `metadataPath`; it no longer retains each candidate's full `trials` array in the parent result. Retrieve the complete saved run with `loadRun(candidate.run.metadataPath)`, or use `failtrace_inspect_run` for bounded agent responses. The source commit remains with the saved run, so selecting source files for a reproduction bundle continues to work after worktree cleanup.
+
+The reader accepts both stored run schemas 1 and 2 within these byte/count bounds, including crash recovery. Older incomplete runs may have a larger requested count if their actually recorded data fits. Oversized historical records fail explicitly; they are neither silently truncated nor deleted. Long internal diagnostics are shortened to at most 2048 characters in newly generated records, with a truncation marker; their failure status is retained. Commands and target output are governed by their separate limits.

@@ -50,15 +50,19 @@ async function savedRun(cwd: string, count = 45): Promise<RunSummary> {
   return summary;
 }
 
-async function mutateAfterNextHandleRead(path: string, mutation: () => Promise<void>, operation: () => Promise<unknown>): Promise<void> {
+async function mutateAfterOutputRead(path: string, mutation: () => Promise<void>, operation: () => Promise<unknown>): Promise<void> {
   const probe = await open(path, 'r');
+  const identity = await probe.stat({ bigint: true });
   const prototype = Object.getPrototypeOf(probe) as { read: BufferRead };
   const original = prototype.read;
   await probe.close();
   let mutated = false;
   prototype.read = async function (buffer, offset, length, position) {
     const result = await original.call(this, buffer, offset, length, position);
-    if (!mutated) {
+    // Metadata now also uses bounded handle reads. Inject the mutation only
+    // after reading the selected output, not an earlier metadata document.
+    const current = await this.stat({ bigint: true });
+    if (!mutated && current.dev === identity.dev && current.ino === identity.ino) {
       mutated = true;
       await mutation();
     }
@@ -200,7 +204,7 @@ describe('inspectRunEvidence', () => {
   it('rejects a saved output whose size changes after its bounded read', async () => {
     const run = await savedRun(await workspace(), 1);
     const path = join(run.artifactDirectory, 'trials', '001', 'stdout.txt');
-    await mutateAfterNextHandleRead(path, () => appendFile(path, 'changed'), () => inspectRunEvidence({
+    await mutateAfterOutputRead(path, () => appendFile(path, 'changed'), () => inspectRunEvidence({
       view: 'output', run: run.artifactDirectory, trial: 1, stream: 'stdout', maxBytes: 8,
     }));
   });
@@ -210,7 +214,7 @@ describe('inspectRunEvidence', () => {
     const path = join(run.artifactDirectory, 'trials', '001', 'stdout.txt');
     const replacement = await readFile(path);
     const original = `${path}.original`;
-    await mutateAfterNextHandleRead(path, async () => {
+    await mutateAfterOutputRead(path, async () => {
       await rename(path, original);
       await writeFile(path, replacement);
     }, () => inspectRunEvidence({

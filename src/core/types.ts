@@ -1,5 +1,6 @@
 import type { ContextCaptureOptions, RunContext } from './verify-context.js';
 import type { OutputBudget, OutputLimit, OutputLimits } from './output-budget.js';
+import type { MetadataLimit } from './metadata-budget.js';
 
 export type TrialStatus = 'passed' | 'failed' | 'timed_out' | 'spawn_error' | 'interrupted' | 'resource_limited' | 'output_error';
 export type TerminationReason = 'exit' | 'signal' | 'timeout' | 'spawn_error' | 'interrupted' | 'output_limit' | 'output_error';
@@ -71,6 +72,8 @@ export interface RunSummary extends OutputLimits {
   decision?: { minFailures: number; outcome: 'reproduced' | 'not_reproduced'; completedTrials: number };
   error?: string;
   predicate?: FailurePredicate;
+  /** No further trial could be safely recorded within the investigation allowance. */
+  metadataLimit?: MetadataLimit;
   environment?: EnvironmentSnapshot;
   /** Opt-in declared file and local source identities, captured before and after execution. */
   context?: RunContext;
