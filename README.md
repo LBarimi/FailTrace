@@ -39,7 +39,7 @@ Connect the local stdio MCP server through your client's configuration:
 npx --yes failtrace@1.1.0 mcp --cwd "/absolute/path/to/your/project"
 ```
 
-**[Setup for Codex, Claude Code, Cursor, and other MCP clients →](docs/AGENT-WORKFLOWS.md)**
+**[Connect your MCP client and try an investigation →](docs/AGENT-WORKFLOWS.md)**
 
 Your client launches this command; running it alone in a terminal waits for MCP requests. The guide covers Windows command shims and an optional project instruction snippet.
 
@@ -60,6 +60,8 @@ npx --yes failtrace@1.1.0 run "npm test -- checkout" --repeat 20 --stderr-contai
 ```
 
 FailTrace saves each trial's output and prints an investigation ID. Exit `1` can mean the failure you are investigating was recorded. Add `--json` for automation, and use the [command reference](docs/CLI.md) to inspect or continue that investigation.
+
+For repeated use, [save the experiment settings in your project scripts](docs/PROJECT-WORKFLOW.md) and capture a baseline before changing code.
 
 | When you need to… | Use | What you get |
 | --- | --- | --- |
@@ -89,7 +91,7 @@ The target command can use any runtime; FailTrace itself requires Node.js. Input
 
 Version 1.1.0 adds stricter Bisect exit policies, target-first comparison, and clearer CLI diagnostics. Review the migration notes when upgrading existing workflows. [Changes and migration notes](CHANGELOG.md#110) · [Product roadmap](docs/ROADMAP.md)
 
-**In this source checkout, unreleased:** [require a completed-check signal](docs/EXECUTION-EVIDENCE.md) when evaluating an experiment or proposed fix. The original event-import example distinguishes a working patch from a checker that was silently skipped. The published commands above continue to use 1.1.0.
+**In this source checkout, unreleased:** [trace a lost data revision or an overlapping update](docs/WORKFLOWS.md) using original runnable examples. They reduce a reproducer and distinguish a working patch from a checker that was silently skipped using [completed-check signals](docs/EXECUTION-EVIDENCE.md). The published commands above continue to use 1.1.0.
 
 **[Tell us where FailTrace helped or got stuck →](https://github.com/LBarimi/FailTrace/issues/new?template=workflow.yml)**
 

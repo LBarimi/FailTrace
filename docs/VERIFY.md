@@ -84,7 +84,7 @@ For agents using a version through 0.4.0, call `failtrace_run` twice and `failtr
 
 A suitable report is: "The target matched 14/50 valid baseline trials and 0/50 valid candidate trials under the recorded conditions. All candidate commands exited successfully. The target was not observed in that candidate sample; elimination and statistical improvement have not been established." The counts here illustrate wording, not a measured FailTrace case.
 
-The [Prettier investigation](../examples/cases/prettier-chain/investigate.mjs) uses an affected version, a fixed control, actual successful exit checks and a reduced-input recheck. Its version-specific commands are an intentional intervention. Its manual checks illustrate the same requirement to separate the intended defect from unrelated parser errors.
+The original [event-import example](EXECUTION-EVIDENCE.md) preserves an affected baseline, checks a corrected importer, and rejects skipped checks and unrelated preparation errors. Its source changes are declared interventions. The checkpoint option requires the unreleased source build.
 
 ## Evidence requirements enforced by Core
 

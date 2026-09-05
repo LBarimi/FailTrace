@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
-import { lstat, mkdir, mkdtemp, readFile, readdir, realpath, rm, stat, writeFile } from 'node:fs/promises';
+import { copyFile, lstat, mkdir, mkdtemp, readFile, readdir, realpath, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, delimiter, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -191,12 +191,36 @@ async function exerciseInstalledVerification() {
   assert.equal(skipped.candidate.executionEvidenceMissingTrials, 2);
   assert.equal((await invoke(cliArgs, 2)).status, 'inconclusive');
   await writeFile(target, fixed);
-  console.log(JSON.stringify({ cwd, command, baseline: options.baseline, core: 'passed', cli: 'passed', unrelatedErrorGuard: 'passed', skippedCheckGuard: 'passed' }));
+  const scripts = {
+    'debug:baseline': 'failtrace run "node target.mjs" --repeat 2 --timeout 5s --stderr-contains SMOKE_TARGET --context-input input.json --context-setup package.json --context-setup setup.json --context-source target.mjs',
+    'debug:verify': 'failtrace verify --command "node target.mjs" --cwd . --allow-change "source:check the proposed fix"',
+  };
+  await writeFile(join(cwd, 'package.json'), JSON.stringify({ name: 'failtrace-workflow-consumer', private: true, scripts }, null, 2));
+  const namedAction = async (name, arguments_, expected) => {
+    let result;
+    try { result = { ...await execute(process.execPath, [process.env.FAILTRACE_SMOKE_NPM, 'run', '--silent', name, '--', ...arguments_, '--json'],
+      { cwd, windowsHide: true, timeout: 30_000, maxBuffer: 2 * 1024 * 1024 }), code: 0 }; }
+    catch (error) { if (typeof error.code !== 'number') throw error; result = error; }
+    assert.equal(result.code, expected, result.stderr);
+    assert.equal(result.stderr, '');
+    return JSON.parse(result.stdout);
+  };
+  await writeFile(target, affected);
+  const recipeBaseline = await namedAction('debug:baseline', [], 1);
+  assert.equal(recipeBaseline.command, 'node target.mjs');
+  assert.equal(recipeBaseline.trials.filter(trial => trial.failureMatched === true).length, 2);
+  assert.equal((await namedAction('debug:verify', [recipeBaseline.id], 1)).status, 'target_observed');
+  await writeFile(target, fixed);
+  const recipeFixed = await namedAction('debug:verify', [recipeBaseline.id], 0);
+  assert.equal(recipeFixed.status, 'target_not_observed');
+  assert.deepEqual(recipeFixed.changes.map(change => change.field), ['source']);
+  console.log(JSON.stringify({ cwd, command, baseline: options.baseline, core: 'passed', cli: 'passed', unrelatedErrorGuard: 'passed',
+    skippedCheckGuard: 'passed', namedProjectActions: 'passed' }));
 }
 
 // The SDK client is a development-only test harness in this checkout. The
 // server process below is always the independently installed production CLI.
-async function exerciseInstalledMcp(installedDirectory, verification, environment) {
+async function exerciseInstalledMcp(installedDirectory, verification, environment, workflows) {
   const { Client } = await import('@modelcontextprotocol/client');
   const { StdioClientTransport } = await import('@modelcontextprotocol/client/stdio');
   const client = new Client({ name: 'failtrace-package-smoke', version: '1.0.0' });
@@ -274,9 +298,62 @@ async function exerciseInstalledMcp(installedDirectory, verification, environmen
     assert.equal(bounded.isError, false);
     assert.equal(bounded.structuredContent.status, 'resource_limited');
     assert.equal(bounded.structuredContent.matchedTrials, 0);
+    for (const [key, specification] of Object.entries({
+      eventImport: { folder: 'event-import', implementation: 'importer.mjs', fixed: 'importer-fixed.mjs', input: 'events.json',
+        target: 'IMPORT_REVISION_LOST', checkpoint: 'IMPORT_CHECK_COMPLETED', repeat: 3, matches: 3 },
+      asyncCounter: { folder: 'async-counter', implementation: 'counter.mjs', fixed: 'counter-fixed.mjs', input: 'schedule.json',
+        target: 'COUNTER_UPDATE_LOST', checkpoint: 'COUNTER_CHECK_COMPLETED', repeat: 6, matches: 3 },
+    })) {
+      const project = workflows[key];
+      const fixture = join(installedDirectory, 'examples', 'workflows', specification.folder);
+      await copyFile(join(fixture, specification.implementation), join(project.cwd, specification.implementation));
+      const call = async (name, arguments_) => {
+        const result = await client.callTool({ name, arguments: arguments_ });
+        assert.equal(result.isError, false, JSON.stringify(result.content));
+        return result.structuredContent;
+      };
+      const predicate = { kind: 'stderr_contains', value: specification.target };
+      const baseline = await call('failtrace_run', { command: project.command, cwd: project.cwd, repeat: specification.repeat,
+        predicate, executionRequirement: { stream: 'stdout', contains: specification.checkpoint },
+        captureContext: { inputFiles: [specification.input], sourceFiles: ['check.mjs', specification.implementation] },
+      });
+      assert.equal(baseline.matchedTrials, specification.matches);
+      assert.equal(baseline.executionEvidenceMissingTrials, 0);
+      if (key === 'eventImport') {
+        const reduced = await call('failtrace_minimize', { command: project.command, cwd: project.cwd,
+          input: specification.input, format: 'json', maxEvaluations: 100, predicate });
+        assert.equal(reduced.status, 'completed');
+        assert.equal(reduced.finalVerified, true);
+        assert.equal(JSON.parse(await readFile(reduced.minimizedPath, 'utf8')).length, 2);
+        const bundle = await call('failtrace_bundle', { run: reduced.final.runDirectory, cwd: project.cwd,
+          files: ['check.mjs', specification.implementation], input: reduced.minimizedPath, command: 'node check.mjs' });
+        const replay = await execute(process.execPath, [join(bundle.directory, 'repro.mjs')], {
+          cwd: project.cwd, env: environment, windowsHide: true, timeout: 30_000,
+        }).then(() => { throw new Error('Installed MCP bundle must reproduce the reduced failure.'); }, error => error);
+        assert.equal(replay.code, 1);
+        assert.equal(replay.stderr, '');
+        assert.match(replay.stdout, /Target failure reproduced: 1 \/ 1/);
+      }
+      await copyFile(join(fixture, specification.fixed), join(project.cwd, specification.implementation));
+      const options = { baseline: baseline.artifactDirectory, command: project.command, cwd: project.cwd,
+        allowChanges: [{ field: 'source', reason: 'Apply the supplied original-workflow fix.' }] };
+      const fixed = await call('failtrace_verify', options);
+      assert.equal(fixed.status, 'target_not_observed');
+      assert.equal(fixed.candidate.healthyTrials, specification.repeat);
+      const comparison = await call('failtrace_compare', { runA: baseline.artifactDirectory, runB: fixed.candidate.artifactDirectory });
+      assert.equal(comparison.stderr.equal, false);
+      await writeFile(join(project.cwd, 'check.mjs'), 'process.exitCode = 0;\n');
+      const skipped = await call('failtrace_verify', options);
+      assert.equal(skipped.status, 'inconclusive');
+      assert.equal(skipped.candidate.executionEvidenceMissingTrials, specification.repeat);
+      const missing = await call('failtrace_inspect_run', { run: skipped.candidate.metadataPath, view: 'trials', filter: 'unhealthy' });
+      assert.equal(missing.trials.length, specification.repeat);
+      assert(missing.trials.every(trial => trial.executionMatched === false));
+      await copyFile(join(fixture, 'check.mjs'), join(project.cwd, 'check.mjs'));
+    }
     assert.deepEqual(errors, []);
     assert.equal(stderr.join(''), '', 'MCP stdout must stay protocol-only and stderr should be quiet');
-    return { verification: 'passed', inspection: 'passed' };
+    return { verification: 'passed', inspection: 'passed', originalWorkflows: 'passed' };
   } finally {
     await client.close();
   }
@@ -291,6 +368,7 @@ const consumer = join(temporary, 'consumer');
 const environment = { ...process.env };
 delete environment.NODE_PATH;
 environment.FAILTRACE_SMOKE_VERSION = manifest.version;
+environment.FAILTRACE_SMOKE_NPM = npm;
 const npmRun = (args, cwd) => execute(process.execPath, [npm, ...args], {
   cwd, env: environment, windowsHide: true, timeout: 180_000, maxBuffer: 4 * 1024 * 1024,
 });
@@ -345,7 +423,20 @@ try {
     cwd: consumer, env: environment, windowsHide: true, timeout: 60_000, maxBuffer: 2 * 1024 * 1024,
   });
   const verification = JSON.parse(verifyOutput.stdout);
-  const mcpChecks = await exerciseInstalledMcp(installedDirectory, verification, environment);
+  const workflowOutput = await execute(process.execPath, [join(installedDirectory, 'examples', 'workflows', 'investigate.mjs')], {
+    cwd: consumer, env: environment, windowsHide: true, timeout: 120_000, maxBuffer: 2 * 1024 * 1024,
+  });
+  const workflowSummary = JSON.parse(workflowOutput.stdout);
+  const workflows = JSON.parse(await readFile(resolve(consumer, workflowSummary.reportPath), 'utf8'));
+  assert.deepEqual(workflowSummary.eventImport, { inputRecords: 12, reducedRecords: 2, finalVerified: true,
+    ineffectiveFix: 'target_observed', unrelatedError: 'inconclusive', skippedCheck: 'inconclusive', validFix: 'target_not_observed', replay: 'target_observed' });
+  assert.deepEqual(workflowSummary.asyncCounter, { predeclaredSchedules: 6, baselineMatches: 3,
+    ineffectiveFix: 'target_observed', unrelatedError: 'inconclusive', skippedCheck: 'inconclusive', validFix: 'target_not_observed' });
+  for (const workflow of Object.values(workflows).filter(value => value && typeof value === 'object')) {
+    for (const key of ['baseline', 'fixed', 'ineffective', 'unrelated', 'skipped']) await stat(workflow[key]);
+    if (workflow.reduction) await stat(workflow.reduction);
+  }
+  const mcpChecks = await exerciseInstalledMcp(installedDirectory, verification, environment, workflows);
   const help = await npmRun(['exec', '--offline', '--', 'failtrace', '--help'], consumer);
   assert(/\bfailtrace demo\b/.test(help.stdout), 'Installed CLI must advertise the demo');
   const demoOutput = await npmRun(['exec', '--offline', '--', 'failtrace', 'demo', '--json'], consumer);
@@ -392,7 +483,9 @@ try {
     checks: { installedCli: 'passed', installedCore: 'passed', productionDependenciesOnly: 'passed', installedDemo: 'passed',
       installedVerifyCore: verification.core, installedVerifyCli: verification.cli, installedVerifyMcp: mcpChecks.verification,
       installedInspectMcp: mcpChecks.inspection, installedBundleManifest: 'passed', installedBundleReplay: 'passed',
-      unrelatedErrorGuard: verification.unrelatedErrorGuard, installedSkippedCheckGuard: verification.skippedCheckGuard },
+      unrelatedErrorGuard: verification.unrelatedErrorGuard, installedSkippedCheckGuard: verification.skippedCheckGuard,
+      installedOriginalWorkflows: 'passed', installedOriginalMcpWorkflows: mcpChecks.originalWorkflows },
+    namedProjectActions: verification.namedProjectActions,
     core: { total: core.total, failed: core.failed, comparison: core.comparison, inspection: core.inspection },
     retained: keep,
     ...(keep ? { consumerDirectory: consumer, coreRunDirectory: core.artifactDirectory,

@@ -19,6 +19,8 @@ npx failtrace demo
 
 Keep the dependency and lockfile with your project. Target commands need their own dependencies and setup. The project itself need not use JavaScript.
 
+For an existing npm project, [name the baseline and verification actions](PROJECT-WORKFLOW.md) to reuse the same conditions without retyping the flags.
+
 ## Install globally
 
 ```sh
@@ -30,7 +32,7 @@ For native Windows applications that do not resolve npm's shims automatically, u
 
 ## Connect an AI coding agent
 
-The CLI and MCP server ship in the same package. Follow the [Codex, Claude Code, Cursor, and generic MCP setup guide](AGENT-WORKFLOWS.md). The configured client launches the stdio server; directly running `failtrace mcp` waits for protocol messages.
+The CLI and MCP server ship in the same package. Follow the [MCP client setup guide](AGENT-WORKFLOWS.md). The configured client launches the stdio server; directly running `failtrace mcp` waits for protocol messages.
 
 ## GitHub release alternative
 

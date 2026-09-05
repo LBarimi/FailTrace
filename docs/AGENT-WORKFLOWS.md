@@ -1,6 +1,6 @@
 # Use FailTrace with a coding agent
 
-This guide targets FailTrace 1.1.0. See the [installation instructions](../README.md#quick-start) for verified npm and GitHub package commands.
+This guide targets published FailTrace 1.1.0. The source checkout also provides [unreleased execution checkpoints](EXECUTION-EVIDENCE.md); use a supporting build throughout that workflow. See the [installation instructions](../README.md#quick-start) for verified npm and GitHub package commands.
 
 Ask your agent to measure a flaky command, compare the saved evidence, or reduce a reproducing input. FailTrace performs the repeated experiments locally and returns inspectable results; the agent uses those results to investigate the code.
 
@@ -31,70 +31,7 @@ failtrace mcp --cwd "/absolute/path/to/project"
 
 Use `failtrace` as the configured command and `mcp`, `--cwd`, and the absolute project path as its arguments. Native Windows clients that do not resolve npm's command shims should use `failtrace.cmd`; the same rule uses `npx.cmd` for the no-install examples below.
 
-## Codex
-
-Register the pinned package with the Codex CLI:
-
-```sh
-codex mcp add failtrace -- npx --yes failtrace@1.1.0 mcp --cwd "/absolute/path/to/project"
-codex mcp list
-```
-
-For a longer but bounded investigation, edit the existing server table in `~/.codex/config.toml`, or use a project `.codex/config.toml` in a trusted project:
-
-```toml
-[mcp_servers.failtrace]
-command = "npx"
-args = ["--yes", "failtrace@1.1.0", "mcp", "--cwd", "/absolute/path/to/project"]
-cwd = "/absolute/path/to/project"
-startup_timeout_sec = 60
-tool_timeout_sec = 600
-```
-
-Replace the path with your own. On Windows, set `command = "npx.cmd"` if the native client does not resolve the npm batch shim. The 60-second startup allowance covers a cold npm download; later starts normally use npm's cache. The example allows ten minutes per tool call, so still choose counts and per-trial timeouts that leave room for setup and cleanup. Start with five trials at `timeoutMs: 5000` when checking a new connection. The configuration fields, scopes, defaults, and CLI registration follow [official OpenAI MCP documentation](https://learn.chatgpt.com/docs/extend/mcp?surface=cli).
-
-## Claude Code
-
-From the project you want to investigate, register the server with its explicit absolute path:
-
-```sh
-claude mcp add --transport stdio --scope local failtrace -- npx --yes failtrace@1.1.0 mcp --cwd "/absolute/path/to/project"
-claude mcp get failtrace
-```
-
-For native Windows PowerShell, call npm's command shim explicitly:
-
-```powershell
-claude mcp add --transport stdio --scope local failtrace -- npx.cmd --yes failtrace@1.1.0 mcp --cwd "C:/work/my-project"
-```
-
-Local scope keeps this registration private to the current project. Project scope instead writes a shareable `.mcp.json`; review machine-specific paths before choosing that scope. In Claude Code, use `/mcp` to check the connection and available tools. Follow the client's normal server approval flow if it requests one. These registration and scope details follow the [official Claude Code MCP reference](https://code.claude.com/docs/en/mcp).
-
-## Cursor
-
-For a project configuration, merge this entry into that project's `.cursor/mcp.json`. `${workspaceFolder}` selects the project containing the configuration:
-
-```json
-{
-  "mcpServers": {
-    "failtrace": {
-      "type": "stdio",
-      "command": "npx",
-      "args": [
-        "--yes",
-        "failtrace@1.1.0",
-        "mcp",
-        "--cwd",
-        "${workspaceFolder}"
-      ]
-    }
-  }
-}
-```
-
-On Windows, use `"command": "npx.cmd"` if Cursor cannot resolve `npx`. Cursor also supports a global `~/.cursor/mcp.json`. For a configuration tied to one project, the project file keeps the working directory explicit. Check the server in Cursor's Customize page and confirm the tools listed below are available to Agent. Cursor's configuration locations, `stdio` fields, and workspace interpolation are documented in its [official MCP reference](https://cursor.com/docs/mcp).
-
-## Other clients and Windows paths
+## MCP client configuration and Windows paths
 
 Clients that accept `mcpServers` JSON can use this configuration shape with their own configuration location. Every `args` element is one argument; do not add shell quotes inside an argument string.
 
@@ -119,6 +56,8 @@ Clients that accept `mcpServers` JSON can use this configuration shape with thei
 Use `npx.cmd` on Windows when the client launches commands directly rather than through a shell. JSON backslashes must be doubled; forward slashes make Windows project paths easier to copy. Use `run`, `compare`, `bisect`, `minimize`, `verify`, or `bundle` for terminal investigations.
 
 ### Source fallback and contributor setup
+
+For an original investigation against the source build, try the [data-import and asynchronous-update workflows](WORKFLOWS.md). Their completed-check requirement is unreleased; use the source server for those calls.
 
 To build from source instead, clone the repository, run `npm ci` and `npm run build`, then configure `node` with the checkout's absolute `dist/cli/index.js`, `mcp`, `--cwd`, and absolute project path as separate arguments. Keep the checkout and rebuild after updates. The advanced source-demo recipe later in this guide uses a checkout; the connection test does not.
 
@@ -321,7 +260,7 @@ Choose a bounded experiment that fits the client's tool-call timeout. The per-tr
 
 **Opt in deliberately:** review this snippet and copy it into the instruction file your agent reads. This guide does not create or replace any client configuration or project instruction file. Keep existing repository rules.
 
-Claude Code supports project instructions in `CLAUDE.md`; see its [official memory documentation](https://code.claude.com/docs/en/memory). Cursor supports project rules and `AGENTS.md`; see its [official rules documentation](https://cursor.com/docs/rules). Use the appropriate existing file for your client.
+Use the existing project instruction file supported by your client, and preserve its current rules.
 
 ```markdown
 ## Failure investigations

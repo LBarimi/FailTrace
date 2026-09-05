@@ -38,13 +38,5 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
-      - run: npm ci --ignore-scripts --allow-remote=root
-        working-directory: examples/cases/prettier-chain
-      - run: npm test
-        working-directory: examples/cases/prettier-chain
-      - run: npm run investigate
-        working-directory: examples/cases/prettier-chain
-      - run: npm run verify
-        working-directory: examples/cases/prettier-chain
-      - run: npm run case:p-memoize
+      - run: npm run test:workflows
       - run: npm run test:package

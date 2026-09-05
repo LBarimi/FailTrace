@@ -1,55 +1,42 @@
 # Product direction and roadmap
 
-FailTrace helps developers and coding agents turn a difficult failure into repeatable experiments, a smaller reproducer, and inspectable evidence. **Fix verification** now connects that evidence to a proposed code change in version 0.5.0: determine what new observations establish about the original failure without claiming elimination.
-
-Success remains independent use and repeat use, as described in the [adoption goal](ADOPTION.md). The priorities below are not a release schedule or evidence of adoption.
+FailTrace helps developers and coding agents turn a difficult failure into repeatable experiments, a smaller reproducer and inspectable evidence after a proposed change. Success means useful independent use and repeat use, as described in the [adoption goal](ADOPTION.md).
 
 ## Capability priorities and current state
 
 **Predicate → Compare → Bisect → Minimize → Verify → Bundle → MCP**
 
-This expresses product emphasis, not a requirement to execute every operation in order or rebuild completed milestones. A small bug may need only reproduction and verification. A bundle can help another developer investigate before a fix exists. MCP already provides access to the engine and remains supported.
+This expresses product emphasis. An investigation can use just the operations it needs; a small defect may need only a baseline and verification. MCP exposes the same Core engine and remains supported.
 
-| Capability | Current state | Next emphasis |
+| Capability | Published 1.1.0 | Next emphasis |
 | --- | --- | --- |
-| Predicate | Implemented: nonzero/exact exit, stdout/stderr substring and regex | Identify the intended defect separately from execution problems |
-| Compare | Implemented: saved runs, selected trial output, hashes, statistics and selected environment | Make comparable evidence easy to inspect; it currently gives no fix verdict |
-| Bisect | Implemented: repeated first-parent candidate classification in an isolated worktree | Preserve inconclusive outcomes and source evidence |
-| Minimize | Implemented: text, JSON/arrays, files and environment keys | Keep the same target failure and independently check the reduction |
-| **Verify** | **Implemented in 0.5.0: Core `verifyFix`, CLI/JSON and MCP** | Seek independent use and address observed workflow friction |
-| Bundle | Implemented: selected source/input and local replay engine; 1.0 adds explicit sharing choices, optional original evidence and a content manifest | Preserve reproduction context and review included data; bundling an entire verification report is not implemented |
-| MCP | Implemented: six tools in 0.5.0; version 0.6.0 adds bounded read-only run inspection as the seventh, all calling Core | Keep the adapter thin and preserve complete evidence counts |
+| Predicate | Nonzero/exact exit, stdout/stderr substring and regex | Separate the intended defect from execution problems |
+| Compare | Saved outputs, hashes, statistics, selected environment and interpretation warnings | Help callers choose comparable evidence |
+| Bisect | Repeated first-parent classification in an isolated worktree with explicit exit policies | Preserve inconclusive outcomes and source evidence |
+| Minimize | Text, JSON, files and environment keys, with a separate final recheck | Preserve the target and make candidate-input setup easier |
+| Verify | Baseline eligibility, declared context, fixed-budget sampling and linked evidence | Distinguish valid execution from skipped or incomplete checks |
+| Bundle | Selected source/input, replay engine, sharing choices and content manifest | Preserve useful reproduction context and explicit sharing scope |
+| MCP | Seven tools, including bounded read-only saved-run inspection | Keep complete counts and interpretation aligned with Core |
 
-The six original milestones are implemented in 0.3.1. Version 0.4.0 adds opt-in concurrency, threshold stopping for bisect/minimize, efficient metadata, recovery, file-copy optimization and benchmarks; see [performance scope and remaining limits](PERFORMANCE.md).
+The original milestones are implemented. Their completion is not an adoption metric. See the [compatibility contract](COMPATIBILITY.md), [command reference](CLI.md) and [performance scope](PERFORMANCE.md).
 
-## Why Verify was added
+## Unreleased source improvements
 
-Before 0.5.0, an agent could run commands again and compare two saved runs, but the caller had to keep the original predicate and input, recognize incomplete or contaminated experiments, and avoid calling a different failure a successful fix. The dedicated Verify operation enforces those requirements and links the evidence rather than merely shortening two commands.
+The source checkout supports [execution checkpoints](EXECUTION-EVIDENCE.md). A baseline can require a message emitted after the intended check has run. Verify inherits it and reports an inconclusive result when a candidate silently skips that check. Core, CLI, MCP, saved inspection, comparison, classification and replay preserve the condition. Published 1.1.0 does not include this option.
 
-The [verification contract and workflow](VERIFY.md) define the released scope and its limits. The 0.5.0 release validation covered:
+Original authored workflow fixtures exercise affected implementations, valid fixes and misleading candidate controls. They demonstrate how evidence changes a debugging decision; they are not production incident reports or evidence of external adoption.
 
-1. Affected/fixed controls and negative controls for an unrelated error, an unchanged defect and an interrupted experiment.
-2. Core baseline eligibility, explicit experiment settings, healthy completion checks, fixed-budget sampling and a linked durable report.
-3. A historical [Prettier defect](../examples/cases/prettier-chain/README.md) and a controlled [p-memoize race](../examples/cases/p-memoize-race/README.md), each with affected, fixed and negative-control evidence.
-4. CLI/JSON and MCP wrappers against the same operation, including a fresh installation of the public package and an unrelated-error guard.
+## Next priorities
 
-The next adoption step is voluntary evidence that developers or agents used the released workflow on their own fixes and returned to it. Observed setup or interpretation friction should determine the next improvement.
+- Reduce repeated setup for commands, target signatures and baseline context without granting saved files implicit execution authority.
+- Make saved evidence discoverable and storage operations bounded, reviewable and safe around active or referenced work.
+- Preserve OS/Node, installed-package, replay and performance gates. Record local-only validation accurately while publication is pending.
+- Collect voluntary observations of time to first useful result, interpretation errors and second use. Let those observations determine further features.
 
-## Positioning and market evidence
+## Boundaries
 
-The useful combination is a framework-independent command, an explicit failure predicate, repeated experiments, regression isolation, input reduction and portable evidence. We should demonstrate that combination on real failures. Adding an LLM, dashboard or another tool name does not by itself establish differentiation.
+Statistical uncertainty requires a defined sampling plan. Sequential trials are not automatically independent, and zero observed failures do not prove elimination. Bisect/minimize stopping rules establish sampled threshold decisions.
 
-Cypress Cloud MCP exposes recorded runs, flaky tests and failure details to agents. Cypress also offers `cypress tap`, which lets agents run and inspect local Cypress tests. Thus, describing all competing tools as passive data viewers would be inaccurate. These are distinct capabilities documented in [Cloud MCP](https://docs.cypress.io/cloud/integrations/cloud-mcp) and [Cypress AI tooling](https://docs.cypress.io/cloud/features/cypress-ai-features), reviewed on 2026-09-05.
+Output, input copies, input complexity and metadata are bounded; see [resource limits](RESOURCE-LIMITS.md). Target services, dependency setup and state reset remain the caller's responsibility. Concurrency changes resource contention and may change failure behavior.
 
-Trunk documents framework-independent flaky-test detection, tracking, quarantine and remediation. Framework independence alone is therefore not a unique advantage either. Its documented scope is evidence of an existing developer problem, not evidence that those users will adopt FailTrace. See [Trunk's overview](https://docs.trunk.io/flaky-tests/overview).
-
-Our product hypothesis is that reusable, local failure experiments and trustworthy after-fix evidence will be valuable across test frameworks and custom commands. That hypothesis needs usage evidence; competitor feature lists and a completed roadmap cannot validate it.
-
-## Supporting work and boundaries
-
-The 1.0 scope includes the [public compatibility contract](COMPATIBILITY.md), [0.x migration](MIGRATING-TO-1.md), bounded experiments and bundle sharing controls. The public 1.0.0-rc.1 archive passed cross-platform and minimum-runtime CI, independent installation, public-download verification and replay. Final GitHub/npm/MCP distribution passed separate public-download, npm-installation and Registry checks; see [installation](../README.md#quick-start) and [verification evidence](IMPLEMENTATION.md). After release, prioritize voluntary evidence of useful real-project and agent workflows. Release checks do not establish independent adoption.
-
-- Statistical uncertainty belongs with a defined sampling plan. Sequential trials are not automatically independent; zero observed failures do not prove elimination. Do not reuse bisect's classification stopping rule for an ordinary failure-rate confidence claim.
-- Version 1.0 adds [bounded output, input copies, input complexity and metadata](RESOURCE-LIMITS.md), preserving inconclusive outcomes when evidence is incomplete. Version 0.6.0 predates these controls. There are no general before/after-trial reset hooks, total filesystem quota or automatic retention. Project-owned wrapper scripts can perform setup/reset today.
-- Further predicate modes, environment matrices, reducers and performance paths remain candidates, not committed releases. The syntax `--fail-when`, bisect/minimize `--run`, and `matrix` is not currently supported.
-- Keep Core independent of the CLI, MCP, AI providers and cloud services. Maintain the existing adapter while prioritizing the quality of the experiments it exposes.
+Core stays independent of CLI/MCP, AI providers and cloud services. No hosted service, accounts or telemetry are needed. Additional predicate modes, environment matrices and reducers require evidence of a useful debugging problem before implementation.

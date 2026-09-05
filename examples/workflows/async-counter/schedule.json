@@ -1,0 +1,3 @@
+{
+  "schedules": ["overlap", "serial", "overlap", "serial", "overlap", "serial"]
+}

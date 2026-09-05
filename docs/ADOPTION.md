@@ -1,71 +1,45 @@
 # Adoption is the product goal
 
-FailTrace should become a local debugging primitive that humans and coding agents reach for when a failure is hard to reproduce. Success means independent developers installing it, obtaining useful evidence, and returning to it in real projects. Feature count, a completed roadmap, and passing tests do not establish that outcome.
+FailTrace should become a local debugging primitive that humans and coding agents reach for when a failure is hard to reproduce. Success means independent developers installing it, obtaining useful evidence, and returning to it on their own code.
 
 ## Product decisions
 
 Before a major feature, ask: **Will this make significantly more developers or AI agents want to use FailTrace?**
 
-Prefer work that solves a recognizable debugging problem, replaces repetitive experiments that agents handle inefficiently, produces a demonstrable result, can be explained in seconds, and makes integration easier. Keep the identity focused on reproduction, regression isolation, input reduction, and transferable evidence. Avoid monetization, hype-driven scope, and functionality without a plausible user.
+Prefer a recognizable debugging problem, a demonstrable result, easier integration, and less repeated manual work. Keep the identity focused on reproduction, regression isolation, input reduction, fix verification and transferable evidence. Feature count, downloads, stars and passing tests do not establish useful repeated adoption.
 
-## Baseline — 2026-09-04
+## What is verified
 
-The initial public-state inspection preceded the first release and registry distribution; it found 0 GitHub stars and 0 forks. These are dated distribution/discovery observations, not a count of users. Actual independent usage and retention are unknown.
+The published [1.1.0 release](https://github.com/LBarimi/FailTrace/releases/tag/v1.1.0), source commit `c7f9e7ce3ebc36b5e72fc9ee88cfbc57ff73781c`, passed 374 tests and all seven [release CI gates](https://github.com/LBarimi/FailTrace/actions/runs/33954024895). Its reviewed archive SHA-256 is `dd52ef2a36ade281c6795fb708765f4f6da509b31f9fce3e10f7d559c68237bb`.
 
-Source revision `d0e2164` implemented the six initial milestones, but first use required cloning, installing, building, linking, and running the example from the source directory. MCP setup documented a generic configuration without client-specific workflows. There was no contributor guide or structured way to report a real use case.
+On 2026-09-05, the reviewed GitHub archive matched the public npm download. Fresh installations outside the checkout exercised the demo, Core, CLI, Verify, saved inspection, bundle manifests and replay. Installed CLI/MCP checks exercised target-first comparison and Bisect's unrelated/declared exit policies. The matching versioned MCP Registry record was active. These checks establish distribution and tested behavior, not independent adoption. Installation routes and version-specific limits are in the [README](../README.md).
 
-## Distribution evidence — 2026-09-04
+The source checkout adds original [data-import and asynchronous-update workflows](WORKFLOWS.md). Maintainer tests show how affected behavior, a valid fix, a skipped checker and a preparation error lead to different conclusions. These source additions are unreleased and do not establish production use.
 
-[v0.3.0](https://github.com/LBarimi/FailTrace/releases/tag/v0.3.0) provides a compiled package and checksum from commit `823163a`. Its [CI run](https://github.com/LBarimi/FailTrace/actions/runs/33883716383) passed 191 tests and installed-package checks across six OS/Node combinations. Maintainer verification downloaded the public asset without authentication, installed it with a fresh npm cache outside the source checkout, ran the demo, and replayed the resulting failure bundle. The installed MCP server exposed all five tools and reproduced a predicate-matching failure.
+## What remains unknown
 
-That public-install check caught npm 12's default restriction on URL packages; the GitHub archive alternative includes a command-scoped `--allow-remote=root` option. These results establish distribution and compatibility. They do not establish independent adoption. The registry route below removes the URL-specific installation step; real-project usage evidence remains a priority.
+Independent active users, recurring agent use, useful integrations and retention have not been established. No performance result or scripted SDK session should be relabeled as evidence of those outcomes. A server's availability does not show that an agent selected it unprompted or that its result helped solve a bug.
 
-The [Prettier case](../examples/cases/prettier-chain/README.md) applies the published FailTrace package to an upstream historical formatting defect. A maintainer run reduced authored surrounding context from 464 to 11 characters, verified the affected release still failed, and verified the fixed release actually exited successfully. The case supplies pinned dependencies, an explicit predicate, a replay recipe, and an agent investigation prompt. This is evidence that the workflow applies to a real package, not evidence of external adoption.
-
-## Registry distribution — 2026-09-05 (KST)
-
-The primary installation routes are `npx --yes failtrace demo`, `npm install --global failtrace`, and `npm install --save-dev failtrace`. Normal registry installation needs no remote-archive option; the verified GitHub v1.0.0 package is the current archive alternative.
-
-[failtrace 0.3.0](https://www.npmjs.com/package/failtrace/v/0.3.0) was published from the exact verified GitHub release archive (SHA-256 `c843f77e0b59a0137c1af1334d469db1fe12abe0cbfea377c1f87172730f79f4`). Unauthenticated registry downloads matched its SHA-512 integrity. A fresh npm cache, empty npm configuration, and an independent temporary project successfully ran `npx --yes failtrace demo`: 7 passes, 3 failures, six elements reduced to `["BUG"]`, and a replayed target match of 1 / 1. The installed CLI reported 0.3.0.
-
-[FailTrace 0.3.1 is published on npm](https://www.npmjs.com/package/failtrace/v/0.3.1), and the [official MCP Registry record](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.LBarimi%2Ffailtrace/versions/0.3.1) is active. These public name/version/status fields were checked on 2026-09-05. The release incorporates registry installation instructions, the documented Prettier case, exclusion of local case dependencies/evidence from package archives, and metadata for discovery of the existing MCP adapter. It adds no Core investigation features. Version 0.4.0 adds the [performance changes](PERFORMANCE.md); the dated distribution check above records the preceding release.
-
-Publication, registration, and successful installation establish distribution and compatibility. They do not establish independent users, recurring agent use, or retention; those outcomes still need voluntary external evidence.
-
-The [0.4.0 release](https://github.com/LBarimi/FailTrace/releases/tag/v0.4.0) ships the performance controls. Its reviewed archive SHA-256 is `950855294fa20d1e1628e658097d98e2947907eb219552006c0344102ec87aba`. On 2026-09-05, unauthenticated npm downloads matched the same archive, publication source fields identified the public HTTPS URL, and a fresh-cache installation exercised CLI/MCP concurrency, Core loading and threshold stopping, the demo, and bundle replay. The matching [MCP Registry record](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.LBarimi%2Ffailtrace/versions/0.4.0) was active. The release source is main commit `0dd3f085594f963d753c8c2c93902b9829f1b70f`.
-
-The [0.5.0 release](https://github.com/LBarimi/FailTrace/releases/tag/v0.5.0) publishes fix verification through Core, CLI and MCP. Its reviewed archive SHA-256 is `7a1104cb824bb1884ac6308ba9ad726d56307678b6a12ce3dc233b807f7f1757`. On 2026-09-05, an unauthenticated fresh-cache install of [failtrace 0.5.0](https://www.npmjs.com/package/failtrace/v/0.5.0) matched those bytes and exercised Core, CLI and MCP Verify, including an unrelated-error control. The installed package also completed the pinned Prettier and `p-memoize` affected/fixed workflows. The matching [MCP Registry record](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.LBarimi%2Ffailtrace/versions/0.5.0) was active. The release source is main commit `6224d71562d4e7c101769915b7c6b6bd115a628a`. These maintainer checks establish published-package behavior, not independent use.
-
-The [0.6.0 release](https://github.com/LBarimi/FailTrace/releases/tag/v0.6.0) adds bounded Core/MCP inspection of saved run trials and output, version-pinned one-command MCP client setup, stronger installed-package checks, an expanded Verify demo, and measured adoption examples. Its source is commit `c696deb17bbfca81019bb522bba4c05341570ea6`. All six [OS/Node CI jobs](https://github.com/LBarimi/FailTrace/actions/runs/33934143830) and all three [performance jobs](https://github.com/LBarimi/FailTrace/actions/runs/33934143805) passed; the [release preparation workflow](https://github.com/LBarimi/FailTrace/actions/runs/33934355361) built and independently installed the reviewed archive.
-
-On 2026-09-05, unauthenticated downloads of the GitHub archive and [failtrace 0.6.0 on npm](https://www.npmjs.com/package/failtrace/v/0.6.0) matched SHA-256 `8086a4450d81e22ac148b02ca2496b3ab1aa4df5caed014c0d743f493bc8f776`; npm's SHA-512 integrity also matched. Public npm source fields were absent or identified the public GitHub HTTPS archive, and the metadata check found no personal paths or secrets. Separate fresh npm caches and empty configuration files verified exact-version `npx` first use and an independent production installation outside the checkout. The public demo recorded 7 passes / 3 failures, reduced the input to `["BUG"]`, rejected an unrelated crash, and observed a healthy fixed sample; replay reproduced the target 1 / 1. Installed Core/CLI verification and Core inspection passed, and an `npx`-launched MCP server exposed all seven tools with trial/output pagination and the unrelated-error guard. The matching [MCP Registry record](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.LBarimi%2Ffailtrace/versions/0.6.0) was active after the [registry publication workflow](https://github.com/LBarimi/FailTrace/actions/runs/33934680886). These are maintainer distribution checks, not evidence of independent use.
-
-## Version 1.0.0 distribution
-
-The final [1.0.0 release](https://github.com/LBarimi/FailTrace/releases/tag/v1.0.0) uses commit `8a6c0ed6bbcfec56be1c99d3123bf8dd6a02cc59`, which passed 366 tests and all seven [CI gates](https://github.com/LBarimi/FailTrace/actions/runs/33945341915). Archive SHA-256 `f7793d39ce5083c7030d9dc1da2a189b91e922bec65684f52366a8dd9fe4d913` matched both public GitHub and npm downloads. Fresh npm installations and the exact-version npx demo verified Core, Verify controls, saved-evidence pagination, bundle manifests and replay. The installed MCP server listed all seven tools; calls exercised run limits, Verify and saved-trial/output inspection. The [versioned MCP Registry record](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.LBarimi%2Ffailtrace/versions/1.0.0) is active. These are maintainer distribution checks; independent use remains unverified.
-
-## Version 1.1.0 distribution
-
-Version [1.1.0](https://github.com/LBarimi/FailTrace/releases/tag/v1.1.0), commit `c7f9e7ce3ebc36b5e72fc9ee88cfbc57ff73781c`, passed 374 tests and all seven [CI gates](https://github.com/LBarimi/FailTrace/actions/runs/33954024895). Archive SHA-256 `dd52ef2a36ade281c6795fb708765f4f6da509b31f9fce3e10f7d559c68237bb` matched the reviewed GitHub asset and the public npm download. Fresh-cache installations exercised the demo, Core, CLI, Verify, saved inspection, bundle manifests and replay. Additional installed CLI/MCP checks verified target-first comparison and Bisect's unrelated/declared exit guards. The server listed all seven tools; calls exercised run limits, comparison, Bisect, Verify and saved inspection. The [1.1.0 MCP Registry record](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.LBarimi%2Ffailtrace/versions/1.1.0) is active. These are distribution checks, not evidence of independent adoption.
+The initial inspection on 2026-09-04 found zero stars and forks before distribution. That dated observation is not a current user count.
 
 ## Current priorities
 
-1. **Observe useful results in real projects.** The installable package, guided demo, historical Prettier case and controlled `p-memoize` race case already exist. Collect voluntary evidence of developers investigating their own failures, whether the result changed their next step, and whether they returned to the tool. Use those observations to choose improvements; private logs and telemetry are not required.
-2. **Validate agents using the released engine.** The published 0.6.0 MCP adapter exposes seven tools, including Verify, Bundle, and bounded run inspection. Observe real Codex, Claude Code, or Cursor investigations: tool selection, bounded experiments, correct handling of failures and partial results, and evidence used after a patch. An SDK connection test establishes compatibility, not useful autonomous debugging.
-3. **Shorten the path to current functionality.** Version 0.6.0 replaces global npm-root path assembly with version-pinned `npx` client setup and extends the guided demo through Verify. Fresh public-package checks verified those paths. Address friction observed in real-project and agent trials rather than adding more Core surface area.
-4. **Preserve reliable distribution and evidence.** Keep fresh-install, replay, packaging, cross-platform CI, and performance checks current for each release. Maintain Core behavior independently of CLI/MCP and keep published-package capabilities distinct from unreleased source work. The [roadmap](ROADMAP.md) records implemented and planned work without making feature count the adoption goal.
-5. **Improve discovery with demonstrated workflows.** Use accurate release notes, replayable examples, and voluntary reports. Additional cases should exercise an observed debugging need. Outreach, posts, and messages to other maintainers require explicit user authorization; no endorsement, testimonials, or usage counts should be inferred from maintainer tests or registry presence.
+1. **Shorten time to useful evidence.** Help a developer connect an existing command, select a meaningful target, capture a baseline and interpret the next result. Keep saved commands and context inspectable.
+2. **Preserve the meaning of a check.** Distinguish target matches, skipped execution, unrelated failures and incomplete evidence. Make useful negative controls easy to run.
+3. **Support repeated use.** Make evidence easy to find and inspect; bound storage and cleanup operations without losing active or referenced work.
+4. **Measure relevant costs.** Use versioned, bounded workloads with explicit limitations. Preserve raw local evidence privately and publish only reviewed aggregates.
+5. **Observe independent workflows.** Use voluntary reports to learn whether evidence changed a debugging decision and whether a person or agent returned. No outreach or automatic data collection is implied.
 
 ## Evidence to collect
 
-Use the [voluntary debugging-session guide](WORKFLOW-OBSERVATION.md) to record time to useful evidence, help needed, agent tool choices, and observed second use. It is an observation plan; no independent sessions or usage gains are implied by its existence.
+Use the [voluntary debugging-session guide](WORKFLOW-OBSERVATION.md) to record time to useful evidence, help needed, agent tool choices and observed second use. It is an observation plan; no independent sessions or usage gains are implied by its existence.
 
 | Question | Useful evidence | Interpretation limit |
 | --- | --- | --- |
-| Can a new user get value? | Fresh-directory install and demo; voluntary reports of time to first result | Maintainer smoke tests establish functionality, not adoption |
-| Do developers use it on their own code? | Independent reports with a command, result, and optional public project link | Reports are self-selected |
-| Do agents select it effectively? | Opt-in workflow transcripts showing tool choice and useful evidence | A hand-scripted SDK test is compatibility evidence only |
-| Does usage repeat? | Follow-up reports, recurring integrations, external fixes and contributors | Downloads and stars are weak proxies |
-| Is discovery improving? | Dated stars, forks, release asset downloads, referring integrations | Counters do not identify people or prove active use |
+| Can a new user get value? | Fresh-directory installation and a voluntary report of time to first result | Maintainer checks establish functionality |
+| Does it help with the user's own failure? | A report of the selected command, evidence and resulting next step | Reports are self-selected; private logs are optional |
+| Do agents select it effectively? | Opt-in session records showing tool choice and how evidence informed the fix | A scripted SDK test establishes compatibility |
+| Does usage repeat? | Voluntary follow-up reports and recurring integrations | Downloads and stars do not identify active users |
+| Is adoption improving? | Dated, attributable observations using the same definitions | Small samples cannot establish broad adoption |
 
-No runtime telemetry, account requirement, or automatic data collection is part of this plan. Keep claims tied to dated, inspectable evidence and adjust priorities when actual users show a different bottleneck.
+No runtime telemetry, account requirement, unsolicited outreach or automatic data collection is part of this plan. Keep claims tied to inspectable evidence and adjust priorities when users show a different bottleneck.

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Replace external case studies and product-specific setup sections with original authored workflows and generic MCP configuration.
+
 - Add optional execution checkpoints across Core, CLI and MCP. Verify inherits the baseline checkpoint and refuses to interpret a skipped check as healthy candidate evidence; inspection, comparison, bisect, minimization and bundle replay preserve the condition. Existing behavior is unchanged when the option is absent.
 - Add an original event-import fixture with an independent checker and corrected implementation, including skipped-check and unrelated-error validation.
 - Split cumulative MCP and bundle integration tests into independent cases, preserving their assertions and execution timeouts.
@@ -45,8 +47,7 @@ The [public GitHub candidate](https://github.com/LBarimi/FailTrace/releases/tag/
 
 - Extended the guided demo into one measurement-to-replay flow without removing its 7/3 repetition, `["BUG"]` reduction or replay bundle. The minimized input becomes a captured baseline; the demo observes the unchanged target, rejects an unrelated crash as inconclusive, reports a healthy fixed candidate sample without claiming elimination, then restores the affected implementation for replay.
 - Added bounded, read-only saved-run inspection through public Core `inspectRunEvidence` and MCP `failtrace_inspect_run`. Agents can page complete trial evidence and stdout/stderr byte ranges without executing recorded commands or supplying arbitrary artifact paths; output changes during a read are rejected.
-- Replaced global npm-root path assembly with version-pinned one-command `npx` setup for Codex, Claude Code, Cursor and generic stdio clients. Installed-package smoke tests now verify all seven MCP tools, read-only inspection annotations, paged evidence and output chunks.
-- Added `npm run case:p-memoize` as a repository-root entry point for the pinned race checker and its affected, negative-control and fixed Verify workflow.
+- Replaced global npm-root path assembly with version-pinned one-command `npx` setup for stdio MCP clients. Installed-package smoke tests now verify all seven MCP tools, read-only inspection annotations, paged evidence and output chunks.
 - Added sanitized five-sample 0.5.0 benchmark evidence and README medians from one Windows x64/Node.js 24 host. The README table keeps timing ranges, logical metadata writes, concurrency semantics and threshold-sampling limits with the measurements.
 
 ## 0.5.0 — 2026-09-05
@@ -55,7 +56,6 @@ The [public GitHub candidate](https://github.com/LBarimi/FailTrace/releases/tag/
 - Added opt-in baseline context capture with explicit input, setup and source file hashes or bounded Git identity. Verify requires the caller's current command and canonical working directory, records intentional changes and refuses missing, unstable or unsupported evidence.
 - Hardened Git context against hidden index flags, clean-filter normalization, submodules, symlinks and unresolved index entries by hashing tracked working-tree bytes and failing closed when identity is incomplete.
 - Added installed Core/CLI/MCP verification checks and cancellation coverage. Package smoke verifies that an unrelated error cannot become a successful fix result.
-- Added affected/fixed Verify workflows for a historical Prettier defect and a real `p-memoize` pending-call race. The race case uses six controlled interleavings and does not present them as a naturally sampled failure rate.
 
 ## 0.4.0 — 2026-09-05
 
@@ -68,7 +68,6 @@ The [public GitHub candidate](https://github.com/LBarimi/FailTrace/releases/tag/
 ## 0.3.1 — 2026-09-05
 
 - Installation guides use the public npm package for the demo, regular CLI use, and agent setup. The versioned GitHub archive remains an alternative.
-- Added a reproducible historical Prettier case using pinned affected and fixed releases, a specific failure predicate, text minimization, and a replayable bundle. CI checks this workflow on Windows, macOS, and Linux with Node.js 22 and 24.
 - Restricted packaged examples to the built-in demo files so locally installed case dependencies and investigation evidence cannot enter release archives. Installed-package checks enforce that boundary.
 - Included MCP Registry identity and server metadata for discovery of the existing stdio tools.
 
@@ -81,7 +80,7 @@ First prebuilt GitHub release, focused on getting from installation to useful ev
 - `failtrace demo` works from any directory. It measures a deterministic flaky command, reduces a JSON input to `["BUG"]`, and builds a replayable reproduction. Completed demos exit successfully while preserving their expected target failures as evidence.
 - Packages include the compiled CLI/Core/MCP server, examples, and documentation. CI installs the actual packed artifact outside the source checkout and verifies public entry points, production dependencies, and the demo.
 - MCP run results include `matchedTrials` across all recorded trials, including those omitted from compact responses. Server instructions explain how to choose and chain the existing investigation tools.
-- README, Codex/Claude Code/Cursor setup guides, contributor guidance, and optional workflow-report forms focus on installation and real debugging use.
+- README, MCP setup guides, contributor guidance, and optional workflow-report forms focus on installation and real debugging use.
 - The README preview is generated from a real demo result with `node scripts/render-demo.mjs`.
 
 This release does not change the Core investigation algorithms. Regression conclusions remain sampled first-parent boundaries; minimization is local to supported removals; bundles require the target's own dependencies and setup.

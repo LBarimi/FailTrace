@@ -27,7 +27,7 @@
     "examples/advanced-demo-unrelated.js",
     "examples/advanced-demo-fixed.js",
     "examples/advanced-input.json",
-    "examples/workflows/event-import",
+    "examples/workflows",
     "README.md",
     "CONTRIBUTING.md",
     "CHANGELOG.md",
@@ -44,7 +44,7 @@
     "test:package": "node scripts/package-smoke.mjs",
     "bench": "npm run build && node scripts/bench.mjs",
     "bench:ci": "npm run build && node scripts/bench.mjs --suite ci --check",
-    "case:p-memoize": "npm run build && npm --prefix examples/cases/p-memoize-race ci --ignore-scripts && npm --prefix examples/cases/p-memoize-race test && npm --prefix examples/cases/p-memoize-race run verify",
+    "test:workflows": "npm run build && node examples/workflows/investigate.mjs",
     "demo": "node dist/cli/index.js demo",
     "prepack": "npm run build"
   },
