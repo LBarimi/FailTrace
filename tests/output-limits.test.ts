@@ -31,7 +31,7 @@ describe('bounded output evidence', () => {
       outputLimit: { scope: 'trial', limitBytes: 32 } });
     expect(await outputBytes(run)).toBe(32);
     expect(assessRun(run)).toBe('inconclusive');
-    expect(await loadRun(run.artifactDirectory)).toEqual(run);
+    expect(await loadRun(run.artifactDirectory)).toEqual({ ...run, artifactDirectory: await fs.realpath(run.artifactDirectory) });
   });
 
   it('accepts exactly the configured byte count and reports an overrun at the next byte', async () => {
@@ -84,7 +84,7 @@ describe('bounded output evidence', () => {
     expect(run.status).toBe('error');
     expect(run.trials[0]).toMatchObject({ status: 'output_error', failureMatched: false, terminationReason: 'output_error' });
     expect(assessRun(run)).toBe('inconclusive');
-    expect(await loadRun(run.artifactDirectory)).toEqual(run);
+    expect(await loadRun(run.artifactDirectory)).toEqual({ ...run, artifactDirectory: await fs.realpath(run.artifactDirectory) });
   });
 
   it('shares one output budget across minimization candidates and never claims final verification after exhaustion', async () => {

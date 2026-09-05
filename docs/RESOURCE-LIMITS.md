@@ -1,4 +1,4 @@
-# Bounded experiment output
+# Experiment resource limits
 
 These controls are implemented in the source checkout toward 1.0. They are not available in the published 0.6.0 package. Build the checkout before using them.
 
@@ -39,6 +39,19 @@ Bundles record the source run's caps and replay with them. Older source runs use
 
 ## Scope and remaining storage work
 
-These are output byte budgets, not a cap on the entire artifact directory or a process sandbox. They do not account for metadata, copied minimization inputs, Git worktrees, dependency installations, files written directly by the target, or previous investigations. Candidate storage and metadata reconstruction need separate controls before the planned 1.0 release. No automatic deletion or retention schedule is applied.
+Output byte budgets do not account for metadata, copied minimization inputs, Git worktrees, dependency installations, files written directly by the target, or previous investigations. The input budgets below separately bound copies managed by minimization. Metadata reconstruction still needs separate controls before the planned 1.0 release. No automatic deletion or retention schedule is applied.
 
 Commands still run with local permissions. Timeout and descendant cleanup remain best effort, and a target can use files or processes outside these output pipes. Review sensitive output before sharing evidence.
+
+## Minimization input storage
+
+| Option | Default | Scope |
+| --- | --- | --- |
+| Core/MCP `maxInputBytes`, CLI `--max-input-bytes` | 16777216 (16 MiB) | Original file or complete directory, and each encoded candidate |
+| Core/MCP `maxCandidateBytes`, CLI `--max-candidate-bytes` | 268435456 (256 MiB) | Cumulative bytes copied into original, candidate and selected-input files |
+
+Both values are positive safe integers. File-set inputs have at most 10000 files. Directory and JSON nesting is limited to 64 levels. Input reads are bounded before parsing. Copies use exclusive destinations and bounded streaming reads; growth or replacement during a read is rejected. This replaces the published copy-on-write optimization so a changing source cannot silently enlarge a managed copy beyond its reserved allowance. Filesystem I/O costs can therefore differ from the historical measurements.
+
+Exhausting the copy allowance returns `status: "limit_reached"`, `finalVerified: false`, and `storageLimit` with the allowance, bytes reserved and rejected request. CLI exits 2. `minimizedPath` points to an existing best available input: the last accepted candidate, or the preserved original when no reduction was accepted. An independent final check is not claimed. Previously completed candidate evidence and the original user input remain intact; even partial rejected copies count against the allowance.
+
+If the original input itself is larger than the requested input or copy allowance, validation fails before creating an investigation. Target-written files, later modifications by the target, metadata and output logs are outside this copy counter; output has its own budget. Limits do not grant filesystem isolation or automatically delete earlier investigations.

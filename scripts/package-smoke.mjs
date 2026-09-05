@@ -111,6 +111,13 @@ async function exerciseInstalledCore() {
   assert.equal(api.assessRun(bounded), 'inconclusive');
   assert.equal(bounded.trials.length, 1);
   assert.equal((await readFile(join(bounded.artifactDirectory, bounded.trials[0].stdoutPath))).length, 32);
+  await writeFile(join(project, 'input.txt'), 'BUG');
+  const storage = await api.minimizeFailure({ cwd: project, command: `${quote(process.execPath)} ${quote(noisy)}`,
+    input: 'input.txt', format: 'text', maxInputBytes: 3, maxCandidateBytes: 3 });
+  assert.equal(storage.status, 'limit_reached');
+  assert.equal(storage.finalVerified, false);
+  assert.equal(storage.evaluations.length, 0);
+  assert.equal(await readFile(storage.minimizedPath, 'utf8'), 'BUG');
   console.log(JSON.stringify({
     total: run.statistics.total, failed: run.statistics.failed,
     artifactDirectory: run.artifactDirectory, comparison: 'passed', inspection: 'passed',

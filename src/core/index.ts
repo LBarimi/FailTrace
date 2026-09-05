@@ -21,3 +21,5 @@ export type { ContextCaptureOptions, ContextDeclaration, ContextSnapshot, FileId
 export type { RunOptions, RunSummary, RunStatistics, TrialResult, TrialStatus, TerminationReason, FailurePredicate, EnvironmentSnapshot } from './types.js';
 export { DEFAULT_MAX_OUTPUT_BYTES, DEFAULT_MAX_TOTAL_OUTPUT_BYTES } from './output-budget.js';
 export type { OutputLimits, OutputLimit } from './output-budget.js';
+export { DEFAULT_MAX_INPUT_BYTES, DEFAULT_MAX_CANDIDATE_BYTES } from './input-budget.js';
+export type { InputLimits, CandidateStorageLimit } from './input-budget.js';

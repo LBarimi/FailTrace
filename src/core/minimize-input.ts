@@ -1,6 +1,7 @@
-import { constants } from 'node:fs';
-import { copyFile, lstat, mkdir, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, opendir, realpath, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { copyBoundedFile, readBoundedFile } from './bounded-file.js';
+import { DEFAULT_MAX_INPUT_BYTES, MAX_INPUT_DEPTH, MAX_INPUT_FILES, type CandidateStorageBudget } from './input-budget.js';
 
 export type MinimizeFormat = 'text' | 'json' | 'files' | 'env';
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
@@ -15,21 +16,30 @@ function contains(parent: string, child: string): boolean {
   return path === '' || (!isAbsolute(path) && path !== '..' && !path.startsWith(`..${process.platform === 'win32' ? '\\' : '/'}`));
 }
 
-async function collectFiles(directory: string, prefix = ''): Promise<string[]> {
+async function collectFiles(directory: string, maxBytes: number): Promise<string[]> {
   const files: string[] = [];
-  for (const name of (await readdir(directory)).sort()) {
-    const path = join(directory, name);
-    const entry = await lstat(path);
-    if (entry.isSymbolicLink()) throw new Error(`Input directory contains a symbolic link: ${path}`);
-    if (entry.isDirectory()) files.push(...await collectFiles(path, join(prefix, name)));
-    else if (entry.isFile()) files.push(join(prefix, name));
-    else throw new Error(`Input contains an unsupported special file: ${path}`);
-  }
-  return files;
+  let bytes = 0;
+  const visit = async (folder: string, prefix: string, depth: number): Promise<void> => {
+    if (depth > MAX_INPUT_DEPTH) throw new Error('Input directory exceeds the 64 level depth limit.');
+    for await (const { name } of await opendir(folder)) {
+      const path = join(folder, name);
+      const entry = await lstat(path);
+      if (entry.isSymbolicLink()) throw new Error(`Input directory contains a symbolic link: ${path}`);
+      if (entry.isDirectory()) await visit(path, join(prefix, name), depth + 1);
+      else if (entry.isFile()) {
+        bytes += entry.size;
+        if (bytes > maxBytes) throw new Error(`Input exceeds the ${maxBytes} byte directory limit.`);
+        if (files.length >= MAX_INPUT_FILES) throw new Error('Input exceeds the 10000 file limit.');
+        files.push(join(prefix, name));
+      } else throw new Error(`Input contains an unsupported special file: ${path}`);
+    }
+  };
+  await visit(directory, '', 0);
+  return files.sort();
 }
 
 /** Validate the complete source tree before creating any minimization artifacts. */
-export async function readMinimizeInput(inputPath: string, format: MinimizeFormat, cwd: string): Promise<Candidate> {
+export async function readMinimizeInput(inputPath: string, format: MinimizeFormat, cwd: string, maxBytes = DEFAULT_MAX_INPUT_BYTES): Promise<Candidate> {
   const entry = await lstat(inputPath);
   if (entry.isSymbolicLink()) throw new Error('Minimization input must not be a symbolic link.');
   const canonicalCwd = await realpath(cwd);
@@ -47,15 +57,25 @@ export async function readMinimizeInput(inputPath: string, format: MinimizeForma
   }
   if (format === 'files') {
     if (!entry.isDirectory()) throw new Error('Files input must be a dedicated directory.');
-    return { format, files: await collectFiles(inputPath) };
+    return { format, files: await collectFiles(inputPath, maxBytes) };
   }
   if (!entry.isFile()) throw new Error(`${format} input must be a regular file.`);
-  const text = await readFile(inputPath, 'utf8');
+  const text = (await readBoundedFile(inputPath, maxBytes)).toString('utf8');
   if (format === 'text') return { format, text };
   let value: JsonValue;
   try { value = JSON.parse(text) as JsonValue; }
   catch { throw new Error(`${format} input must contain valid JSON.`); }
-  if (format === 'json') return { format, value, text };
+  if (format === 'json') {
+    const pending = [{ value, depth: 0 }];
+    while (pending.length) {
+      const item = pending.pop()!;
+      if (item.depth > MAX_INPUT_DEPTH) throw new Error('JSON input exceeds the 64 level depth limit.');
+      if (item.value !== null && typeof item.value === 'object') {
+        for (const child of Object.values(item.value)) pending.push({ value: child, depth: item.depth + 1 });
+      }
+    }
+    return { format, value, text };
+  }
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error('Environment input must be a JSON object of string variable values.');
   }
@@ -89,21 +109,28 @@ export function inputName(format: MinimizeFormat): string {
 }
 
 /** Materialize only inside a newly owned destination; originals are always read-only. */
-export async function writeCandidate(candidate: Candidate, path: string, originalDirectory: string): Promise<void> {
+export async function writeCandidate(candidate: Candidate, path: string, originalDirectory: string, budget?: CandidateStorageBudget, maxBytes = DEFAULT_MAX_INPUT_BYTES): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
   if (candidate.format !== 'files') {
     const text = candidate.format === 'env' ? `${JSON.stringify(candidate.values, null, 2)}\n` : candidate.text;
+    const bytes = Buffer.byteLength(text);
+    if (bytes > maxBytes) throw new Error(`Encoded candidate exceeds the ${maxBytes} byte input limit.`);
+    budget?.reserve(bytes);
     await writeFile(path, text, { encoding: 'utf8', flag: 'wx' });
     return;
   }
   await mkdir(path);
+  let total = 0;
   for (const file of candidate.files) {
     const source = resolve(originalDirectory, file);
     const destination = resolve(path, file);
     if (!contains(originalDirectory, source) || !contains(path, destination)) throw new Error('Input file escaped its directory.');
     if (!(await lstat(source)).isFile()) throw new Error(`Input file changed or became a symbolic link: ${source}`);
     await mkdir(dirname(destination), { recursive: true });
-    // Reflinks preserve mutation isolation; Node falls back to copying when unavailable.
-    await copyFile(source, destination, constants.COPYFILE_EXCL | constants.COPYFILE_FICLONE);
+    await copyBoundedFile(source, destination, maxBytes, (bytes) => {
+      if (bytes > maxBytes - total) throw new Error(`Copied candidate exceeds the ${maxBytes} byte input limit.`);
+      total += bytes;
+      budget?.reserve(bytes);
+    });
   }
 }

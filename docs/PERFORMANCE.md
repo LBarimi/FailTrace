@@ -22,7 +22,7 @@ Bundles preserve the recorded concurrency, predicate, timeout, and original requ
 
 ## Metadata and recovery
 
-The source checkout toward 1.0 replaces direct output file descriptors with bounded streaming pipes. Per-trial and whole-investigation output caps now preserve explicit incomplete evidence; see [output budgets](RESOURCE-LIMITS.md). The historical measurements below describe their recorded versions, not the changed output transport. Retained inputs and metadata scaling remain separate work.
+The source checkout toward 1.0 replaces direct output file descriptors with bounded streaming pipes and bounds managed minimization input copies. File-set copies use bounded streaming snapshots instead of the earlier reflink optimization. See [resource budgets](RESOURCE-LIMITS.md). Historical measurements describe their recorded versions, not these changed I/O paths. Metadata scaling remains separate work.
 
 Each `trials/<index>/result.json` is the authoritative record of a finished trial. Run-level metadata is persisted initially and at finalization. It is no longer serialized, rewritten, and synced in full after each trial. Statistics use a running accumulator for constant work per recorded trial.
 

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Bound minimization input size and cumulative retained input copies. Storage exhaustion preserves the best available input and existing evidence without claiming a final verification. Bounded snapshot copies reject changing sources and preserve original files; JSON/directory depth limits prevent recursive stack exhaustion.
+
 - Bound retained command output by default: 16 MiB combined stdout/stderr per trial and 256 MiB across a run or all candidates in a bisect/minimization. Core, CLI and MCP accept explicit byte caps. Limits preserve partial evidence and stop inconclusively; output write failures cannot become healthy predicate nonmatches.
 - Verify inherits output caps and requires an explicit reason for changed limits. Replay bundles preserve the source run's caps. Saved inspection and agent responses expose incomplete-output details.
 

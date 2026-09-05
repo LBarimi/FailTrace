@@ -295,6 +295,8 @@ function createServer(cwd: string, shutdown: AbortSignal, pending: Set<Promise<C
     inputSchema: commandSchema.extend({
       input: z.string().min(1), format: z.enum(['text', 'json', 'files', 'env']),
       minFailures: positiveInteger.optional(), maxEvaluations: positiveInteger.min(2).optional(),
+      maxInputBytes: positiveInteger.optional().describe('Input file or directory byte cap; default 16 MiB.'),
+      maxCandidateBytes: positiveInteger.optional().describe('Cumulative retained input copy byte cap; default 256 MiB. Exhaustion preserves best available input without claiming final verification.'),
     }),
     annotations: executesCommand,
   }, (input, context) => invoke(context, async (signal) => {
@@ -302,6 +304,8 @@ function createServer(cwd: string, shutdown: AbortSignal, pending: Set<Promise<C
       ...commandOptions(input, cwd, signal), input: input.input, format: input.format,
       ...(input.minFailures === undefined ? {} : { minFailures: input.minFailures }),
       ...(input.maxEvaluations === undefined ? {} : { maxEvaluations: input.maxEvaluations }),
+      ...(input.maxInputBytes === undefined ? {} : { maxInputBytes: input.maxInputBytes }),
+      ...(input.maxCandidateBytes === undefined ? {} : { maxCandidateBytes: input.maxCandidateBytes }),
     });
     const { evaluations, ...metadata } = result;
     return toolResult({

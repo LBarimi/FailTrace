@@ -104,6 +104,8 @@ Reported units are Unicode characters, JSON tree nodes, files, or environment ke
 
 File-set copies request copy-on-write support when available and otherwise use ordinary copies. They do not use hard links; modifying a candidate cannot modify the original through a shared file link.
 
+In the source checkout toward 1.0, `--max-input-bytes` bounds the original input and each candidate (16 MiB default), and `--max-candidate-bytes` bounds cumulative managed input copies (256 MiB default). Bounded streaming copies replace the published copy-on-write optimization. Storage exhaustion preserves an existing best available input, reports `limit_reached`, and leaves `finalVerified` false. See [input storage scope](RESOURCE-LIMITS.md#minimization-input-storage).
+
 Use `--repeat N --min-failures K` to require repeated reproduction. The default evaluation budget is `--max-evaluations 200`, including baseline and final verification. Candidates are accepted only when the selected predicate still reproduces in clean trials. Original input, each candidate, its runs, the selected reduction, and `result.json` are retained under `.failtrace/minimizations/<id>/`.
 
 Baseline, candidate, and independent final checks use the same sequential threshold early stopping described for bisect. The final check still runs as a separate evaluation. Each evaluation's `runDirectory` contains its observed trials and decision; do not interpret a short decided run as an interrupted run or its observed failure rate as a full-budget measurement. There is no minimize `--concurrency` option.

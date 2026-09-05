@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { copyFile, readFile, rename } from 'node:fs/promises';
+import { copyFile, readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/client';
@@ -79,6 +79,13 @@ describe('output caps through public adapters', () => {
     } });
     expect(saved.isError).toBe(false);
     expect(saved.structuredContent).toMatchObject({ status: 'resource_limited', trials: [{ unhealthy: true, outputLimit: { scope: 'experiment' } }] });
+    await writeFile(join(cwd, 'input.txt'), 'BUG');
+    const storage = await client.callTool({ name: 'failtrace_minimize', arguments: {
+      input: 'input.txt', format: 'text', command, maxInputBytes: 3, maxCandidateBytes: 3,
+    } });
+    expect(storage.isError).toBe(false);
+    expect(storage.structuredContent).toMatchObject({ status: 'limit_reached', finalVerified: false,
+      maxInputBytes: 3, maxCandidateBytes: 3, evaluations: [], storageLimit: { limitBytes: 3 } });
   });
 
   it('preserves the source run caps in a relocated bundle and returns replay exit 2', async () => {
@@ -93,5 +100,17 @@ describe('output caps through public adapters', () => {
     expect(result.code).toBe(2);
     expect(result.stdout).toContain('Replay inconclusive');
     expect(result.stderr).toBe('');
+  });
+
+  it('passes minimization input budgets through CLI and reports a preserved unverified input', async () => {
+    const cwd = await workspace();
+    await writeFile(join(cwd, 'input.txt'), 'BUG');
+    const result = await invoke([cliPath, 'minimize', '--input', 'input.txt', '--command', command,
+      '--max-input-bytes', '3', '--max-candidate-bytes', '3', '--json'], cwd);
+    expect(result.code).toBe(2);
+    expect(result.stderr).toBe('');
+    const reduction = JSON.parse(result.stdout);
+    expect(reduction).toMatchObject({ status: 'limit_reached', finalVerified: false, evaluations: [], maxCandidateBytes: 3 });
+    expect(await readFile(reduction.minimizedPath, 'utf8')).toBe('BUG');
   });
 });

@@ -1,4 +1,4 @@
-import type { BundleOptions, CompareOptions, FailurePredicate, MinimizeFormat, OutputLimits, RunOptions, VerifyOptions } from '../core/index.js';
+import type { BundleOptions, CompareOptions, FailurePredicate, InputLimits, MinimizeFormat, OutputLimits, RunOptions, VerifyOptions } from '../core/index.js';
 
 type Common = { cwd?: string; json?: boolean };
 type Experiment = { command: string; repeat: number; timeoutMs: number; predicate?: FailurePredicate } & OutputLimits;
@@ -10,7 +10,7 @@ export type CliInvocation =
   | ({ kind: 'verify'; json?: boolean } & Omit<VerifyOptions, 'signal' | 'onTrialComplete' | 'env'>)
   | ({ kind: 'compare' } & Common & CompareOptions)
   | ({ kind: 'bisect'; good: string; bad: string; minFailures: number } & Common & Experiment)
-  | ({ kind: 'minimize'; input: string; format: MinimizeFormat; minFailures: number; maxEvaluations: number } & Common & Experiment)
+  | ({ kind: 'minimize'; input: string; format: MinimizeFormat; minFailures: number; maxEvaluations: number } & Common & Experiment & InputLimits)
   | ({ kind: 'bundle'; envFile?: string } & Common & Omit<BundleOptions, 'env' | 'signal'>)
   | { kind: 'mcp'; cwd?: string };
 
@@ -45,7 +45,7 @@ const allowed: Record<string, string[]> = {
   verify: ['command', 'cwd', 'repeat', 'timeout', 'concurrency', ...outputFlags, 'healthy-exit-code', 'allow-change', 'json'],
   compare: ['trial-a', 'trial-b', 'max-lines', 'max-bytes', 'cwd', 'json'],
   bisect: [...experiments, 'good', 'bad', 'min-failures', 'cwd', 'json'],
-  minimize: [...experiments, 'input', 'format', 'min-failures', 'max-evaluations', 'cwd', 'json'],
+  minimize: [...experiments, 'input', 'format', 'min-failures', 'max-evaluations', 'max-input-bytes', 'max-candidate-bytes', 'cwd', 'json'],
   bundle: ['file', 'input', 'command', 'output', 'env-file', 'cwd', 'json'],
   mcp: ['cwd'],
 };
@@ -187,5 +187,9 @@ export function parseArgs(argv: string[]): CliInvocation {
   if (kind === 'bisect') return { kind, ...experiment, ...common, good: required('good'), bad: required('bad'), minFailures };
   const format = get('format') ?? 'text';
   if (!['text', 'json', 'files', 'env'].includes(format)) throw new Error('Format must be text, json, files, or env.');
-  return { kind: 'minimize', ...experiment, ...common, input: required('input'), format: format as MinimizeFormat, minFailures, maxEvaluations: integer(get('max-evaluations') ?? '200', 'Maximum evaluations', 2) };
+  return { kind: 'minimize', ...experiment, ...common, input: required('input'), format: format as MinimizeFormat, minFailures,
+    maxEvaluations: integer(get('max-evaluations') ?? '200', 'Maximum evaluations', 2),
+    ...(get('max-input-bytes') === undefined ? {} : { maxInputBytes: integer(get('max-input-bytes')!, 'Max input bytes') }),
+    ...(get('max-candidate-bytes') === undefined ? {} : { maxCandidateBytes: integer(get('max-candidate-bytes')!, 'Max candidate bytes') }),
+  };
 }

@@ -1,17 +1,18 @@
 import { randomUUID } from 'node:crypto';
-import { constants } from 'node:fs';
-import { copyFile, mkdir, stat } from 'node:fs/promises';
+import { mkdir, stat } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { writeJsonAtomic } from './artifacts.js';
 import { candidateSize, inputName, readMinimizeInput, writeCandidate, type Candidate, type JsonValue, type MinimizeFormat } from './minimize-input.js';
 import { assessRun, validatePredicate } from './predicates.js';
 import { DEFAULT_TIMEOUT_MS, runTrialsWithBudget, validateRunOptions, VERSION } from './run-trials.js';
 import { OutputBudget, outputLimits, type OutputLimits } from './output-budget.js';
+import { copyBoundedFile } from './bounded-file.js';
+import { CandidateStorageBudget, CandidateStorageLimitError, inputLimits, type InputLimits, type CandidateStorageLimit } from './input-budget.js';
 import type { FailurePredicate } from './types.js';
 
 export type { MinimizeFormat } from './minimize-input.js';
 
-export interface MinimizeOptions extends OutputLimits {
+export interface MinimizeOptions extends OutputLimits, InputLimits {
   command: string;
   input: string;
   format: MinimizeFormat;
@@ -37,7 +38,7 @@ export interface MinimizeEvaluation {
   accepted: boolean;
 }
 
-export interface MinimizeResult extends OutputLimits {
+export interface MinimizeResult extends OutputLimits, InputLimits {
   schemaVersion: 1;
   failtraceVersion: string;
   id: string;
@@ -59,6 +60,7 @@ export interface MinimizeResult extends OutputLimits {
   maxEvaluations: number;
   predicate: FailurePredicate;
   finalVerified: boolean;
+  storageLimit?: CandidateStorageLimit;
   evaluations: MinimizeEvaluation[];
   baseline?: MinimizeEvaluation;
   final?: MinimizeEvaluation;
@@ -114,6 +116,8 @@ export async function minimizeFailure(options: MinimizeOptions): Promise<Minimiz
   validateRunOptions({ ...options, repeat, timeoutMs });
   const limits = outputLimits(options);
   const outputBudget = new OutputBudget(limits.maxTotalOutputBytes);
+  const inputBounds = inputLimits(options);
+  const storageBudget = new CandidateStorageBudget(inputBounds.maxCandidateBytes);
   validatePredicate(options.predicate);
   if (!Number.isSafeInteger(minFailures) || minFailures < 1 || minFailures > repeat) {
     throw new Error('minFailures must be an integer between one and repeat.');
@@ -126,19 +130,24 @@ export async function minimizeFailure(options: MinimizeOptions): Promise<Minimiz
   const cwd = resolve(options.cwd ?? process.cwd());
   if (!(await stat(cwd)).isDirectory()) throw new Error('Working directory must be a directory.');
   const inputPath = resolve(cwd, options.input);
-  const initial = await readMinimizeInput(inputPath, options.format, cwd);
+  const initial = await readMinimizeInput(inputPath, options.format, cwd, inputBounds.maxInputBytes);
+  let initialBytes = 0;
+  if (initial.format === 'files') {
+    for (const path of initial.files) initialBytes += (await stat(join(inputPath, path))).size;
+  } else initialBytes = (await stat(inputPath)).size;
+  if (initialBytes > inputBounds.maxCandidateBytes) throw new Error('The original input copy exceeds maxCandidateBytes; increase the explicit storage budget.');
   const id = `${new Date().toISOString().replace(/[:.]/g, '-')}-${randomUUID()}`;
   const artifactDirectory = join(cwd, '.failtrace', 'minimizations', id);
   await mkdir(join(cwd, '.failtrace', 'minimizations'), { recursive: true });
   await mkdir(artifactDirectory);
   const originalPath = join(artifactDirectory, 'original', inputName(options.format));
-  if (initial.format === 'files') await writeCandidate(initial, originalPath, inputPath);
+  if (initial.format === 'files') await writeCandidate(initial, originalPath, inputPath, storageBudget, inputBounds.maxInputBytes);
   else {
     await mkdir(dirname(originalPath));
-    await copyFile(inputPath, originalPath, constants.COPYFILE_EXCL | constants.COPYFILE_FICLONE);
+    await copyBoundedFile(inputPath, originalPath, inputBounds.maxInputBytes, (bytes) => storageBudget.reserve(bytes));
   }
   const result: MinimizeResult = {
-    schemaVersion: 1, failtraceVersion: VERSION, id, status: 'inconclusive', ...limits,
+    schemaVersion: 1, failtraceVersion: VERSION, id, status: 'inconclusive', ...limits, ...inputBounds,
     command: options.command, format: options.format, cwd, inputPath, artifactDirectory,
     originalPath, minimizedPath: join(artifactDirectory, 'minimized', inputName(options.format)),
     originalSize: candidateSize(initial), minimizedSize: candidateSize(initial),
@@ -147,6 +156,7 @@ export async function minimizeFailure(options: MinimizeOptions): Promise<Minimiz
   };
   const metadataPath = join(artifactDirectory, 'result.json');
   let current = initial;
+  let bestPath = originalPath;
   let limited = false;
   let outputLimited = false;
   let sawInconclusive = false;
@@ -156,7 +166,7 @@ export async function minimizeFailure(options: MinimizeOptions): Promise<Minimiz
     const index = result.evaluations.length + 1;
     const directory = join(artifactDirectory, 'candidates', String(index).padStart(4, '0'));
     const candidatePath = join(directory, inputName(options.format));
-    await writeCandidate(candidate, candidatePath, originalPath);
+    await writeCandidate(candidate, candidatePath, originalPath, storageBudget, inputBounds.maxInputBytes);
     const environment: NodeJS.ProcessEnv = { ...options.env };
     // Selected variables removed by a reduction must not leak back from the host.
     if (initial.format === 'env' && candidate.format === 'env') {
@@ -194,7 +204,7 @@ export async function minimizeFailure(options: MinimizeOptions): Promise<Minimiz
     const evaluation = await evaluate(candidate, 'candidate');
     if (evaluation.assessment === 'inconclusive') sawInconclusive = true;
     if (outputLimited) return null;
-    if (evaluation.accepted) current = candidate;
+    if (evaluation.accepted) { current = candidate; bestPath = evaluation.candidatePath; }
     return evaluation.accepted;
   };
 
@@ -238,7 +248,8 @@ export async function minimizeFailure(options: MinimizeOptions): Promise<Minimiz
         } while (!limited && !options.signal?.aborted && candidateSize(current) < previousSize);
       }
     }
-    await writeCandidate(current, result.minimizedPath, originalPath);
+    await writeCandidate(current, result.minimizedPath, originalPath, storageBudget, inputBounds.maxInputBytes);
+    bestPath = result.minimizedPath;
     result.minimizedSize = candidateSize(current);
     // One budget slot is always reserved for this independent final recheck.
     if (!outputLimited) result.final = await evaluate(current, 'final');
@@ -250,7 +261,15 @@ export async function minimizeFailure(options: MinimizeOptions): Promise<Minimiz
             : sawInconclusive ? 'inconclusive' : 'completed';
   } catch (error) {
     result.error = error instanceof Error ? error.message : String(error);
-    throw new Error(`Minimization failed: ${result.error}\nArtifacts: ${artifactDirectory}`, { cause: error });
+    if (error instanceof CandidateStorageLimitError) {
+      result.status = options.signal?.aborted ? 'interrupted' : 'limit_reached';
+      result.storageLimit = error.details;
+      result.finalVerified = false;
+      result.minimizedPath = bestPath;
+      result.minimizedSize = candidateSize(current);
+    } else {
+      throw new Error(`Minimization failed: ${result.error}\nArtifacts: ${artifactDirectory}`, { cause: error });
+    }
   } finally {
     result.endedAt = new Date().toISOString();
     await persist();

@@ -41,6 +41,7 @@ Command-specific options:
             (repeatable regular files; each implies --capture-context)
   compare   --max-lines N (200), --max-bytes N (65536)
   minimize  --format text|json|files|env, --max-evaluations N (200)
+            --max-input-bytes N (16777216), --max-candidate-bytes N (268435456)
   verify    --repeat N, --timeout DURATION, --concurrency N (inherit baseline)
             --allow-change FIELD:REASON (repeatable; declare interventions)
             Fields: command, source, inputs, setup, environment, timeout,
