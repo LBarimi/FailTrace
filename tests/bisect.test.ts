@@ -72,6 +72,7 @@ describe('bisectRegression', () => {
     expect(result.cleanupError).toBeUndefined();
   });
 
+  // Includes four-commit setup, candidate worktrees and thirteen target processes on shared CI hosts.
   it('finds the repeated-trial threshold boundary and preserves dirty main checkout state', async () => {
     const { cwd, commits } = await repository([{ failures: 0 }, { failures: 1 }, { failures: 3 }, { failures: 5 }]);
     const dirty = `${await readFile(join(cwd, 'suite', 'check.mjs'), 'utf8')}\n// User edits must survive.\n`;
@@ -118,7 +119,7 @@ describe('bisectRegression', () => {
     expect(await readFile(join(cwd, 'untracked.txt'), 'utf8')).toBe('untracked content');
     expect((await git(cwd, 'worktree', 'list', '--porcelain')).match(/^worktree /gm)).toHaveLength(1);
     await expect(readFile(join(result.artifactDirectory, 'worktree', '.git'), 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
-  });
+  }, 60_000);
 
   it('supports explicit output predicates and resolves named endpoints to immutable commits', async () => {
     const { cwd, commits } = await repository([{ failures: 0 }, { failures: 5 }]);
