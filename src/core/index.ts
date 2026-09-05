@@ -8,7 +8,7 @@ export type {
   InspectedTrial, RunEvidenceFilter, RunOutputChunk, RunOutputStream, RunTrialPage,
 } from './inspect.js';
 export { compareRuns } from './compare.js';
-export type { CompareOptions, ComparisonResult, OutputComparison } from './compare.js';
+export type { CompareOptions, ComparisonResult, ComparisonTrialEvidence, OutputComparison } from './compare.js';
 export { bisectRegression } from './bisect.js';
 export type { BisectOptions, BisectResult, BisectCandidate, BisectRunEvidence } from './bisect.js';
 export { minimizeFailure } from './minimize.js';

@@ -50,6 +50,11 @@ const allowed: Record<string, string[]> = {
   mcp: ['cwd'],
 };
 
+function usageHint(kind: string): string {
+  if (kind === 'verify') return 'Usage: failtrace verify <baseline> --command "<command>" --cwd <directory> [--allow-change "source:reason for the change"]. Use "failtrace verify --help" for all fields.';
+  return `Use "failtrace ${kind} --help" for this command's options.`;
+}
+
 function parsePredicate(values: Map<string, string[]>): FailurePredicate | undefined {
   const selected = predicateFlags.filter((flag) => values.has(flag));
   if (selected.length > 1) throw new Error('Choose one failure predicate.');
@@ -83,7 +88,7 @@ export function parseArgs(argv: string[]): CliInvocation {
     if (!argument.startsWith('--')) { positional.push(argument); continue; }
     const equals = argument.indexOf('=');
     const flag = argument.slice(2, equals === -1 ? undefined : equals);
-    if (!flags.includes(flag)) throw new Error(`Unexpected option: --${flag}.`);
+    if (!flags.includes(flag)) throw new Error(`Unexpected option: --${flag}.\n${usageHint(kind)}`);
     if (values.has(flag) && !['file', 'include-env', 'context-input', 'context-setup', 'context-source', 'healthy-exit-code', 'inconclusive-exit-code', 'allow-change'].includes(flag)) throw new Error(`Option --${flag} may only be provided once.`);
     if (flag === 'json' || flag === 'capture-context' || flag === 'include-evidence') {
       if (equals !== -1) throw new Error(`--${flag} does not take a value.`);

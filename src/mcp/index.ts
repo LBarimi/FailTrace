@@ -252,7 +252,7 @@ function createServer(cwd: string, shutdown: AbortSignal, pending: Set<Promise<C
 
   server.registerTool('failtrace_compare', {
     title: 'Compare saved evidence',
-    description: 'Compare two saved runs, or the first PASS and FAIL in one run. Returns bounded output differences and complete stream hashes.',
+    description: 'Compare two saved runs, or prefer a clean nonmatch and a recorded target match in one run. Returns selected trial evidence, interpretation warnings, bounded output differences and complete stream hashes. Explicit trial indices override selection.',
     inputSchema: z.object({
       runA: z.string().min(1), runB: z.string().min(1).optional(), cwd: z.string().min(1).optional(),
       trialA: positiveInteger.optional(), trialB: positiveInteger.optional(),

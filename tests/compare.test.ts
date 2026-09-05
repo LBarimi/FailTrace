@@ -11,6 +11,28 @@ async function workspace(): Promise<string> { const cwd = await temporaryDirecto
 afterEach(async () => cleanupDirectories(directories));
 
 describe('run comparison', () => {
+  it('prefers the target match over an earlier timeout and preserves explicit selection', async () => {
+    const run = await runTrials({ command: fixtureCommand('compare-mixed'), repeat: 3, timeoutMs: 1_500,
+      predicate: { kind: 'stderr_contains', value: 'comparison target' }, cwd: await workspace() });
+    const comparison = await compareRuns({ runA: run.artifactDirectory });
+    expect(comparison).toMatchObject({ trialA: 1, trialB: 3, warnings: [],
+      selectedTrials: { a: { exitCode: 0, failureMatched: false }, b: { exitCode: 7, failureMatched: true } } });
+    expect(comparison.stderr.diff).toContain('+comparison target');
+    const explicit = await compareRuns({ runA: run.artifactDirectory, trialB: 2 });
+    expect(explicit).toMatchObject({ trialB: 2, selectedTrials: { b: { status: 'timed_out', failureMatched: false } } });
+    expect(explicit.warnings?.[0]).toContain('unhealthy execution');
+    // Explicitly comparing separate runs still starts from their first trial.
+    expect(await compareRuns({ runA: run.artifactDirectory, runB: run.artifactDirectory })).toMatchObject({ trialA: 1, trialB: 1 });
+  });
+
+  it('keeps infrastructure evidence inspectable with a warning when there is no target match', async () => {
+    const run = await runTrials({ command: fixtureCommand('compare-mixed'), repeat: 2, timeoutMs: 1_500,
+      predicate: { kind: 'stderr_contains', value: 'comparison target' }, cwd: await workspace() });
+    const result = await compareRuns({ runA: run.artifactDirectory });
+    expect(result).toMatchObject({ trialA: 1, trialB: 2, selectedTrials: { b: { status: 'timed_out' } } });
+    expect(result.warnings?.[0]).toContain('do not interpret this difference as the target failure');
+  });
+
   it('compares PASS and FAIL evidence within one run by ID', async () => {
     const cwd = await workspace();
     const run = await runTrials({ command: fixtureCommand('alternate'), repeat: 2, cwd });

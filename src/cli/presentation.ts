@@ -156,11 +156,17 @@ export function formatSummary(summary: RunSummary): string {
 }
 
 export function formatComparison(result: ComparisonResult): string {
+  const selected = (label: 'a' | 'b'): string => {
+    const trial = result.selectedTrials?.[label];
+    if (!trial) return '';
+    return `  ${trial.status}; exit ${trial.exitCode ?? '-'}; target ${trial.failureMatched === undefined ? 'unknown' : trial.failureMatched ? 'matched' : 'not matched'}`;
+  };
   const lines = [
     'FailTrace - evidence comparison', '',
-    `A  ${result.runA}  trial ${result.trialA}`,
-    `B  ${result.runB}  trial ${result.trialB}`, '',
-    `Failure rate  ${(result.statisticsA.failureRate * 100).toFixed(1)}% -> ${(result.statisticsB.failureRate * 100).toFixed(1)}%`,
+    `A  ${result.runA}  trial ${result.trialA}${selected('a')}`,
+    `B  ${result.runB}  trial ${result.trialB}${selected('b')}`, '',
+    ...(result.warnings ?? []).map((warning) => `Note  ${warning}`),
+    `Failed outcome rate  ${(result.statisticsA.failureRate * 100).toFixed(1)}% -> ${(result.statisticsB.failureRate * 100).toFixed(1)}% (includes execution errors)`,
     `Command changed    ${result.commandChanged ? 'yes' : 'no'}`,
     `Concurrency changed ${result.concurrencyChanged ? 'yes' : 'no'}`,
     `Predicate changed  ${result.predicateChanged ? 'yes' : 'no'}`,

@@ -23,6 +23,13 @@ switch (mode) {
   case 'environment':
     process.stdout.write(`${process.env.FAILTRACE_TEST_VALUE}\n${process.cwd()}\n`);
     break;
+  case 'compare-mixed': {
+    const index = Number(process.env.FAILTRACE_TRIAL_INDEX);
+    if (index === 2) { process.stderr.write('unrelated delay\n'); setInterval(() => {}, 1_000); }
+    else if (index === 3) { process.stderr.write('comparison target\n'); process.exitCode = 7; }
+    else process.stdout.write('healthy\n');
+    break;
+  }
   case 'hang':
     process.stdout.write('started\n');
     if (marker) writeFileSync(marker, String(process.pid));

@@ -7,7 +7,7 @@ import type { RunStatistics, TrialResult } from './types.js';
 
 export interface CompareOptions {
   runA: string;
-  /** Omit to compare the first passing and first failing trial in runA. */
+  /** Omit to prefer a clean nonmatch and a recorded target match in runA. */
   runB?: string;
   trialA?: number;
   trialB?: number;
@@ -31,6 +31,8 @@ export interface ComparisonResult {
   runB: string;
   trialA: number;
   trialB: number;
+  selectedTrials?: { a: ComparisonTrialEvidence; b: ComparisonTrialEvidence };
+  warnings?: string[];
   commandChanged: boolean;
   concurrencyChanged: boolean;
   predicateChanged: boolean;
@@ -41,6 +43,8 @@ export interface ComparisonResult {
   stdout: OutputComparison;
   stderr: OutputComparison;
 }
+
+export type ComparisonTrialEvidence = Pick<TrialResult, 'status' | 'exitCode' | 'terminationReason' | 'failureMatched'>;
 
 async function digest(path: string, signal?: AbortSignal): Promise<{ hash: string; size: number }> {
   signal?.throwIfAborted();
@@ -90,11 +94,28 @@ async function compareOutput(a: string, b: string, maxBytes: number, maxLines: n
 }
 
 function selectTrial(trials: TrialResult[], index: number | undefined, desired: 'passed' | 'failed'): TrialResult {
+  const preferred = desired === 'failed'
+    ? trials.find((item) => item.failureMatched === true)
+    : trials.find((item) => item.status === 'passed' && item.terminationReason === 'exit' && item.exitCode === 0 && !item.error);
   const trial = index === undefined
-    ? trials.find((item) => desired === 'passed' ? item.status === 'passed' : item.status !== 'passed')
+    ? preferred ?? trials.find((item) => desired === 'passed' ? item.status === 'passed' : item.status !== 'passed')
     : trials.find((item) => item.index === index);
   if (!trial) throw new Error(index === undefined ? `Run has no ${desired} trial to compare.` : `Trial ${index} does not exist.`);
   return trial;
+}
+
+function trialEvidence(trial: TrialResult): ComparisonTrialEvidence {
+  return { status: trial.status, exitCode: trial.exitCode, terminationReason: trial.terminationReason,
+    ...(trial.failureMatched === undefined ? {} : { failureMatched: trial.failureMatched }) };
+}
+
+function trialWarning(trial: TrialResult, label: string): string[] {
+  if (trial.terminationReason !== 'exit' || trial.error || trial.outputLimit) {
+    return [`Trial ${label} is an incomplete or unhealthy execution (${trial.status}); do not interpret this difference as the target failure.`];
+  }
+  if (trial.failureMatched === undefined) return [`Trial ${label} has no recorded predicate match field; its legacy status alone does not identify the target.`];
+  if (!trial.failureMatched && trial.exitCode !== 0) return [`Trial ${label} exited ${trial.exitCode} without matching the target; check for unrelated setup or test failures.`];
+  return [];
 }
 
 export async function compareRuns(options: CompareOptions): Promise<ComparisonResult> {
@@ -132,6 +153,8 @@ export async function compareRuns(options: CompareOptions): Promise<ComparisonRe
     .map((key) => ({ key, before: (environmentA as Record<string, unknown>)[key] ?? null, after: (environmentB as Record<string, unknown>)[key] ?? null }));
   return {
     runA: first.id, runB: second.id, trialA: trialA.index, trialB: trialB.index,
+    selectedTrials: { a: trialEvidence(trialA), b: trialEvidence(trialB) },
+    warnings: [...trialWarning(trialA, 'A'), ...trialWarning(trialB, 'B')],
     commandChanged: first.command !== second.command,
     concurrencyChanged: (first.concurrency ?? 1) !== (second.concurrency ?? 1),
     predicateChanged: JSON.stringify(first.predicate ?? { kind: 'nonzero_exit' }) !== JSON.stringify(second.predicate ?? { kind: 'nonzero_exit' }),

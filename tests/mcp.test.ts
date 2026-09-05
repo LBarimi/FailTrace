@@ -99,7 +99,8 @@ describe('official SDK stdio MCP adapter', () => {
 
     const comparison = await client.callTool({ name: 'failtrace_compare', arguments: { runA: runDirectory } });
     expect(comparison.isError).toBe(false);
-    expect(structured(comparison)).toMatchObject({ trialA: 1, trialB: 2, stderr: { equal: false } });
+    expect(structured(comparison)).toMatchObject({ trialA: 1, trialB: 2, stderr: { equal: false }, warnings: [],
+      selectedTrials: { a: { failureMatched: false, exitCode: 0 }, b: { failureMatched: true } } });
 
     const bundled = await client.callTool({
       name: 'failtrace_bundle', arguments: { run: runDirectory, files: ['target.mjs'], command: 'node target.mjs mixed',

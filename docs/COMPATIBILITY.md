@@ -25,6 +25,10 @@ The next source version rejects nonmatching nonzero exits as inconclusive by def
 
 If a completed, valid nonmatch intentionally exits with another code, explicitly supply `healthyExitCodes` / repeat `--healthy-exit-code`, including `0` if needed. Use `inconclusiveExitCodes` / `--inconclusive-exit-code` for known preparation failures that must never classify a commit. Do not allow a setup error merely to restore a green result. An unrelated error matching a broad predicate still requires a more specific predicate or an explicit inconclusive code. The old `assessRun` and regular run predicate contracts are unchanged; candidate health belongs to the Bisect result.
 
+## Migration review for unreleased comparison selection
+
+Automatic comparison within one run now prefers a clean exit-0 nonmatch and a recorded target match. Previously the first non-passed trial could be a timeout even when a later trial matched the target. If no target match exists, the first failed outcome remains inspectable with an interpretation warning. Explicit trial indices and default first-trial selection between two runs are unchanged. Use explicit indices when reproducing an old comparison. Additive `selectedTrials` and `warnings` fields identify what was compared; a status of `passed` by itself is not semantic proof of successful test execution.
+
 ## Evidence formats at the 1.0 boundary
 
 | Result or file | Version and interpretation |

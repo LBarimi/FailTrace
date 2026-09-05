@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Prefer recorded target matches over infrastructure failures in automatic same-run comparisons, and expose selected trial status, exit code, match evidence and interpretation warnings through Core, CLI and MCP. Explicit trial choices and first-trial selection between two runs are preserved. Unknown Verify options now show an executable syntax hint.
+
 - Tighten Bisect candidate health: nonmatching exits must be healthy (default `0`); unrelated failures stop with an inconclusive result and a trial-specific reason. Core, CLI and MCP can declare other healthy exits or explicit inconclusive exits, which take precedence over target matches. See the compatibility migration note before upgrading workflows that deliberately use nonzero healthy exits.
 
 ## 1.0.0

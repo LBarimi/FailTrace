@@ -54,7 +54,9 @@ failtrace compare <run-a> <run-b> --trial-a 1 --trial-b 2
 failtrace compare <run-id> --max-lines 100 --max-bytes 65536 --json
 ```
 
-With one run, comparison selects its first passing and first failing trial. With two runs, it selects the first trial in each. Explicit trial indices override either selection. References can be a run ID, run directory, or `run.json` path.
+With one run, published 1.0.0 selects its first passing and first failing trial. **Unreleased source behavior:** prefer a clean exit-0 nonmatch and a recorded target match, so a preceding timeout does not hide the target. If no recorded match exists, failed execution evidence remains inspectable with a warning. With two runs, the first trial in each is still selected. Explicit trial indices override either selection. References can be a run ID, run directory, or `run.json` path.
+
+The unreleased result adds `selectedTrials.a` / `.b` (status, exit code, termination reason, and predicate evidence when recorded), plus `warnings`. Read those fields before interpreting a diff. Aggregate `failureRate` includes infrastructure failures; it is not necessarily the target-match rate. An explicit nonzero nonmatching exit may be intentional or an unrelated failure; comparison does not decide which.
 
 Results include aggregate failure-rate changes, command/predicate/concurrency changes, selected environment changes, stdout/stderr byte counts, full-stream SHA-256 hashes, and bounded line-aligned differences. A concurrency change identifies different experiment settings. Default limits are 200 displayed lines and a 64 KiB prefix per stream; truncation is explicit. This is an inspectable positional diff, not a semantic comparison or an optimal edit script. Matching hashes still compare the complete files.
 

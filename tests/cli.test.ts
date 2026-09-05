@@ -75,6 +75,17 @@ describe('CLI argument parsing', () => {
 });
 
 describe('built CLI', () => {
+  it('shows the correct Verify syntax for an unknown option before opening evidence', async () => {
+    const cwd = await workspace();
+    const result = await runCli(['verify', 'missing-baseline', '--reason', 'patch'], cwd);
+    expect(result.code).toBe(2);
+    expect(result.stderr).toContain('Unexpected option: --reason');
+    expect(result.stderr).toContain('--allow-change "source:reason for the change"');
+    expect(result.stderr).toContain('--command');
+    expect(result.stderr).toContain('--cwd');
+    expect(await readdir(cwd)).toEqual([]);
+  });
+
   it('prints help without creating run artifacts', async () => {
     const cwd = await workspace();
     const result = await runCli(['--help'], cwd);
