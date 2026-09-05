@@ -46,10 +46,10 @@ Prefer a project dependency? Use `npm install --save-dev failtrace` and run `npx
 
 ### GitHub release alternative
 
-The verified [v0.5.0 release archive and checksum](https://github.com/LBarimi/FailTrace/releases/tag/v0.5.0) are also available. To run that exact GitHub package:
+The verified [v0.6.0 release archive and checksum](https://github.com/LBarimi/FailTrace/releases/tag/v0.6.0) are also available. To run that exact GitHub package:
 
 ```sh
-npm exec --yes --allow-remote=root --package=https://github.com/LBarimi/FailTrace/releases/download/v0.5.0/failtrace-0.5.0.tgz -- failtrace demo
+npm exec --yes --allow-remote=root --package=https://github.com/LBarimi/FailTrace/releases/download/v0.6.0/failtrace-0.6.0.tgz -- failtrace demo
 ```
 
 For this archive alternative, the command-scoped `--allow-remote=root` option permits the explicitly requested URL on npm 12. It is unnecessary for the registry commands above and does not change your npm configuration. Older npm versions that do not recognize it can omit it. See [npm's URL install policy](https://docs.npmjs.com/using-npm/config/#allow-remote).
