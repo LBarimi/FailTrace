@@ -9,10 +9,11 @@ import { runTrials, validateRunOptions } from './run-trials.js';
 import { captureContext, snapshotsEqual, validRunContext } from './verify-context.js';
 import type { ContextSnapshot, RunContext } from './verify-context.js';
 import type { EnvironmentSnapshot, FailurePredicate, RunOptions, RunSummary, TrialResult } from './types.js';
+import { outputLimits, type OutputLimits } from './output-budget.js';
 
-export type VerifyChangeField = 'command' | 'source' | 'inputs' | 'setup' | 'environment' | 'timeout' | 'concurrency';
+export type VerifyChangeField = 'command' | 'source' | 'inputs' | 'setup' | 'environment' | 'timeout' | 'concurrency' | 'outputLimits';
 export interface VerifyAllowedChange { field: VerifyChangeField; reason: string }
-export interface VerifyOptions {
+export interface VerifyOptions extends OutputLimits {
   baseline: string;
   /** Always supplied by the current caller; saved evidence grants no execution authority. */
   command: string;
@@ -64,6 +65,7 @@ export interface VerifyResult {
   healthyExitCodes: number[];
   plan: {
     command: string; cwd: string; repeat: number; timeoutMs: number; concurrency: number;
+    maxOutputBytes: number; maxTotalOutputBytes: number;
     predicate: FailurePredicate | null; captureEnv: string[];
     healthyExitCodes: number[]; allowChanges: VerifyAllowedChange[];
   };
@@ -78,7 +80,7 @@ function healthyCodes(value: number[] = [0]): number[] {
 
 function cleanExit(trial: TrialResult): boolean {
   return trial.terminationReason === 'exit' && trial.signal === null && trial.timedOut === false
-    && trial.spawningFailed === false && trial.error === undefined && Number.isSafeInteger(trial.exitCode)
+    && trial.spawningFailed === false && trial.error === undefined && trial.outputLimit === undefined && Number.isSafeInteger(trial.exitCode)
     && trial.exitCode !== null && trial.exitCode >= 0 && typeof trial.failureMatched === 'boolean'
     && trial.status === (trial.failureMatched ? 'failed' : 'passed');
 }
@@ -89,9 +91,9 @@ function evidence(run: RunSummary, codes: number[]): VerifyRunEvidence {
   let unrelatedFailureTrials = 0;
   let invalidEvidenceTrials = 0;
   for (const [offset, trial] of run.trials.entries()) {
-    if (['signal', 'timeout', 'spawn_error', 'interrupted'].includes(trial.terminationReason)
+    if (['signal', 'timeout', 'spawn_error', 'interrupted', 'output_limit', 'output_error'].includes(trial.terminationReason)
       || trial.timedOut === true || trial.spawningFailed === true || (trial.signal !== null && trial.signal !== undefined)
-      || trial.error !== undefined) infrastructureTrials++;
+      || trial.error !== undefined || trial.outputLimit !== undefined) infrastructureTrials++;
     else if (!cleanExit(trial) || trial.command !== run.command || trial.index !== offset + 1) invalidEvidenceTrials++;
     else if (!trial.failureMatched && !codes.includes(trial.exitCode!)) unrelatedFailureTrials++;
     else healthyTrials++;
@@ -161,13 +163,15 @@ function environmentIdentity(env: EnvironmentSnapshot): unknown {
 }
 
 function changesBetween(
-  baseline: RunSummary, current: { command: string; timeoutMs: number; concurrency: number; environment: EnvironmentSnapshot; context: ContextSnapshot },
+  baseline: RunSummary, current: { command: string; timeoutMs: number; concurrency: number; environment: EnvironmentSnapshot; context: ContextSnapshot } & Required<OutputLimits>,
   allowed: VerifyAllowedChange[],
 ): VerifyContextChange[] {
   const previous = baseline.context!.before;
   const pairs: [VerifyChangeField, unknown, unknown][] = [
     ['command', baseline.command, current.command], ['timeout', baseline.timeoutMs, current.timeoutMs],
     ['concurrency', baseline.concurrency, current.concurrency],
+    ['outputLimits', { maxOutputBytes: baseline.maxOutputBytes ?? null, maxTotalOutputBytes: baseline.maxTotalOutputBytes ?? null },
+      { maxOutputBytes: current.maxOutputBytes, maxTotalOutputBytes: current.maxTotalOutputBytes }],
     ['environment', environmentIdentity(baseline.environment!), environmentIdentity(current.environment)],
     ['inputs', previous.inputs, current.context.inputs], ['setup', previous.setup, current.context.setup],
     ['source', { source: previous.source, files: previous.sourceFiles }, { source: current.context.source, files: current.context.sourceFiles }],
@@ -189,11 +193,12 @@ export async function verifyFix(options: VerifyOptions): Promise<VerifyResult> {
   if (typeof options.baseline !== 'string' || !options.baseline.trim() || options.baseline.includes('\0')) throw new Error('Verify requires a baseline run ID or path.');
   // Validate explicit execution authority before opening any saved run.
   validateRunOptions({ command: options.command, ...(options.repeat === undefined ? {} : { repeat: options.repeat }),
+    ...outputLimits(options),
     ...(options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs }),
     ...(options.concurrency === undefined ? {} : { concurrency: options.concurrency }) });
   const codes = healthyCodes(options.healthyExitCodes);
   const allowed = structuredClone(options.allowChanges ?? []);
-  const fields: VerifyChangeField[] = ['command', 'source', 'inputs', 'setup', 'environment', 'timeout', 'concurrency'];
+  const fields: VerifyChangeField[] = ['command', 'source', 'inputs', 'setup', 'environment', 'timeout', 'concurrency', 'outputLimits'];
   if (!Array.isArray(allowed) || allowed.some((entry) => !entry || !fields.includes(entry.field)
     || typeof entry.reason !== 'string' || !entry.reason.trim() || entry.reason.length > 10_000)
     || new Set(allowed.map((entry) => entry.field)).size !== allowed.length) throw new Error('Allowed changes require unique fields and a non-empty reason.');
@@ -207,6 +212,7 @@ export async function verifyFix(options: VerifyOptions): Promise<VerifyResult> {
     startedAt: new Date().toISOString(), endedAt: null, baseline: null, candidate: null,
     baselineEligibility: { eligible: false, reasons: [] }, changes: [], reasons: [], healthyExitCodes: codes,
     plan: { command: options.command, cwd, repeat: options.repeat ?? 10, timeoutMs: options.timeoutMs ?? 30_000,
+      ...outputLimits(options),
       concurrency: options.concurrency ?? 1, predicate: null, captureEnv: [], healthyExitCodes: codes, allowChanges: structuredClone(allowed) },
   };
   await writeJsonAtomic(report.metadataPath, report);
@@ -232,6 +238,10 @@ export async function verifyFix(options: VerifyOptions): Promise<VerifyResult> {
     plan.repeat = options.repeat ?? baseline.requestedTrials;
     plan.timeoutMs = options.timeoutMs ?? baseline.timeoutMs;
     plan.concurrency = options.concurrency ?? baseline.concurrency!;
+    Object.assign(plan, outputLimits({
+      maxOutputBytes: options.maxOutputBytes ?? baseline.maxOutputBytes ?? outputLimits({}).maxOutputBytes,
+      maxTotalOutputBytes: options.maxTotalOutputBytes ?? baseline.maxTotalOutputBytes ?? outputLimits({}).maxTotalOutputBytes,
+    }));
     plan.predicate = structuredClone(baseline.predicate!);
     plan.captureEnv = Object.keys(baseline.environment!.variables).sort();
     const environment = captureEnvironment(plan.captureEnv, options.env);
@@ -251,6 +261,7 @@ export async function verifyFix(options: VerifyOptions): Promise<VerifyResult> {
     try {
       candidate = await runTrials({
         command: plan.command, cwd, repeat: plan.repeat, timeoutMs: plan.timeoutMs, concurrency: plan.concurrency,
+        maxOutputBytes: plan.maxOutputBytes, maxTotalOutputBytes: plan.maxTotalOutputBytes,
         predicate: plan.predicate!, captureEnv: plan.captureEnv, captureContext: baseline.context!.declaration,
         artifactsDir: candidateArtifacts,
         ...(options.env === undefined ? {} : { env: options.env }),

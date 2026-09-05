@@ -6,6 +6,8 @@ Concurrency, classification early stopping, and metadata reconstruction below re
 
 Verify and baseline context capture require version 0.5.0 or later.
 
+The source checkout toward 1.0 adds `--max-output-bytes` (16 MiB per trial) and `--max-total-output-bytes` (256 MiB across an investigation) to run, bisect, minimize and verify. These flags are not in published 0.6.0. Output exhaustion preserves partial evidence and is inconclusive, with CLI exit 2. Verify inherits the baseline caps; an override requires `--allow-change outputLimits:reason`. See [resource scopes and result semantics](RESOURCE-LIMITS.md).
+
 ## Repeat and identify a failure
 
 ```sh

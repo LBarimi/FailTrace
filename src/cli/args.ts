@@ -1,7 +1,7 @@
-import type { BundleOptions, CompareOptions, FailurePredicate, MinimizeFormat, RunOptions, VerifyOptions } from '../core/index.js';
+import type { BundleOptions, CompareOptions, FailurePredicate, MinimizeFormat, OutputLimits, RunOptions, VerifyOptions } from '../core/index.js';
 
 type Common = { cwd?: string; json?: boolean };
-type Experiment = { command: string; repeat: number; timeoutMs: number; predicate?: FailurePredicate };
+type Experiment = { command: string; repeat: number; timeoutMs: number; predicate?: FailurePredicate } & OutputLimits;
 export type CliInvocation =
   | { kind: 'help' }
   | { kind: 'version' }
@@ -37,11 +37,12 @@ function integer(value: string, name: string, min = 1, max = Number.MAX_SAFE_INT
 }
 
 const predicateFlags = ['exit-code', 'stdout-contains', 'stderr-contains', 'stdout-regex', 'stderr-regex'];
-const experiments = ['command', 'repeat', 'timeout', ...predicateFlags, 'regex-flags'];
+const outputFlags = ['max-output-bytes', 'max-total-output-bytes'];
+const experiments = ['command', 'repeat', 'timeout', ...predicateFlags, 'regex-flags', ...outputFlags];
 const allowed: Record<string, string[]> = {
   demo: ['cwd', 'json'],
-  run: ['repeat', 'timeout', 'concurrency', ...predicateFlags, 'regex-flags', 'capture-env', 'capture-context', 'context-input', 'context-setup', 'context-source', 'cwd', 'json'],
-  verify: ['command', 'cwd', 'repeat', 'timeout', 'concurrency', 'healthy-exit-code', 'allow-change', 'json'],
+  run: ['repeat', 'timeout', 'concurrency', ...outputFlags, ...predicateFlags, 'regex-flags', 'capture-env', 'capture-context', 'context-input', 'context-setup', 'context-source', 'cwd', 'json'],
+  verify: ['command', 'cwd', 'repeat', 'timeout', 'concurrency', ...outputFlags, 'healthy-exit-code', 'allow-change', 'json'],
   compare: ['trial-a', 'trial-b', 'max-lines', 'max-bytes', 'cwd', 'json'],
   bisect: [...experiments, 'good', 'bad', 'min-failures', 'cwd', 'json'],
   minimize: [...experiments, 'input', 'format', 'min-failures', 'max-evaluations', 'cwd', 'json'],
@@ -100,6 +101,10 @@ export function parseArgs(argv: string[]): CliInvocation {
     return value;
   };
   const cwd = get('cwd');
+  const limits: OutputLimits = {
+    ...(get('max-output-bytes') === undefined ? {} : { maxOutputBytes: integer(get('max-output-bytes')!, 'Max output bytes') }),
+    ...(get('max-total-output-bytes') === undefined ? {} : { maxTotalOutputBytes: integer(get('max-total-output-bytes')!, 'Max total output bytes') }),
+  };
   const common: Common = { ...(cwd === undefined ? {} : { cwd }), ...(values.has('json') ? { json: true } : {}) };
   const maximum = kind === 'compare' ? 2 : ['run', 'bundle', 'verify'].includes(kind) ? 1 : 0;
   if (positional.length > maximum) throw new Error('Unexpected argument. Quote the entire target command.');
@@ -116,8 +121,8 @@ export function parseArgs(argv: string[]): CliInvocation {
       const separator = value.indexOf(':');
       const field = value.slice(0, separator);
       const reason = value.slice(separator + 1).trim();
-      if (separator === -1 || !['command', 'source', 'inputs', 'setup', 'environment', 'timeout', 'concurrency'].includes(field) || !reason) {
-        throw new Error('--allow-change must be field:reason; fields are command, source, inputs, setup, environment, timeout, concurrency.');
+      if (separator === -1 || !['command', 'source', 'inputs', 'setup', 'environment', 'timeout', 'concurrency', 'outputLimits'].includes(field) || !reason) {
+        throw new Error('--allow-change must be field:reason; fields are command, source, inputs, setup, environment, timeout, concurrency, outputLimits.');
       }
       return { field: field as NonNullable<VerifyOptions['allowChanges']>[number]['field'], reason };
     });
@@ -126,6 +131,7 @@ export function parseArgs(argv: string[]): CliInvocation {
     }
     return {
       kind, baseline, command, cwd: directory, ...(values.has('json') ? { json: true } : {}),
+      ...limits,
       ...(get('repeat') === undefined ? {} : { repeat: integer(get('repeat')!, 'Repeat') }),
       ...(get('timeout') === undefined ? {} : { timeoutMs: parseTimeout(get('timeout')!) }),
       ...(get('concurrency') === undefined ? {} : { concurrency: integer(get('concurrency')!, 'Concurrency') }),
@@ -160,7 +166,7 @@ export function parseArgs(argv: string[]): CliInvocation {
   const repeat = integer(get('repeat') ?? (kind === 'run' ? '10' : kind === 'bisect' ? '5' : '1'), 'Repeat');
   const timeoutMs = parseTimeout(get('timeout') ?? '30s');
   const predicate = parsePredicate(values);
-  const experiment: Experiment = { command, repeat, timeoutMs, ...(predicate === undefined ? {} : { predicate }) };
+  const experiment: Experiment = { command, repeat, timeoutMs, ...limits, ...(predicate === undefined ? {} : { predicate }) };
   if (kind === 'run') {
     const captureEnv = get('capture-env')?.split(',').map((key) => key.trim());
     if (captureEnv?.some((key) => !key || key.includes('=') || key.includes('\0'))) throw new Error('Capture environment names must be non-empty and comma-separated.');

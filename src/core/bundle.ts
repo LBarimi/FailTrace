@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { copyGitSourceFile } from './git-source.js';
 import { loadRun, safeArtifactPath } from './run-reader.js';
 import type { FailurePredicate } from './types.js';
+import { outputLimits, type OutputLimits } from './output-budget.js';
 
 export interface BundleOptions {
   run: string;
@@ -31,7 +32,7 @@ export interface BundleResult {
   files: string[];
 }
 
-interface ReproductionConfig {
+interface ReproductionConfig extends Required<OutputLimits> {
   schemaVersion: 1;
   failtraceVersion: string;
   sourceRunId: string;
@@ -150,6 +151,8 @@ export async function replay() {
       repeat: config.repeat,
       concurrency: config.concurrency ?? 1,
       timeoutMs: config.timeoutMs,
+      maxOutputBytes: config.maxOutputBytes,
+      maxTotalOutputBytes: config.maxTotalOutputBytes,
       predicate: config.predicate,
       cwd: resolve(directory, config.sourceDirectory),
       artifactsDir: resolve(directory, config.artifactsDirectory),
@@ -244,6 +247,7 @@ export async function createBundle(options: BundleOptions): Promise<BundleResult
       repeat: run.requestedTrials,
       concurrency: run.concurrency ?? 1,
       timeoutMs: run.timeoutMs,
+      ...outputLimits(run),
       predicate: run.predicate ?? { kind: 'nonzero_exit' },
       sourceDirectory: 'source',
       artifactsDirectory: 'replay-artifacts',

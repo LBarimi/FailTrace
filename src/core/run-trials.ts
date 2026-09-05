@@ -9,6 +9,7 @@ import { captureEnvironment, effectiveEnvironment } from './environment.js';
 import { DEFAULT_PREDICATE, matchesFailure, validatePredicate } from './predicates.js';
 import { captureContext, contextDeclaration, snapshotsEqual } from './verify-context.js';
 import type { RunOptions, RunSummary } from './types.js';
+import { OutputBudget, outputLimits } from './output-budget.js';
 
 export const VERSION = '0.6.0';
 export const DEFAULT_REPEAT = 10;
@@ -38,12 +39,18 @@ export function validateRunOptions(options: RunOptions): void {
     throw new Error('Timeout must be a positive integer from 1 to 2147483647 milliseconds.');
   }
   validatePredicate(options.predicate);
+  outputLimits(options);
   captureEnvironment(options.captureEnv, options.env);
   if (options.captureContext !== undefined) contextDeclaration(options.captureContext);
 }
 
 /** Sequential by default; bounded parallelism is explicit and evidence remains index ordered. */
 export async function runTrials(options: RunOptions): Promise<RunSummary> {
+  return runTrialsWithBudget(options, new OutputBudget(outputLimits(options).maxTotalOutputBytes));
+}
+
+/** Internal: investigations share one output allowance across candidate runs. */
+export async function runTrialsWithBudget(options: RunOptions, budget: OutputBudget): Promise<RunSummary> {
   validateRunOptions(options);
   options = { ...options,
     ...(options.predicate === undefined ? {} : { predicate: structuredClone(options.predicate) }),
@@ -75,6 +82,7 @@ export async function runTrials(options: RunOptions): Promise<RunSummary> {
     requestedTrials: options.repeat ?? DEFAULT_REPEAT,
     concurrency: options.concurrency ?? 1,
     timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+    ...outputLimits(options),
     startedAt: new Date().toISOString(),
     endedAt: null,
     status: 'running',
@@ -109,6 +117,8 @@ export async function runTrials(options: RunOptions): Promise<RunSummary> {
           runDirectory: directory,
           ...(executionEnv === undefined ? {} : { env: executionEnv }),
           signal: controller.signal,
+          maxOutputBytes: summary.maxOutputBytes!,
+          outputBudget: budget,
         });
         summary.trials.push(trial);
         let predicateError: unknown;
@@ -125,8 +135,13 @@ export async function runTrials(options: RunOptions): Promise<RunSummary> {
         summary.statistics = statistics.snapshot();
         await writeJsonAtomic(join(directory, dirname(trial.stdoutPath), 'result.json'), trial);
         if (predicateError) throw predicateError;
-        await options.onTrialComplete?.({ ...trial });
+        await options.onTrialComplete?.(structuredClone(trial));
         if (trial.status === 'interrupted') { stopScheduling = true; controller.abort(); }
+        if (trial.status === 'resource_limited' || trial.status === 'output_error') {
+          stopScheduling = true;
+          delete summary.decision;
+          controller.abort();
+        }
         if (options.stopWhenDecided !== undefined && !controller.signal.aborted) {
           if (trial.terminationReason !== 'exit' || trial.spawningFailed || trial.error) {
             stopScheduling = true; // An infrastructure outcome cannot justify classification.
@@ -161,9 +176,13 @@ export async function runTrials(options: RunOptions): Promise<RunSummary> {
     // persistence before the terminal summary (or caller rejection) is exposed.
     await Promise.all(Array.from({ length: Math.min(summary.concurrency!, summary.requestedTrials) }, worker));
     if (failed) throw firstError;
-    summary.status = options.signal?.aborted || summary.trials.some((trial) => trial.status === 'interrupted')
+    summary.status = options.signal?.aborted ? 'interrupted'
+      : summary.trials.some((trial) => trial.status === 'output_error') ? 'error'
+      : summary.trials.some((trial) => trial.status === 'resource_limited') ? 'resource_limited'
+      : summary.trials.some((trial) => trial.status === 'interrupted')
       ? 'interrupted'
       : 'completed';
+    if (summary.status === 'error') summary.error = 'Command output could not be fully persisted; inspect trial errors.';
   } catch (error) {
     summary.status = 'error';
     delete summary.decision;

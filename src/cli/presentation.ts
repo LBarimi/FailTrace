@@ -29,6 +29,9 @@ Experiment options (run, bisect, minimize):
   --stdout-regex REGEX   | --stderr-regex REGEX [--regex-flags imsu]
                      Choose one predicate; default is a non-zero exit.
   --min-failures N    Matches required per candidate (bisect/minimize: 1)
+  --max-output-bytes N       Combined stdout/stderr cap per trial (16777216)
+  --max-total-output-bytes N Combined output cap for all candidates (268435456)
+                            A limit preserves partial logs; result is inconclusive.
 
 Command-specific options:
   run       --capture-env KEY1,KEY2 (selected values only)
@@ -41,7 +44,8 @@ Command-specific options:
   verify    --repeat N, --timeout DURATION, --concurrency N (inherit baseline)
             --allow-change FIELD:REASON (repeatable; declare interventions)
             Fields: command, source, inputs, setup, environment, timeout,
-            concurrency. --healthy-exit-code N (repeatable; default: 0)
+            concurrency, outputLimits. --healthy-exit-code N (repeatable; default: 0)
+            Output caps inherit baseline; changing them needs an allowance.
             Predicate and context declarations are inherited from baseline.
   bundle    --file PATH (repeatable), --input PATH, --command COMMAND,
             --output NEW_DIRECTORY, --env-file JSON_FILE
@@ -97,6 +101,8 @@ export function formatTrial(trial: TrialResult, requestedTrials?: number): strin
     timed_out: 'TIMEOUT',
     spawn_error: 'SPAWN ERROR',
     interrupted: 'INTERRUPTED',
+    resource_limited: 'OUTPUT LIMIT',
+    output_error: 'OUTPUT ERROR',
   } as const;
   const index = String(trial.index).padStart(Math.max(2, String(requestedTrials ?? trial.index).length), '0');
   const detail = trial.status === 'failed'
@@ -128,6 +134,8 @@ export function formatSummary(summary: RunSummary): string {
     '',
     interrupted
       ? 'Run interrupted. Saved trials include interrupted trials that were active.'
+      : summary.status === 'resource_limited' ? 'Run inconclusive: output limit reached. Partial logs are preserved.'
+      : summary.status === 'error' ? 'Run inconclusive: evidence could not be fully persisted.'
       : matched > 0 ? 'Failure reproduced.' : statistics.failed > 0
         ? 'Target failure not reproduced; inspect execution failure evidence.' : 'No failure reproduced in this run.',
     '',

@@ -19,3 +19,5 @@ export { verifyFix, assessBaselineEligibility } from './verify.js';
 export type { VerifyOptions, VerifyResult, VerifyRunEvidence, VerifyContextChange, VerifyChangeField, VerifyAllowedChange, BaselineEligibility } from './verify.js';
 export type { ContextCaptureOptions, ContextDeclaration, ContextSnapshot, FileIdentity, RunContext } from './verify-context.js';
 export type { RunOptions, RunSummary, RunStatistics, TrialResult, TrialStatus, TerminationReason, FailurePredicate, EnvironmentSnapshot } from './types.js';
+export { DEFAULT_MAX_OUTPUT_BYTES, DEFAULT_MAX_TOTAL_OUTPUT_BYTES } from './output-budget.js';
+export type { OutputLimits, OutputLimit } from './output-budget.js';

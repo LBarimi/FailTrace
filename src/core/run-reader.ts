@@ -4,6 +4,7 @@ import { validatePredicate } from './predicates.js';
 import { MAX_METADATA_BYTES, type StoredRunSummary } from './run-metadata.js';
 import { aggregateStatistics } from './statistics.js';
 import type { RunSummary, TrialResult } from './types.js';
+import { outputLimits } from './output-budget.js';
 
 /** Resolve a referenced artifact without accepting escapes or symbolic links. */
 export async function safeArtifactPath(directory: string, path: string): Promise<string> {
@@ -30,11 +31,15 @@ function validateTrial(value: unknown): asserts value is TrialResult {
   const trial = value as TrialResult;
   if (!Number.isSafeInteger(trial.index) || trial.index < 1 || typeof trial.command !== 'string'
     || !Number.isFinite(trial.durationMs) || trial.durationMs < 0
-    || !['passed', 'failed', 'timed_out', 'spawn_error', 'interrupted'].includes(trial.status)
+    || !['passed', 'failed', 'timed_out', 'spawn_error', 'interrupted', 'resource_limited', 'output_error'].includes(trial.status)
     || typeof trial.stdoutPath !== 'string' || typeof trial.stderrPath !== 'string'
-    || !['exit', 'signal', 'timeout', 'spawn_error', 'interrupted'].includes(trial.terminationReason)
+    || !['exit', 'signal', 'timeout', 'spawn_error', 'interrupted', 'output_limit', 'output_error'].includes(trial.terminationReason)
     || (trial.exitCode !== null && !Number.isSafeInteger(trial.exitCode))) {
     throw new Error('Invalid trial metadata.');
+  }
+  if (trial.outputLimit !== undefined && (!trial.outputLimit || !['trial', 'experiment'].includes(trial.outputLimit.scope)
+    || !Number.isSafeInteger(trial.outputLimit.limitBytes) || trial.outputLimit.limitBytes < 1)) {
+    throw new Error('Invalid output limit metadata.');
   }
 }
 
@@ -61,11 +66,12 @@ export async function loadRun(reference: string, cwd = process.cwd()): Promise<R
     || !Number.isSafeInteger(run.requestedTrials) || run.requestedTrials < 1
     || (run.concurrency !== undefined && (!Number.isSafeInteger(run.concurrency) || run.concurrency < 1))
     || !Number.isSafeInteger(run.timeoutMs) || run.timeoutMs < 1 || run.timeoutMs > 2_147_483_647
-    || !['running', 'completed', 'interrupted', 'error'].includes(run.status)
+    || !['running', 'completed', 'interrupted', 'error', 'resource_limited'].includes(run.status)
     || !run.statistics || !Number.isFinite(run.statistics.failureRate)) {
     throw new Error('Invalid or unsupported run metadata.');
   }
   validatePredicate(run.predicate);
+  outputLimits(run);
   run.artifactDirectory = dirname(path);
   if (run.trialStorage !== undefined) {
     if (run.trialStorage !== 'individual' || run.trials.length !== 0

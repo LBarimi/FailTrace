@@ -102,7 +102,7 @@ The guide includes client configuration, bounded experiments, result interpretat
 - Minimization accepts only reproducing candidates and independently rechecks the result. Check `status` and `finalVerified`; limits and inconclusive runs are reported. Reductions are local to the supported removal operations.
 - Verify in 0.5.0 enforces a full, healthy baseline and candidate sample with explicit context changes. `target_not_observed` means no target match in that sample; it does not establish a statistical improvement or prove the defect gone. Captured file/environment scope does not include all external state.
 - Bundles include selected files and the Node Core engine. Target dependencies, services, uncaptured environment state, and shell portability still need attention. Creation never executes the bundle.
-- Commands run with your local permissions. Process cleanup is best effort. Logs can contain private output and grow without a size cap; `.failtrace/` is ignored by this repository.
+- Commands run with your local permissions. Process cleanup is best effort. Logs can contain private output; `.failtrace/` is ignored by this repository. Published 0.6.0 has no output size cap. The source checkout toward 1.0 adds [bounded output with explicit inconclusive outcomes](docs/RESOURCE-LIMITS.md).
 
 `run` exits `1` when it records failed outcomes; that is useful evidence. The Verify command uses `0` for healthy target-not-observed evidence, `1` for target observed, and `2` for inconclusive evidence. Invalid usage and incomplete investigations use `2`. Interruptions use `130`/`143`. See the [reference](docs/CLI.md#artifacts-and-exit-codes) for details.
 

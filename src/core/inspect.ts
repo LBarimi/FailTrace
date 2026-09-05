@@ -49,6 +49,7 @@ export interface InspectedTrial {
   stdoutPath: string;
   stderrPath: string;
   error?: string;
+  outputLimit?: TrialResult['outputLimit'];
 }
 
 export interface RunTrialPage {
@@ -133,6 +134,7 @@ function unhealthyTrial(trial: TrialResult, command: string): boolean {
     || trial.timedOut !== false
     || trial.spawningFailed !== false
     || trial.error !== undefined
+    || trial.outputLimit !== undefined
     || trial.exitCode === null
     || trial.exitCode < 0
     || matched === null
@@ -161,6 +163,7 @@ function projectTrial(trial: TrialResult, run: RunSummary): InspectedTrial {
     stdoutPath: `${directory}/stdout.txt`,
     stderrPath: `${directory}/stderr.txt`,
     ...(typeof trial.error === 'string' ? { error: trial.error } : {}),
+    ...(trial.outputLimit === undefined ? {} : { outputLimit: { ...trial.outputLimit } }),
   };
 }
 

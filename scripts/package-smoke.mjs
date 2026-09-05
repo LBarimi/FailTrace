@@ -103,6 +103,14 @@ async function exerciseInstalledCore() {
   });
   assert.equal(firstOutput.text + remainingOutput.text, 'trial 2\n');
   assert.equal(remainingOutput.nextOffsetBytes, null);
+  const noisy = join(project, 'noisy.mjs');
+  await writeFile(noisy, "process.stdout.write('x'.repeat(64));\n");
+  const bounded = await api.runTrials({ command: `${quote(process.execPath)} ${quote(noisy)}`, cwd: project,
+    repeat: 2, maxOutputBytes: 32, maxTotalOutputBytes: 48 });
+  assert.equal(bounded.status, 'resource_limited');
+  assert.equal(api.assessRun(bounded), 'inconclusive');
+  assert.equal(bounded.trials.length, 1);
+  assert.equal((await readFile(join(bounded.artifactDirectory, bounded.trials[0].stdoutPath))).length, 32);
   console.log(JSON.stringify({
     total: run.statistics.total, failed: run.statistics.failed,
     artifactDirectory: run.artifactDirectory, comparison: 'passed', inspection: 'passed',
@@ -230,6 +238,12 @@ async function exerciseInstalledMcp(installedDirectory, verification, environmen
     assert.equal(invalid.isError, false);
     assert.equal(invalid.structuredContent.status, 'inconclusive');
     assert.equal(invalid.structuredContent.candidate.unhealthyTrials, 2);
+    const bounded = await client.callTool({ name: 'failtrace_run', arguments: {
+      command: verification.command, repeat: 1, maxOutputBytes: 8, maxTotalOutputBytes: 16,
+    } });
+    assert.equal(bounded.isError, false);
+    assert.equal(bounded.structuredContent.status, 'resource_limited');
+    assert.equal(bounded.structuredContent.matchedTrials, 0);
     assert.deepEqual(errors, []);
     assert.equal(stderr.join(''), '', 'MCP stdout must stay protocol-only and stderr should be quiet');
     return { verification: 'passed', inspection: 'passed' };

@@ -41,6 +41,19 @@ async function repository(states: Array<{ failures: number; hang?: boolean }>): 
 afterEach(async () => cleanupDirectories(directories));
 
 describe('bisectRegression', () => {
+  it('shares an output allowance across endpoints and declines to claim a culprit after exhaustion', async () => {
+    const { cwd, commits } = await repository([{ failures: 0 }, { failures: 5 }]);
+    const result = await bisectRegression({ cwd: join(cwd, 'suite'), command, good: commits[0]!, bad: commits[1]!,
+      repeat: 1, maxOutputBytes: 64, maxTotalOutputBytes: 10 });
+    expect(result.status).toBe('inconclusive');
+    expect(result.firstBad).toBeNull();
+    expect(result.candidates).toHaveLength(2);
+    expect(result.candidates[0]!.run.status).toBe('completed');
+    expect(result.candidates[1]!.run.status).toBe('resource_limited');
+    expect(result.candidates[1]!.run.trials[0]!.outputLimit?.scope).toBe('experiment');
+    expect(result.cleanupError).toBeUndefined();
+  });
+
   it('finds the repeated-trial threshold boundary and preserves dirty main checkout state', async () => {
     const { cwd, commits } = await repository([{ failures: 0 }, { failures: 1 }, { failures: 3 }, { failures: 5 }]);
     const dirty = `${await readFile(join(cwd, 'suite', 'check.mjs'), 'utf8')}\n// User edits must survive.\n`;

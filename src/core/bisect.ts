@@ -5,10 +5,11 @@ import { writeJsonAtomic } from './artifacts.js';
 import { runGit } from './git.js';
 import { assessRun, validatePredicate } from './predicates.js';
 import { writeRunSummary } from './run-metadata.js';
-import { DEFAULT_TIMEOUT_MS, runTrials, validateRunOptions, VERSION } from './run-trials.js';
+import { DEFAULT_TIMEOUT_MS, runTrialsWithBudget, validateRunOptions, VERSION } from './run-trials.js';
+import { OutputBudget, outputLimits, type OutputLimits } from './output-budget.js';
 import type { FailurePredicate, RunSummary } from './types.js';
 
-export interface BisectOptions {
+export interface BisectOptions extends OutputLimits {
   command: string;
   good: string;
   bad: string;
@@ -29,7 +30,7 @@ export interface BisectCandidate {
   run: RunSummary;
 }
 
-export interface BisectResult {
+export interface BisectResult extends OutputLimits {
   schemaVersion: 1;
   failtraceVersion: string;
   id: string;
@@ -86,6 +87,8 @@ async function assertOwnedWorktree(artifactDirectory: string, worktree: string):
  */
 export async function bisectRegression(options: BisectOptions): Promise<BisectResult> {
   validateOptions(options);
+  const limits = outputLimits(options);
+  const outputBudget = new OutputBudget(limits.maxTotalOutputBytes);
   const cwd = await realpath(resolve(options.cwd ?? process.cwd()));
   // Resolve the repository without the caller's abort signal so even a
   // pre-cancelled invocation can persist a valid interrupted report.
@@ -102,6 +105,7 @@ export async function bisectRegression(options: BisectOptions): Promise<BisectRe
   const worktree = join(artifactDirectory, 'worktree');
   const result: BisectResult = {
     schemaVersion: 1,
+    ...limits,
     failtraceVersion: VERSION,
     id,
     artifactDirectory,
@@ -138,7 +142,8 @@ export async function bisectRegression(options: BisectOptions): Promise<BisectRe
     // this generated worktree before evaluating the next immutable commit.
     await runGit(worktree, ['reset', '--hard', commit], gitOptions);
     await runGit(worktree, ['clean', '-ffdx'], gitOptions);
-    const run = await runTrials({
+    const run = await runTrialsWithBudget({
+      ...limits,
       command: result.command,
       cwd: join(worktree, subdirectory),
       repeat: result.repeat,
@@ -148,7 +153,7 @@ export async function bisectRegression(options: BisectOptions): Promise<BisectRe
       ...(options.predicate === undefined ? {} : { predicate: options.predicate }),
       ...(options.env === undefined ? {} : { env: options.env }),
       ...(options.signal === undefined ? {} : { signal: options.signal }),
-    });
+    }, outputBudget);
     run.source = { kind: 'git', repository, commit, subdirectory: subdirectory.replaceAll('\\', '/') };
     await writeRunSummary(run);
     const candidate: BisectCandidate = { commit, role, assessment: assessRun(run, result.minFailures), run };

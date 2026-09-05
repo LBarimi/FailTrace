@@ -5,12 +5,13 @@ import { dirname, join, resolve } from 'node:path';
 import { writeJsonAtomic } from './artifacts.js';
 import { candidateSize, inputName, readMinimizeInput, writeCandidate, type Candidate, type JsonValue, type MinimizeFormat } from './minimize-input.js';
 import { assessRun, validatePredicate } from './predicates.js';
-import { DEFAULT_TIMEOUT_MS, runTrials, validateRunOptions, VERSION } from './run-trials.js';
+import { DEFAULT_TIMEOUT_MS, runTrialsWithBudget, validateRunOptions, VERSION } from './run-trials.js';
+import { OutputBudget, outputLimits, type OutputLimits } from './output-budget.js';
 import type { FailurePredicate } from './types.js';
 
 export type { MinimizeFormat } from './minimize-input.js';
 
-export interface MinimizeOptions {
+export interface MinimizeOptions extends OutputLimits {
   command: string;
   input: string;
   format: MinimizeFormat;
@@ -36,7 +37,7 @@ export interface MinimizeEvaluation {
   accepted: boolean;
 }
 
-export interface MinimizeResult {
+export interface MinimizeResult extends OutputLimits {
   schemaVersion: 1;
   failtraceVersion: string;
   id: string;
@@ -110,7 +111,9 @@ export async function minimizeFailure(options: MinimizeOptions): Promise<Minimiz
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const minFailures = options.minFailures ?? 1;
   const maxEvaluations = options.maxEvaluations ?? 200;
-  validateRunOptions({ command: options.command, repeat, timeoutMs });
+  validateRunOptions({ ...options, repeat, timeoutMs });
+  const limits = outputLimits(options);
+  const outputBudget = new OutputBudget(limits.maxTotalOutputBytes);
   validatePredicate(options.predicate);
   if (!Number.isSafeInteger(minFailures) || minFailures < 1 || minFailures > repeat) {
     throw new Error('minFailures must be an integer between one and repeat.');
@@ -135,7 +138,7 @@ export async function minimizeFailure(options: MinimizeOptions): Promise<Minimiz
     await copyFile(inputPath, originalPath, constants.COPYFILE_EXCL | constants.COPYFILE_FICLONE);
   }
   const result: MinimizeResult = {
-    schemaVersion: 1, failtraceVersion: VERSION, id, status: 'inconclusive',
+    schemaVersion: 1, failtraceVersion: VERSION, id, status: 'inconclusive', ...limits,
     command: options.command, format: options.format, cwd, inputPath, artifactDirectory,
     originalPath, minimizedPath: join(artifactDirectory, 'minimized', inputName(options.format)),
     originalSize: candidateSize(initial), minimizedSize: candidateSize(initial),
@@ -145,6 +148,7 @@ export async function minimizeFailure(options: MinimizeOptions): Promise<Minimiz
   const metadataPath = join(artifactDirectory, 'result.json');
   let current = initial;
   let limited = false;
+  let outputLimited = false;
   let sawInconclusive = false;
   const persist = async (): Promise<void> => writeJsonAtomic(metadataPath, result);
 
@@ -161,12 +165,18 @@ export async function minimizeFailure(options: MinimizeOptions): Promise<Minimiz
     }
     environment.FAILTRACE_INPUT = options.format === 'files' ? undefined : candidatePath;
     environment.FAILTRACE_INPUT_DIR = options.format === 'files' ? candidatePath : undefined;
-    const run = await runTrials({
+    const run = await runTrialsWithBudget({
       command: options.command, repeat, timeoutMs, cwd, artifactsDir: directory,
+      ...limits,
       stopWhenDecided: { minFailures },
       env: environment, predicate: result.predicate,
       ...(options.signal === undefined ? {} : { signal: options.signal }),
-    });
+    }, outputBudget);
+    if (run.status === 'resource_limited' || run.status === 'error') {
+      outputLimited = true;
+      limited = true;
+      result.error = 'Output could not be captured completely; no further candidates or final verification were executed.';
+    }
     const assessment = assessRun(run, minFailures);
     const evaluation: MinimizeEvaluation = {
       index, phase, candidatePath, units: candidateSize(candidate), assessment,
@@ -179,10 +189,11 @@ export async function minimizeFailure(options: MinimizeOptions): Promise<Minimiz
   };
 
   const accept = async (candidate: Candidate): Promise<boolean | null> => {
-    if (options.signal?.aborted) return null;
+    if (outputLimited || options.signal?.aborted) return null;
     if (result.evaluations.length >= maxEvaluations - 1) { limited = true; return null; }
     const evaluation = await evaluate(candidate, 'candidate');
     if (evaluation.assessment === 'inconclusive') sawInconclusive = true;
+    if (outputLimited) return null;
     if (evaluation.accepted) current = candidate;
     return evaluation.accepted;
   };
@@ -230,8 +241,8 @@ export async function minimizeFailure(options: MinimizeOptions): Promise<Minimiz
     await writeCandidate(current, result.minimizedPath, originalPath);
     result.minimizedSize = candidateSize(current);
     // One budget slot is always reserved for this independent final recheck.
-    result.final = await evaluate(current, 'final');
-    result.finalVerified = result.baseline.assessment === 'reproduced' && result.final.assessment === 'reproduced';
+    if (!outputLimited) result.final = await evaluate(current, 'final');
+    result.finalVerified = result.baseline.assessment === 'reproduced' && result.final?.assessment === 'reproduced';
     result.status = options.signal?.aborted ? 'interrupted'
       : result.baseline.assessment !== 'reproduced' ? result.baseline.assessment
         : !result.finalVerified ? 'inconclusive'

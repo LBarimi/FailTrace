@@ -72,7 +72,7 @@ export async function matchesFailure(
   trial: TrialResult, runDirectory: string, predicate: FailurePredicate = DEFAULT_PREDICATE,
 ): Promise<boolean> {
   // Infrastructure outcomes are distinct from a reproduced target predicate.
-  if (trial.terminationReason !== 'exit' || trial.exitCode === null || trial.spawningFailed) return false;
+  if (trial.terminationReason !== 'exit' || trial.exitCode === null || trial.spawningFailed || trial.outputLimit || trial.error) return false;
   switch (predicate.kind) {
     case 'nonzero_exit': return trial.exitCode !== 0;
     case 'exit_code': return trial.exitCode === predicate.value;
@@ -97,7 +97,7 @@ export function assessRun(summary: RunSummary, minFailures = 1): 'reproduced' | 
   let matches = 0;
   for (const [offset, trial] of summary.trials.entries()) {
     if (trial.index !== offset + 1 || trial.terminationReason !== 'exit'
-      || trial.spawningFailed || trial.timedOut || trial.signal !== null || trial.error !== undefined
+      || trial.spawningFailed || trial.timedOut || trial.signal !== null || trial.error !== undefined || trial.outputLimit !== undefined
       || trial.exitCode === null || !Number.isSafeInteger(trial.exitCode) || trial.exitCode < 0
       || !['passed', 'failed'].includes(trial.status)
       || (trial.failureMatched !== undefined && trial.failureMatched !== (trial.status === 'failed'))) {

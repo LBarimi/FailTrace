@@ -1,7 +1,8 @@
 import type { ContextCaptureOptions, RunContext } from './verify-context.js';
+import type { OutputBudget, OutputLimit, OutputLimits } from './output-budget.js';
 
-export type TrialStatus = 'passed' | 'failed' | 'timed_out' | 'spawn_error' | 'interrupted';
-export type TerminationReason = 'exit' | 'signal' | 'timeout' | 'spawn_error' | 'interrupted';
+export type TrialStatus = 'passed' | 'failed' | 'timed_out' | 'spawn_error' | 'interrupted' | 'resource_limited' | 'output_error';
+export type TerminationReason = 'exit' | 'signal' | 'timeout' | 'spawn_error' | 'interrupted' | 'output_limit' | 'output_error';
 
 /** A single, explicit target failure rule. Text predicates match decoded UTF-8 output. */
 export type FailurePredicate =
@@ -37,6 +38,8 @@ export interface TrialResult {
   stderrPath: string;
   /** Whether the configured predicate matched; absent in older artifacts. */
   failureMatched?: boolean;
+  /** Output was incomplete. A truncated stream never establishes a target nonmatch. */
+  outputLimit?: OutputLimit;
 }
 
 export interface RunStatistics {
@@ -48,7 +51,7 @@ export interface RunStatistics {
   durationMs: { min: number; average: number; max: number };
 }
 
-export interface RunSummary {
+export interface RunSummary extends OutputLimits {
   schemaVersion: 1;
   failtraceVersion: string;
   id: string;
@@ -60,7 +63,7 @@ export interface RunSummary {
   timeoutMs: number;
   startedAt: string;
   endedAt: string | null;
-  status: 'running' | 'completed' | 'interrupted' | 'error';
+  status: 'running' | 'completed' | 'interrupted' | 'error' | 'resource_limited';
   artifactDirectory: string;
   trials: TrialResult[];
   statistics: RunStatistics;
@@ -75,7 +78,7 @@ export interface RunSummary {
   source?: { kind: 'git'; repository: string; commit: string; subdirectory: string };
 }
 
-export interface RunOptions {
+export interface RunOptions extends OutputLimits {
   command: string;
   repeat?: number;
   /** Opt-in parallelism changes resource contention and potentially failure behavior. Defaults to one. */
@@ -104,4 +107,6 @@ export interface TrialOptions {
   runDirectory: string;
   env?: NodeJS.ProcessEnv;
   signal?: AbortSignal;
+  maxOutputBytes?: number;
+  outputBudget?: OutputBudget;
 }

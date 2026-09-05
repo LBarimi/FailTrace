@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Bound retained command output by default: 16 MiB combined stdout/stderr per trial and 256 MiB across a run or all candidates in a bisect/minimization. Core, CLI and MCP accept explicit byte caps. Limits preserve partial evidence and stop inconclusively; output write failures cannot become healthy predicate nonmatches.
+- Verify inherits output caps and requires an explicit reason for changed limits. Replay bundles preserve the source run's caps. Saved inspection and agent responses expose incomplete-output details.
+
 ## 0.6.0 — 2026-09-05
 
 - Extended the guided demo into one measurement-to-replay flow without removing its 7/3 repetition, `["BUG"]` reduction or replay bundle. The minimized input becomes a captured baseline; the demo observes the unchanged target, rejects an unrelated crash as inconclusive, reports a healthy fixed candidate sample without claiming elimination, then restores the affected implementation for replay.
