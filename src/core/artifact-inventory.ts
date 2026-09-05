@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { lstat, opendir } from 'node:fs/promises';
+import { lstat, opendir, realpath } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { readBoundedFile } from './bounded-file.js';
 import { MAX_INVESTIGATION_METADATA_BYTES, MAX_METADATA_BYTES } from './metadata-budget.js';
@@ -67,7 +67,14 @@ export async function inventoryArtifacts(options: ArtifactInventoryOptions = {})
   if (options.directory !== undefined && (typeof options.directory !== 'string' || !options.directory.trim() || options.directory.includes('\0'))) {
     throw new Error('Provide an artifact storage directory.');
   }
-  const directory = resolve(options.cwd ?? process.cwd(), options.directory ?? '.failtrace');
+  options.signal?.throwIfAborted();
+  const requestedCwd = resolve(options.cwd ?? process.cwd());
+  const cwd = await realpath(requestedCwd);
+  const requestedDirectory = resolve(requestedCwd, options.directory ?? '.failtrace');
+  const fromCwd = relative(requestedCwd, requestedDirectory);
+  // OS temporary-directory aliases may be part of the chosen working directory.
+  // Canonicalize that base, then reject redirects within the selected storage path.
+  const directory = inside(fromCwd) ? resolve(cwd, fromCwd) : resolve(cwd, options.directory ?? '.failtrace');
   const result: ArtifactInventory = { schemaVersion: 1, directory, exists: false, complete: true, scannedEntries: 0, maxEntries,
     bytes: 0, files: 0, metadataBytesRead: 0, snapshot: '', entries: [], issues: [] };
   options.signal?.throwIfAborted();
@@ -127,7 +134,10 @@ export async function inventoryArtifacts(options: ArtifactInventoryOptions = {})
         for (const [key, child] of Object.entries(value)) {
           if (referenceKeys.has(key)) {
             if (typeof child !== 'string' || !child || child.length > 4096 || child.includes('\0')) incomplete(group, 'Invalid metadata references require manual review.');
-            else if (isAbsolute(child)) found.add(resolve(child));
+            else if (isAbsolute(child)) {
+              const fromRequestedRoot = relative(requestedDirectory, resolve(child));
+              found.add(inside(fromRequestedRoot) ? resolve(directory, fromRequestedRoot) : resolve(child));
+            }
             else incomplete(group, 'Relative metadata references require manual review.');
           }
           if (child && typeof child === 'object') {

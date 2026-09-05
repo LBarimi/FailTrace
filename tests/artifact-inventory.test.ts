@@ -90,6 +90,21 @@ describe('bounded read-only artifact inventory', () => {
     expect(await readFile(join(outside, 'secret.txt'), 'utf8')).toBe('outside private value');
   });
 
+  it('canonicalizes a working-directory alias while preserving local evidence references', async () => {
+    const cwd = await workspace();
+    const parent = await workspace();
+    const alias = join(parent, 'working-directory-alias');
+    await symlink(cwd, alias, process.platform === 'win32' ? 'junction' : 'dir');
+    await put(cwd, 'runs/baseline/run.json', { ...complete, artifactDirectory: join(alias, '.failtrace/runs/baseline') });
+    await put(cwd, 'verifications/fix/verify.json', { ...complete, baseline: { artifactDirectory: join(alias, '.failtrace/runs/baseline') } });
+    const result = await inventoryArtifacts({ cwd: alias });
+    expect(result).toMatchObject({ complete: true, entries: [
+      { path: 'runs/baseline', referencedBy: ['verifications/fix'], externalReferences: 0 },
+      { path: 'verifications/fix', references: ['runs/baseline'], externalReferences: 0 },
+    ] });
+    expect((await inventoryArtifacts({ cwd: alias, directory: join(alias, '.failtrace') })).snapshot).toBe(result.snapshot);
+  });
+
   it('fails closed on invalid, relative, missing, and complex metadata references', async () => {
     const cwd = await workspace();
     await put(cwd, 'runs/invalid/run.json', '{');
