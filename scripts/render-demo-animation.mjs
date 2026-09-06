@@ -7,6 +7,7 @@ import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
+import { width, height, windowFrame } from './media/window.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const options = {};
@@ -47,7 +48,6 @@ assert(run.trials.every(trial => trial.terminationReason === 'exit' && ['passed'
 
 // Public pixels use only validated demo fixture values, counts and status enums.
 // Never render command paths, artifact paths, environment values or raw logs.
-const width = 960, height = 520;
 const c = { bg: '#09111d', panel: '#101c2d', edge: '#27364b', ink: '#f0f5fb', muted: '#9aadc4', blue: '#88b8ff', green: '#72dfb3', red: '#ff8796', amber: '#ffcc80' };
 const escape = value => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
 const text = (x, y, value, size = 20, fill = c.ink, extra = '') => `<text x="${x}" y="${y}" fill="${fill}" font-size="${size}" ${extra}>${escape(value)}</text>`;
@@ -87,7 +87,7 @@ function scene(stage, step) {
       + text(64, 405, 'Bundle ready: source + input + manifest + replay.', 19, c.muted);
   }
   const steps = ['REPEAT', 'MINIMIZE', 'VERIFY', 'RECHECK'];
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+  const bodySvg = `
 <rect width="960" height="520" rx="16" fill="${c.bg}"/>
 <g font-family="Arial, 'DejaVu Sans', sans-serif">
 ${text(40, 48, 'FailTrace', 25, c.ink, 'font-weight="700"')}
@@ -102,8 +102,10 @@ ${text(896, 203, `${stage + 1} / 4 · ${steps[stage]}`, 13, c.muted, 'text-ancho
 ${body}
 ${text(40, 470, `$ npx --yes failtrace@${version} demo`, 21, c.green, mono)}
 ${[0, 1, 2, 3].map(i => rect(772 + i * 38, 456, 28, 5, stage === i ? c.blue : c.edge, 2)).join('')}
-${text(40, 502, 'Recorded CLI demo · abridged output · edited timing · finite observations', 13, c.muted)}
-</g></svg>`;
+</g>`;
+  const cursor = [[605, 424], [660, 410], [595, 430], [760, 430]][stage];
+  return windowFrame({ title: 'FailTrace — demo walkthrough', body: bodySvg,
+    cursor: [cursor[0] + step * 3, cursor[1] + step * 2] });
 }
 
 // The first frame carries the problem and its observed result even before playback.

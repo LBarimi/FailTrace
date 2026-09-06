@@ -20,7 +20,7 @@ npx --yes failtrace@1.4.0 demo
 
 ![FailTrace demo: capture a failure, reduce its input, reject an unrelated crash, and check a patch](docs/assets/demo.gif)
 
-An original, controlled CLI example with abridged output and edited timing. [Static walkthrough](docs/assets/demo.svg) · [Static poster](docs/assets/demo-poster.png) · [Demo details](docs/DEMO.md)
+Original recorded results, presented in macOS-style windows with added pointers. Output is abridged and GIF timing edited. [Static walkthrough](docs/assets/demo.svg) · [Static poster](docs/assets/demo-poster.png) · [Recording details](docs/DEMO.md)
 
 The demo reduces six input items to `["BUG"]`, rejects a patch that crashes for another reason, and checks a working patch. It saves the evidence in `.failtrace/` and prints a replay command. These are example outcomes, not performance measurements; a passing sample does not prove a bug is gone.
 
@@ -42,6 +42,10 @@ Then ask your agent:
 
 The seven MCP tools share the CLI's Core engine. They retain the failure signature and investigation evidence across repetition, comparison, regression search, minimization, verification and replay. Agents can retrieve saved trial and log pages without rerunning the command. Shell-capable agents can also use the CLI with `--json`.
 
+![Recorded MCP calls: capture the target, inspect saved stderr, and verify a declared patch](docs/assets/agent-session.png)
+
+Actual tool-response excerpts from an original fixture. The agent can inspect the saved failure before checking the patch.
+
 ## Recheck an existing unit test
 
 **Follow an exact NUnit or Unity test through a fix.** Each attempt gets a fresh NUnit 3 report. Missing or skipped tests and unrelated failures stay inconclusive, so an agent cannot accept them as evidence that the selected test passed.
@@ -49,6 +53,10 @@ The seven MCP tools share the CLI's Core engine. They retain the failure signatu
 [Connect your test or try the original EditMode example →](docs/UNIT-TESTS.md)
 
 NUnit support is included in 1.3.0 through CLI and MCP. The documented Unity validation covers the Windows EditMode example.
+
+![NUnit evidence: a failing baseline, a passing candidate, and a skipped test kept inconclusive](docs/assets/unit-test-evidence.png)
+
+Recorded NUnit 3 report controls. The selected test stays the same; a skipped report is not accepted as a passing test.
 
 ## Use it on your own failure
 
@@ -70,6 +78,10 @@ Each trial saves its output. Exit `1` can mean the target failure was recorded; 
 | How can I replay this investigation? | `bundle` |
 
 [Command reference](docs/CLI.md) · [Literal executable arguments](docs/DIRECT-EXECUTION.md) · [Reusable project scripts](docs/PROJECT-WORKFLOW.md)
+
+![A reduced input packaged with a replay entry point reproduces the target failure](docs/assets/reproduction-bundle.png)
+
+The demo's bundle reproduces its original failure with exit `1`. Keep the source, input and replay together; [supply the target's prerequisites](docs/BUNDLES.md) when packaging your own investigation.
 
 ## What the results establish
 

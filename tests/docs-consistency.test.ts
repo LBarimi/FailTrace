@@ -54,7 +54,7 @@ it('rejects broken guide paths and heading links', async () => {
 
 it('rejects an asset changed independently of its checked demo recording', async () => {
   const cwd = await fixture();
-  const image = join(cwd, 'docs/assets/demo-poster.png');
+  const image = join(cwd, 'docs/assets/agent-session.png');
   await mkdir(dirname(image), { recursive: true });
   await writeFile(image, Buffer.from('unrecorded image'));
   await expect(check(cwd)).rejects.toMatchObject({ code: 1, stderr: expect.stringContaining('asset digest differs') });

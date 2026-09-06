@@ -19,11 +19,19 @@ For your own investigation, choose a specific failure signature, arrange the tar
 
 [Return to quick start](../README.md#quick-start)
 
-## README animation
+## README images and animation
 
-The README GIF summarizes the original CLI demo: a failure that comes and goes, a reduced input, an unrelated crash, and a checked patch. The first frame and poster show the observed failure immediately. The layout abbreviates output and edits timing; it depicts CLI results, not an autonomous agent session or a speed measurement. [Static poster](assets/demo-poster.png) · [Full static summary](assets/demo.svg)
+The README GIF summarizes the original CLI demo: a failure that comes and goes, a reduced input, an unrelated crash, and a checked patch. The first frame and poster show the observed failure immediately. [Static poster](assets/demo-poster.png) · [Full static summary](assets/demo.svg)
 
-The [recording manifest](assets/demo-recording.json) records the CLI version, checked outcomes and asset hashes. It contains no raw logs, environment values or local machine paths. The current recording uses a fresh public npm installation of 1.4.0.
+Three additional images sit beside their feature descriptions:
+
+- [MCP session](assets/agent-session.png): excerpts from actual run, saved-output inspection and Verify responses through the installed stdio server.
+- [NUnit evidence](assets/unit-test-evidence.png): controlled failed, passed and skipped NUnit 3 XML reports processed through MCP. This is a parser/verification demonstration, not a Unity Editor recording.
+- [Reproduction bundle](assets/reproduction-bundle.png): the original demo's checked reduced input, selected bundle files and actual replay result.
+
+These are **rendered walkthroughs from recorded output**, using macOS-style window chrome and added mouse pointers. The recordings were made on Windows; the frame does not claim a native macOS capture or an agent application's UI. Pointers draw attention to results and do not imply clickable controls. Output is abbreviated, file paths are shortened, and GIF timing is edited. The images make no execution-speed claim.
+
+The [demo manifest](assets/demo-recording.json) and [feature-image manifest](assets/readme-scenes.json) record the CLI version, checked outcomes and asset hashes. They contain no raw logs, environment values or local machine paths. The current recordings use the verified public npm installation of 1.4.0.
 
 To regenerate it, use Node.js and the optional maintainer image renderer. This does not add a runtime dependency to FailTrace:
 
@@ -32,11 +40,12 @@ npm install --prefix .failtrace/media-tools --no-save --package-lock=false sharp
 npm run build
 node scripts/render-demo.mjs
 node scripts/render-demo-animation.mjs
+node scripts/render-readme-scenes.mjs
 npm run check:docs
 ```
 
-The renderers execute the demo and validate the depicted results before writing the static SVG, GIF, poster and recording manifest. Use `--cli <installed-package>/dist/cli/index.js` on both renderers to record an independently installed package, or `--sharp <sharp-package-directory>` on the animation renderer to use an existing image library. Raw evidence and vector storyboards stay under `.failtrace/demos/<id>/`. Keep the GIF below 1 MiB.
+The renderers validate the depicted outcomes before writing assets. Use `--cli <installed-package>/dist/cli/index.js` on each renderer to record an independently installed package, or `--sharp <sharp-package-directory>` on either PNG/GIF renderer to use an existing image library. Raw evidence and vector storyboards stay under `.failtrace/demos/<id>/` and `.failtrace/readme-media/`. The feature recorder uses the development MCP client to call the installed server. Keep the GIF below 1 MiB and each feature image below 250 KiB.
 
-Review each scene at README width before committing. Only validated fixture values enter the artwork. Generate the SVG before the animation so the manifest covers all three current assets; `check:docs` rejects stale versions or changed assets.
+Review each scene at README width before committing. Only validated fixture values enter the artwork. Generate the SVG before the animation so its manifest covers all three demo assets; the feature recorder writes its own manifest. `check:docs` rejects stale versions or changed assets in either set.
 
 [Documentation index](README.md)

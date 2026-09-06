@@ -1,0 +1,24 @@
+{
+  "version": "1.4.0",
+  "presentation": "macos-style-frame-with-pointer",
+  "sources": [
+    "recorded MCP calls",
+    "controlled NUnit 3 XML reports",
+    "recorded CLI bundle replay"
+  ],
+  "outcomes": {
+    "tools": 7,
+    "baselineMatches": 2,
+    "fixedStatus": "target_not_observed",
+    "fixedHealthyTrials": 2,
+    "nunitBaseline": "reproduced",
+    "nunitPassed": "target_not_observed",
+    "nunitSkipped": "inconclusive",
+    "replayExit": 1
+  },
+  "sha256": {
+    "agent-session.png": "1a3fa399cae7dc7b960f3162d19469c43d1aea7e4110bdcf047cfe80d1feebdc",
+    "unit-test-evidence.png": "7e3b24bd03f0c9302c3685b396316ebc46f9282f9cc4280be4eaa489aac52270",
+    "reproduction-bundle.png": "d90dc6d6983d71317f527d615c8f3272f398d8bd802267787ffc4729345dd00d"
+  }
+}

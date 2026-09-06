@@ -86,12 +86,17 @@ for (const [path, markdown] of pages) {
     }
   }
 }
-const recording = await json('docs/assets/demo-recording.json');
-if (recording.version !== installVersion) fail('demo recording', 'recorded CLI version differs from install examples; regenerate the assets');
-for (const name of ['demo.gif', 'demo-poster.png', 'demo.svg']) {
-  const bytes = await readFile(join(root, 'docs/assets', name));
-  if (createHash('sha256').update(bytes).digest('hex') !== recording.sha256?.[name]) fail(name, 'asset digest differs; regenerate the recording');
-  if (name === 'demo.gif' && bytes.length >= 1024 * 1024) fail(name, 'README GIF must remain below 1 MiB');
+for (const [manifestPath, assets] of [
+  ['demo-recording.json', ['demo.gif', 'demo-poster.png', 'demo.svg']],
+  ['readme-scenes.json', ['agent-session.png', 'unit-test-evidence.png', 'reproduction-bundle.png']],
+]) {
+  const recording = await json(`docs/assets/${manifestPath}`);
+  if (recording.version !== installVersion) fail(manifestPath, 'recorded version differs from install examples; regenerate the assets');
+  for (const name of assets) {
+    const bytes = await readFile(join(root, 'docs/assets', name));
+    if (createHash('sha256').update(bytes).digest('hex') !== recording.sha256?.[name]) fail(name, 'asset digest differs; regenerate the recording');
+    if (name === 'demo.gif' && bytes.length >= 1024 * 1024) fail(name, 'README GIF must remain below 1 MiB');
+  }
 }
 if (failures.length) { console.error(failures.join('\n')); process.exitCode = 1; }
 else console.log(`Documentation checked: ${pages.size} pages, installation pins, package/runtime/MCP versions, local links and demo assets.`);
