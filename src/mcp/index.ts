@@ -14,6 +14,7 @@ import { verifyFix, type VerifyResult, type VerifyRunEvidence } from '../core/ve
 import type { ContextSnapshot, RunContext } from '../core/verify-context.js';
 import type { RunOptions, RunSummary } from '../core/types.js';
 import { MAX_COMMAND_BYTES, MAX_CONCURRENCY, MAX_EVALUATIONS, MAX_RECORDED_TRIALS } from '../core/metadata-budget.js';
+import { MAX_COMMAND_ARGS } from '../core/command.js';
 
 const positiveInteger = z.number().int().min(1).max(Number.MAX_SAFE_INTEGER);
 const nonnegativeInteger = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
@@ -34,7 +35,8 @@ const captureContextSchema = z.object({
   sourceFiles: z.array(z.string().min(1)).optional(),
 }).strict();
 const commandSchema = z.object({
-  command: z.string().min(1).max(MAX_COMMAND_BYTES).describe('Command for the platform shell, at most 64 KiB UTF-8; use a project-owned script for longer commands. Executed with your local permissions.'),
+  command: z.string().min(1).max(MAX_COMMAND_BYTES).describe('Shell command when args is absent; executable when args is present. Command and arguments together are limited to 64 KiB. Executed with your local permissions.'),
+  args: z.array(z.string().max(MAX_COMMAND_BYTES)).max(MAX_COMMAND_ARGS).optional().describe('Literal executable arguments, including an empty array, opt out of shell parsing. Minimize replaces only entire {input} arguments with each candidate path. Windows .cmd/.bat shims require shell mode.'),
   cwd: z.string().min(1).optional().describe('Working directory; relative paths resolve from the server working directory.'),
   repeat: positiveInteger.max(MAX_RECORDED_TRIALS).optional(),
   timeoutMs: positiveInteger.max(2_147_483_647).optional(),
@@ -49,6 +51,7 @@ type CommandInput = z.infer<typeof commandSchema>;
 function commandOptions(input: CommandInput, cwd: string, signal: AbortSignal): RunOptions {
   return {
     command: input.command,
+    ...(input.args === undefined ? {} : { args: input.args }),
     cwd: resolve(cwd, input.cwd ?? '.'),
     signal,
     ...(input.repeat === undefined ? {} : { repeat: input.repeat }),
@@ -146,7 +149,7 @@ function createServer(cwd: string, shutdown: AbortSignal, pending: Set<Promise<C
       + 'Reuse returned artifact paths between tools. Select a specific failure predicate before bisect or minimize. '
       + 'Capture baseline context before changing code. Verify requires an explicit command and cwd, and declares absent observations only for healthy, comparable fixed-budget samples. '
       + 'Check status and finalVerified; sampled outcomes are evidence, not proof of elimination. Target failures are data, not tool errors. '
-      + 'Commands run locally in the selected cwd using the platform shell. Complete metadata and logs remain in artifacts.',
+      + 'Commands run locally in the selected cwd. Optional args selects direct executable invocation without shell parsing. Complete metadata and logs remain in artifacts.',
   });
   const disconnected = new AbortController();
   server.server.onclose = () => disconnected.abort();
@@ -236,6 +239,7 @@ function createServer(cwd: string, shutdown: AbortSignal, pending: Set<Promise<C
     inputSchema: z.object({
       baseline: z.string().min(1).describe('Saved baseline run ID, directory or run.json; relative references resolve from the explicit cwd.'),
       command: z.string().min(1).max(MAX_COMMAND_BYTES).describe('Explicit current command, at most 64 KiB UTF-8, to authorize local execution; the saved command is never executed implicitly.'),
+      args: commandSchema.shape.args.describe('Explicit current literal executable arguments; absent selects shell mode, never inherits saved args. Changes require a command allowance.'),
       cwd: z.string().min(1).describe('Required current working directory; relative paths resolve from the server directory.'),
       repeat: positiveInteger.max(MAX_RECORDED_TRIALS).optional().describe('Full candidate trial budget, at most 100000; defaults to the baseline requested count. No classification early stopping.'),
       timeoutMs: positiveInteger.max(2_147_483_647).optional(),
@@ -343,6 +347,7 @@ function createServer(cwd: string, shutdown: AbortSignal, pending: Set<Promise<C
     inputSchema: z.object({
       run: z.string().min(1), cwd: z.string().min(1).optional(), files: z.array(z.string().min(1)).optional(),
       input: z.string().min(1).optional(), command: z.string().min(1).optional(), env: environmentSchema.optional(),
+      args: commandSchema.shape.args.describe('Optional direct argument override. Entire {input} arguments bind selected input during replay. A command-only override selects shell mode.'),
       destination: z.string().min(1).optional(),
       includeEvidence: z.boolean().optional().describe('Include unchanged original metadata/logs, which may contain private output, environment values and local paths. Default false.'),
       includeEnv: z.array(z.string().min(1)).max(10000).optional().describe('Only these captured environment values enter repro.json. Explicit env overrides also opt in those supplied values.'),
@@ -355,6 +360,7 @@ function createServer(cwd: string, shutdown: AbortSignal, pending: Set<Promise<C
       ...(input.files === undefined ? {} : { files: input.files }),
       ...(input.input === undefined ? {} : { input: input.input }),
       ...(input.command === undefined ? {} : { command: input.command }),
+      ...(input.args === undefined ? {} : { args: input.args }),
       ...(input.env === undefined ? {} : { env: input.env }),
       ...(input.destination === undefined ? {} : { destination: input.destination }),
       ...(input.includeEvidence === undefined ? {} : { includeEvidence: input.includeEvidence }),

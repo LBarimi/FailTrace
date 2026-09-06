@@ -38,10 +38,10 @@ export class MetadataBudget {
   }
 }
 
-export function trialMetadataAllowance(command: string): number {
+export function trialMetadataAllowance(command: string, args?: string[]): number {
   // Includes the JSON-escaped command, bounded diagnostics, indices, paths and
   // the fixed trial/result fields. Unused reservation is returned after writing.
-  return Buffer.byteLength(JSON.stringify(command)) + TRIAL_OVERHEAD_BYTES;
+  return Buffer.byteLength(JSON.stringify(command)) + (args === undefined ? 0 : Buffer.byteLength(JSON.stringify({ args }, null, 2))) + TRIAL_OVERHEAD_BYTES;
 }
 
 export function diagnosticMessage(value: unknown): string {

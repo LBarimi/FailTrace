@@ -223,9 +223,61 @@ async function exerciseInstalledVerification() {
     skippedCheckGuard: 'passed', namedProjectActions: 'passed' }));
 }
 
+// Written into the consumer: every public API import and target CLI is installed.
+async function exerciseInstalledDirectExecution() {
+  const assert = (await import('node:assert/strict')).default;
+  const { execFile } = await import('node:child_process');
+  const { mkdir, readFile, writeFile } = await import('node:fs/promises');
+  const { dirname, join } = await import('node:path');
+  const { fileURLToPath } = await import('node:url');
+  const { promisify } = await import('node:util');
+  const { runTrials, loadRun, minimizeFailure, verifyFix, createBundle } = await import('failtrace');
+  const execute = promisify(execFile);
+  const consumer = dirname(fileURLToPath(import.meta.url));
+  const cwd = join(consumer, 'direct argument project');
+  await mkdir(cwd);
+  const cli = join(consumer, 'node_modules', 'failtrace', 'dist', 'cli', 'index.js');
+  const values = ['', 'a b', '"quoted"', 'trailing\\', '$HOME', '%PATH%', '&& echo unexpected', '; echo unexpected', '--help'];
+  await writeFile(join(cwd, 'check input.mjs'), 'import { readFileSync } from "node:fs";\n'
+    + `if(JSON.stringify(process.argv.slice(3)) !== ${JSON.stringify(JSON.stringify(values))}) throw new Error("ARGUMENT_MISMATCH");\n`
+    + 'if(readFileSync(process.argv[2],"utf8").includes("X")){console.error("DIRECT_TARGET");process.exitCode=1;}\n');
+  await writeFile(join(cwd, 'input.txt'), 'xXy');
+  await writeFile(join(cwd, 'other.txt'), 'xXy');
+  const args = ['check input.mjs', 'input.txt', ...values];
+  const template = ['check input.mjs', '{input}', ...values];
+  const predicate = { kind: 'stderr_contains', value: 'DIRECT_TARGET' };
+  const baseline = await runTrials({ command: process.execPath, args, cwd, repeat: 1, predicate,
+    captureContext: { sourceFiles: ['check input.mjs'], inputFiles: ['input.txt'] } });
+  assert.equal(baseline.trials[0].failureMatched, true);
+  assert.deepEqual((await loadRun(baseline.artifactDirectory)).trials[0].args, args);
+  const candidate = await verifyFix({ baseline: baseline.artifactDirectory, cwd, command: process.execPath,
+    args: ['check input.mjs', 'other.txt', ...values] });
+  assert.equal(candidate.status, 'inconclusive');
+  assert.equal(candidate.candidate, null);
+  assert(candidate.changes.some(change => change.field === 'command' && change.allowed === false));
+  const cliResult = await execute(process.execPath, [cli, 'run', '--exec', process.execPath, ...args.map(value => `--arg=${value}`),
+    '--repeat', '1', '--stderr-contains', 'DIRECT_TARGET', '--cwd', cwd, '--json'], { cwd, windowsHide: true, timeout: 30_000 })
+    .then(() => { throw new Error('Expected target exit from installed direct CLI.'); }, error => error);
+  assert.equal(cliResult.code, 1);
+  assert.deepEqual(JSON.parse(cliResult.stdout).args, args);
+  const reduced = await minimizeFailure({ command: process.execPath, args: template, cwd, input: 'input.txt', format: 'text', predicate });
+  assert.equal(reduced.finalVerified, true);
+  assert.equal(await readFile(reduced.minimizedPath, 'utf8'), 'X');
+  const bundle = await createBundle({ run: reduced.final.runDirectory, cwd, command: 'node', args: template,
+    input: reduced.minimizedPath, files: ['check input.mjs'] });
+  assert.deepEqual(JSON.parse(await readFile(bundle.configPath, 'utf8')).args, template);
+  const replay = await execute(process.execPath, [join(bundle.directory, 'repro.mjs')], { cwd, windowsHide: true, timeout: 30_000 })
+    .then(() => { throw new Error('Expected reproduced direct-argument bundle target.'); }, error => error);
+  assert.equal(replay.code, 1);
+  assert.match(replay.stdout, /Target failure reproduced: 1 \/ 1/);
+  assert.equal(replay.stderr, '');
+  console.log(JSON.stringify({ core: 'passed', cli: 'passed', minimize: 'passed', replay: 'passed', argumentChangeGuard: 'passed',
+    cwd, args, template, predicate }));
+}
+
 // The SDK client is a development-only test harness in this checkout. The
 // server process below is always the independently installed production CLI.
-async function exerciseInstalledMcp(installedDirectory, verification, environment, workflows) {
+async function exerciseInstalledMcp(installedDirectory, verification, environment, workflows, direct) {
   const { Client } = await import('@modelcontextprotocol/client');
   const { StdioClientTransport } = await import('@modelcontextprotocol/client/stdio');
   const client = new Client({ name: 'failtrace-package-smoke', version: '1.0.0' });
@@ -303,6 +355,34 @@ async function exerciseInstalledMcp(installedDirectory, verification, environmen
     assert.equal(bounded.isError, false);
     assert.equal(bounded.structuredContent.status, 'resource_limited');
     assert.equal(bounded.structuredContent.matchedTrials, 0);
+    const callDirect = async (name, arguments_) => {
+      const result = await client.callTool({ name, arguments: arguments_ });
+      assert.equal(result.isError, false, JSON.stringify(result.content));
+      return result.structuredContent;
+    };
+    const directBaseline = await callDirect('failtrace_run', { command: process.execPath, args: direct.args,
+      cwd: direct.cwd, repeat: 1, predicate: direct.predicate, captureContext: { sourceFiles: ['check input.mjs'], inputFiles: ['input.txt'] } });
+    assert.equal(directBaseline.matchedTrials, 1);
+    const changedArgs = [...direct.args];
+    changedArgs[1] = 'other.txt';
+    const directVerification = await callDirect('failtrace_verify', { baseline: directBaseline.artifactDirectory,
+      cwd: direct.cwd, command: process.execPath, args: changedArgs });
+    assert.equal(directVerification.status, 'inconclusive');
+    assert.equal(directVerification.candidate, null);
+    assert(directVerification.changes.some(change => change.field === 'command' && !change.allowed));
+    const directReduced = await callDirect('failtrace_minimize', { command: process.execPath, args: direct.template,
+      cwd: direct.cwd, input: 'input.txt', format: 'text', predicate: direct.predicate });
+    assert.equal(directReduced.finalVerified, true);
+    assert.equal(await readFile(directReduced.minimizedPath, 'utf8'), 'X');
+    const directBundle = await callDirect('failtrace_bundle', { run: directReduced.final.runDirectory,
+      cwd: direct.cwd, command: 'node', args: direct.template, input: directReduced.minimizedPath, files: ['check input.mjs'] });
+    assert.deepEqual(JSON.parse(await readFile(directBundle.configPath, 'utf8')).args, direct.template);
+    const directReplay = await execute(process.execPath, [join(directBundle.directory, 'repro.mjs')], {
+      cwd: direct.cwd, env: environment, windowsHide: true, timeout: 30_000,
+    }).then(() => { throw new Error('Installed MCP direct bundle must reproduce the reduced failure.'); }, error => error);
+    assert.equal(directReplay.code, 1);
+    assert.equal(directReplay.stderr, '');
+    assert.match(directReplay.stdout, /Target failure reproduced: 1 \/ 1/);
     for (const [key, specification] of Object.entries({
       eventImport: { folder: 'event-import', implementation: 'importer.mjs', fixed: 'importer-fixed.mjs', input: 'events.json',
         target: 'IMPORT_REVISION_LOST', checkpoint: 'IMPORT_CHECK_COMPLETED', repeat: 3, matches: 3 },
@@ -358,7 +438,7 @@ async function exerciseInstalledMcp(installedDirectory, verification, environmen
     }
     assert.deepEqual(errors, []);
     assert.equal(stderr.join(''), '', 'MCP stdout must stay protocol-only and stderr should be quiet');
-    return { verification: 'passed', inspection: 'passed', originalWorkflows: 'passed' };
+    return { verification: 'passed', inspection: 'passed', originalWorkflows: 'passed', directExecution: 'passed' };
   } finally {
     await client.close();
   }
@@ -428,6 +508,11 @@ try {
     cwd: consumer, env: environment, windowsHide: true, timeout: 60_000, maxBuffer: 2 * 1024 * 1024,
   });
   const verification = JSON.parse(verifyOutput.stdout);
+  await writeFile(join(consumer, 'direct-smoke.mjs'), `await (${exerciseInstalledDirectExecution.toString()})();\n`);
+  const directOutput = await execute(process.execPath, ['direct-smoke.mjs'], {
+    cwd: consumer, env: environment, windowsHide: true, timeout: 60_000, maxBuffer: 2 * 1024 * 1024,
+  });
+  const direct = JSON.parse(directOutput.stdout);
   const workflowOutput = await execute(process.execPath, [join(installedDirectory, 'examples', 'workflows', 'investigate.mjs')], {
     cwd: consumer, env: environment, windowsHide: true, timeout: 120_000, maxBuffer: 2 * 1024 * 1024,
   });
@@ -441,10 +526,13 @@ try {
     for (const key of ['baseline', 'fixed', 'ineffective', 'unrelated', 'skipped']) await stat(workflow[key]);
     if (workflow.reduction) await stat(workflow.reduction);
   }
-  const mcpChecks = await exerciseInstalledMcp(installedDirectory, verification, environment, workflows);
+  const mcpChecks = await exerciseInstalledMcp(installedDirectory, verification, environment, workflows, direct);
   const help = await npmRun(['exec', '--offline', '--', 'failtrace', '--help'], consumer);
   assert(/\bfailtrace demo\b/.test(help.stdout), 'Installed CLI must advertise the demo');
-  assert(/\bfailtrace artifacts\b/.test(help.stdout), 'Installed CLI must advertise storage inspection');
+  assert(/^\s+artifacts\s+/m.test(help.stdout), 'Installed CLI must list storage inspection');
+  const artifactHelp = await npmRun(['exec', '--offline', '--', 'failtrace', 'artifacts', '--help'], consumer);
+  assert(/\bfailtrace artifacts\b/.test(artifactHelp.stdout) && artifactHelp.stdout.includes('--directory'),
+    'Installed command-specific help must explain storage inspection');
   const demoOutput = await npmRun(['exec', '--offline', '--', 'failtrace', 'demo', '--json'], consumer);
   const demo = JSON.parse(demoOutput.stdout);
   assert.equal(demo.status, 'completed');
@@ -489,6 +577,8 @@ try {
     checks: { installedCli: 'passed', installedCore: 'passed', productionDependenciesOnly: 'passed', installedDemo: 'passed',
       installedVerifyCore: verification.core, installedVerifyCli: verification.cli, installedVerifyMcp: mcpChecks.verification,
       installedInspectMcp: mcpChecks.inspection, installedBundleManifest: 'passed', installedBundleReplay: 'passed',
+      installedDirectCore: direct.core, installedDirectCli: direct.cli, installedDirectMinimize: direct.minimize,
+      installedDirectReplay: direct.replay, installedArgumentChangeGuard: direct.argumentChangeGuard, installedDirectMcp: mcpChecks.directExecution,
       unrelatedErrorGuard: verification.unrelatedErrorGuard, installedSkippedCheckGuard: verification.skippedCheckGuard,
       installedOriginalWorkflows: 'passed', installedOriginalMcpWorkflows: mcpChecks.originalWorkflows },
     namedProjectActions: verification.namedProjectActions,

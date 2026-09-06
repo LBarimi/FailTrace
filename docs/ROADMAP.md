@@ -28,6 +28,8 @@ Original authored workflow fixtures exercise affected implementations, valid fix
 
 [Named project actions](PROJECT-WORKFLOW.md) keep repeated baseline/verification settings inspectable using existing project scripts. The unreleased [storage inventory](ARTIFACTS.md) shows bounded totals and observed evidence references. It does not delete records or infer inactivity from their age.
 
+[Direct execution](DIRECT-EXECUTION.md) connects an existing executable to literal arguments, including a complete argument placeholder for the current minimization input. Core, CLI, MCP, comparison, Verify and bundle replay retain that execution contract. Command-specific help reduces the setup needed to use each operation. Fresh substring/checkpoint matching avoids reopening newly captured logs; saved evidence remains independently checked.
+
 ## Next priorities
 
 - Observe whether named project actions reduce repeated setup for commands, signatures and baseline context; improve the steps that cause actual friction.

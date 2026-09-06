@@ -11,6 +11,7 @@ import { diagnosticMessage, MetadataBudget, MetadataLimitError, type MetadataLim
 
 export interface BisectOptions extends OutputLimits {
   command: string;
+  args?: string[];
   good: string;
   bad: string;
   cwd?: string;
@@ -51,6 +52,7 @@ export interface BisectResult extends OutputLimits {
   repository: string;
   cwd: string;
   command: string;
+  args?: string[];
   good: string;
   bad: string;
   repeat: number;
@@ -131,6 +133,7 @@ async function assertOwnedWorktree(artifactDirectory: string, worktree: string):
 export async function bisectRegression(options: BisectOptions): Promise<BisectResult> {
   options = { ...options, ...(options.executionRequirement === undefined ? {} : { executionRequirement: { ...options.executionRequirement } }) };
   validateOptions(options);
+  if (options.args !== undefined) options.args = [...options.args];
   const healthy = exitCodes(options.healthyExitCodes ?? [0], 'healthyExitCodes');
   const inconclusive = exitCodes(options.inconclusiveExitCodes ?? [], 'inconclusiveExitCodes', true);
   if (healthy.some((code) => inconclusive.includes(code))) throw new Error('Healthy and inconclusive exit codes must not overlap.');
@@ -160,6 +163,7 @@ export async function bisectRegression(options: BisectOptions): Promise<BisectRe
     repository,
     cwd,
     command: options.command,
+    ...(options.args === undefined ? {} : { args: [...options.args] }),
     good: options.good,
     bad: options.bad,
     repeat: options.repeat ?? 5,
@@ -196,6 +200,7 @@ export async function bisectRegression(options: BisectOptions): Promise<BisectRe
     const run = await runTrialsWithBudget({
       ...limits,
       command: result.command,
+      ...(result.args === undefined ? {} : { args: result.args }),
       cwd: join(worktree, subdirectory),
       repeat: result.repeat,
       stopWhenDecided: { minFailures: result.minFailures },

@@ -2,6 +2,14 @@
 
 This document describes execution controls, measurements of the **unreleased source candidate**, and explicitly versioned historical measurements. Older releases retain their original behavior. A historical optimization result is not a measurement of the current engine.
 
+## Unreleased execution and evidence changes
+
+Fresh substring failure predicates and completion checkpoints are matched while bounded output is successfully written. This removes their separate post-run output reads. UTF-8 decoding and matches crossing chunk boundaries are preserved; a match seen before truncation, timeout or storage failure cannot establish complete evidence. Saved-run verification continues to read the retained output, so it does not trust a stale match after a log edit.
+
+The opt-in [direct execution mode](DIRECT-EXECUTION.md) passes an executable and literal argument array without starting a platform shell. Shell mode remains the default. Mode and arguments are preserved in evidence and compared by Verify; changing the mode is an experiment change, not a transparent optimization.
+
+Comparison hashes a finite regular-file snapshot and collects its bounded preview from the same bytes. It handles short reads and rejects observed growth or replacement. Regex workers recheck size and bound reads after opening the file. These changes preserve complete evidence without a persisted hash cache or reduced durability policy. Measurements below retain their recorded source digests and do not automatically describe these newer changes.
+
 ## Execution controls
 
 Ordinary runs default to one active trial and attempt all requested trials. Opt into overlap only when it suits the experiment:

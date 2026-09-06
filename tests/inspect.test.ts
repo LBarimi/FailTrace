@@ -230,6 +230,58 @@ describe('inspectRunEvidence', () => {
     expect(await readFile(join(run.artifactDirectory, 'trials', '001', 'stderr.txt'), 'utf8')).toBe('stderr trial 1\n');
   });
 
+  it('fills a requested output page across legitimate short filesystem reads', async () => {
+    const run = await savedRun(await workspace(), 1);
+    const path = join(run.artifactDirectory, 'trials', '001', 'stdout.txt');
+    await writeFile(path, '0123456789');
+    const probe = await open(path, 'r');
+    const identity = await probe.stat({ bigint: true });
+    const prototype = Object.getPrototypeOf(probe) as { read: BufferRead };
+    const original = prototype.read;
+    await probe.close();
+    prototype.read = async function (buffer, offset, length, position) {
+      const current = await this.stat({ bigint: true });
+      return original.call(this, buffer, offset,
+        current.dev === identity.dev && current.ino === identity.ino ? Math.min(length, 2) : length, position);
+    };
+    try {
+      expect(await inspectRunEvidence({ view: 'output', run: run.artifactDirectory, trial: 1, stream: 'stdout', offsetBytes: 1, maxBytes: 7 }))
+        .toMatchObject({ text: '1234567', bytesRead: 7, nextOffsetBytes: 8, totalBytes: 10 });
+    } finally { prototype.read = original; }
+  });
+
+  it('stops metadata reconstruction when inspection is cancelled during a read', async () => {
+    const run = await savedRun(await workspace(), 1);
+    const probe = await open(join(run.artifactDirectory, 'run.json'), 'r');
+    const prototype = Object.getPrototypeOf(probe) as { read: BufferRead };
+    const original = prototype.read;
+    await probe.close();
+    const controller = new AbortController();
+    let reads = 0;
+    prototype.read = async function (buffer, offset, length, position) {
+      reads++;
+      const result = await original.call(this, buffer, offset, length, position);
+      controller.abort(new Error('cancel metadata read'));
+      return result;
+    };
+    try {
+      await expect(inspectRunEvidence({ view: 'trials', run: run.artifactDirectory, signal: controller.signal }))
+        .rejects.toThrow('cancel metadata read');
+      expect(reads).toBe(1);
+    } finally { prototype.read = original; }
+  });
+
+  it('marks a changed direct-execution argument list or shell mode as unhealthy', async () => {
+    const run = await savedRun(await workspace(), 3);
+    run.command = 'node'; run.args = ['marker.mjs'];
+    run.trials.forEach(trial => { trial.command = 'node'; });
+    run.trials[0]!.args = ['marker.mjs'];
+    run.trials[1]!.args = ['different.mjs'];
+    await writeFile(join(run.artifactDirectory, 'run.json'), JSON.stringify(run));
+    const result = await inspectRunEvidence({ view: 'trials', run: run.artifactDirectory, filter: 'unhealthy' });
+    expect(result.view === 'trials' && result.trials.map(trial => trial.index)).toEqual([2, 3]);
+  });
+
   it('validates the public Core options object before resolving artifacts', async () => {
     await expect(inspectRunEvidence(null as unknown as Parameters<typeof inspectRunEvidence>[0]))
       .rejects.toThrow(/options/);

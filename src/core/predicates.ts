@@ -50,9 +50,27 @@ async function matchesRegex(path: string, pattern: string, flags = ''): Promise<
   // Untrusted regular expressions must not block the main event loop or Ctrl+C.
   const worker = new Worker(`
     const { parentPort, workerData } = require('node:worker_threads');
-    const { readFileSync } = require('node:fs');
-    parentPort.postMessage(new RegExp(workerData.pattern, workerData.flags).test(readFileSync(workerData.path, 'utf8')));
-  `, { eval: true, workerData: { path, pattern, flags } });
+    const { openSync, closeSync, fstatSync, readSync } = require('node:fs');
+    const descriptor = openSync(workerData.path, 'r');
+    try {
+      const before = fstatSync(descriptor);
+      if (!before.isFile()) throw new Error('Regex output must be a regular file.');
+      if (before.size > workerData.maxBytes) throw new Error('Regex output exceeds 16 MiB; use a substring or a smaller target output.');
+      const buffer = Buffer.alloc(before.size);
+      let offset = 0;
+      while (offset < buffer.length) {
+        const count = readSync(descriptor, buffer, offset, buffer.length - offset, offset);
+        if (count === 0) throw new Error('Regex output changed while being read.');
+        offset += count;
+      }
+      const extra = readSync(descriptor, Buffer.alloc(1), 0, 1, offset);
+      const after = fstatSync(descriptor);
+      if (extra !== 0 || before.size !== after.size || before.mtimeMs !== after.mtimeMs || before.ctimeMs !== after.ctimeMs) {
+        throw new Error('Regex output changed while being read.');
+      }
+      parentPort.postMessage(new RegExp(workerData.pattern, workerData.flags).test(buffer.toString('utf8')));
+    } finally { closeSync(descriptor); }
+  `, { eval: true, workerData: { path, pattern, flags, maxBytes: MAX_REGEX_OUTPUT_BYTES } });
   try {
     return await new Promise<boolean>((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('Failure regex exceeded its 1 second evaluation limit.')), 1_000);

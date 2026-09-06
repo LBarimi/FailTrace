@@ -9,6 +9,23 @@ export async function hashBoundedFile(path: string, maxBytes: number, signal?: A
   return { bytes, sha256: hash.digest('hex') };
 }
 
+/** Hash the full snapshot and retain a bounded prefix from those exact bytes. */
+export async function summarizeBoundedFile(
+  path: string, maxBytes: number, prefixBytes: number, signal?: AbortSignal,
+): Promise<{ bytes: number; sha256: string; prefix: Buffer }> {
+  if (!Number.isSafeInteger(prefixBytes) || prefixBytes < 0) throw new Error('File prefix limit must be a nonnegative safe integer.');
+  const hash = createHash('sha256');
+  const chunks: Buffer[] = [];
+  let bytes = 0;
+  let retained = 0;
+  await readSnapshot(path, maxBytes, async chunk => {
+    bytes += chunk.length; hash.update(chunk);
+    const length = Math.min(chunk.length, prefixBytes - retained);
+    if (length > 0) { chunks.push(Buffer.from(chunk.subarray(0, length))); retained += length; }
+  }, undefined, signal);
+  return { bytes, sha256: hash.digest('hex'), prefix: Buffer.concat(chunks, retained) };
+}
+
 /** Read only a finite file snapshot, rejecting growth or replacement during I/O. */
 export async function readBoundedFile(path: string, maxBytes: number, signal?: AbortSignal): Promise<Buffer> {
   const chunks: Buffer[] = [];
@@ -41,11 +58,14 @@ async function readSnapshot(
   begin?: (bytes: number) => Promise<void>, signal?: AbortSignal,
 ): Promise<void> {
   signal?.throwIfAborted();
-  if (!(await lstat(path)).isFile()) throw new Error('Input must be a regular file without symbolic links.');
+  const beforePath = await lstat(path, { bigint: true });
+  if (!beforePath.isFile()) throw new Error('Input must be a regular file without symbolic links.');
   const input = await open(path, 'r');
   try {
     const before = await input.stat({ bigint: true });
     if (!before.isFile() || before.size > BigInt(maxBytes)) throw new Error(`Input exceeds the ${maxBytes} byte file limit.`);
+    if (beforePath.size !== before.size || beforePath.ino !== before.ino || beforePath.dev !== before.dev
+      || beforePath.mtimeNs !== before.mtimeNs || beforePath.ctimeNs !== before.ctimeNs) throw new Error('Input changed before its bounded read.');
     const size = Number(before.size);
     await begin?.(size);
     const buffer = Buffer.alloc(Math.min(64 * 1024, size + 1));
@@ -58,6 +78,7 @@ async function readSnapshot(
       if (total > size) throw new Error('Input changed during its bounded read.');
       await consume(buffer.subarray(0, bytesRead));
     }
+    signal?.throwIfAborted();
     const after = await lstat(path, { bigint: true });
     if (!after.isFile() || total !== size || before.size !== after.size || before.ino !== after.ino || before.dev !== after.dev
       || before.mtimeNs !== after.mtimeNs || before.ctimeNs !== after.ctimeNs) throw new Error('Input changed during its bounded read.');

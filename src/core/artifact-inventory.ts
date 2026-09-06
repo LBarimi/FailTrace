@@ -3,6 +3,7 @@ import { lstat, opendir, realpath } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { readBoundedFile } from './bounded-file.js';
 import { MAX_INVESTIGATION_METADATA_BYTES, MAX_METADATA_BYTES } from './metadata-budget.js';
+import { assertJsonComplexity } from './input-complexity.js';
 
 const namespaces = ['runs', 'bisects', 'minimizations', 'verifications', 'reproduction', 'demos'] as const;
 type ArtifactKind = typeof namespaces[number] | 'unknown';
@@ -112,7 +113,11 @@ export async function inventoryArtifacts(options: ArtifactInventoryOptions = {})
     }
     result.metadataBytesRead += size;
     try {
-      const data: unknown = JSON.parse((await readBoundedFile(path, size, options.signal)).toString('utf8'));
+      const text = (await readBoundedFile(path, size, options.signal)).toString('utf8');
+      // Bound parsed allocation before a compact array/object expands in memory.
+      // The traversal guard below separately bounds pending reference work.
+      assertJsonComplexity(text);
+      const data: unknown = JSON.parse(text);
       if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('Invalid metadata.');
       const record = data as Record<string, unknown>;
       // Only an investigation's own top-level report supplies its displayed state.

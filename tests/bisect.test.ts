@@ -42,6 +42,15 @@ async function repository(states: Array<{ failures: number; hang?: boolean; setu
 afterEach(async () => { vi.restoreAllMocks(); await cleanupDirectories(directories); });
 
 describe('bisectRegression', () => {
+  it('preserves literal executable arguments across isolated candidate worktrees', async () => {
+    const { cwd, commits } = await repository([{ failures: 0 }, { failures: 5 }]);
+    const result = await bisectRegression({ cwd: join(cwd, 'suite'), command: process.execPath, args: ['check.mjs'],
+      good: commits[0]!, bad: commits[1]!, repeat: 1 });
+    expect(result).toMatchObject({ status: 'found', firstBad: commits[1], args: ['check.mjs'] });
+    expect(result.candidates.every(candidate => JSON.stringify(candidate.run.args) === '["check.mjs"]')).toBe(true);
+    expect((await loadRun(result.candidates[1]!.run.metadataPath)).trials[0]?.args).toEqual(['check.mjs']);
+  });
+
   it('preserves execution requirements and refuses a matching bad endpoint without its checkpoint', async () => {
     const { cwd, commits } = await repository([{ failures: 0 }, { failures: 5 }]);
     const executionRequirement = { stream: 'stdout' as const, contains: 'healthy' };

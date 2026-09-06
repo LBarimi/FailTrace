@@ -28,6 +28,8 @@ export interface EnvironmentSnapshot {
 export interface TrialResult {
   index: number;
   command: string;
+  /** Present, including [], means direct executable invocation without a shell. */
+  args?: string[];
   startedAt: string;
   endedAt: string;
   durationMs: number;
@@ -63,6 +65,7 @@ export interface RunSummary extends OutputLimits {
   id: string;
   command: string;
   cwd: string;
+  args?: string[];
   requestedTrials: number;
   /** Maximum simultaneous trials; absent in older artifacts means one. */
   concurrency?: number;
@@ -89,6 +92,8 @@ export interface RunSummary extends OutputLimits {
 
 export interface RunOptions extends OutputLimits {
   command: string;
+  /** Pass literal arguments to command as an executable; absent preserves shell syntax. */
+  args?: string[];
   repeat?: number;
   /** Opt-in parallelism changes resource contention and potentially failure behavior. Defaults to one. */
   concurrency?: number;
@@ -112,6 +117,7 @@ export interface RunOptions extends OutputLimits {
 export interface TrialOptions {
   index: number;
   command: string;
+  args?: string[];
   cwd: string;
   timeoutMs: number;
   runDirectory: string;
@@ -119,4 +125,6 @@ export interface TrialOptions {
   signal?: AbortSignal;
   maxOutputBytes?: number;
   outputBudget?: OutputBudget;
+  predicate?: FailurePredicate;
+  executionRequirement?: ExecutionRequirement;
 }

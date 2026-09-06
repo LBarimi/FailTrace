@@ -141,6 +141,25 @@ describe('bounded read-only artifact inventory', () => {
     expect(result.issues).toContain('Metadata read limit reached; reference information is incomplete.');
   });
 
+  it('rejects broad encoded metadata before its parsed objects can exhaust a small heap', async () => {
+    const cwd = await workspace();
+    const text = '{"status":"completed","items":[' + '{},'.repeat(1_499_999) + '{}]}';
+    await put(cwd, 'runs/broad/run.json', text);
+    const coreUrl = new URL('../dist/core/index.js', import.meta.url).href;
+    const driver = join(cwd, 'inventory-guard.mjs');
+    await writeFile(driver, `import assert from 'node:assert/strict';
+import { inventoryArtifacts } from ${JSON.stringify(coreUrl)};
+const inventory = await inventoryArtifacts({ cwd: process.cwd() });
+assert.equal(inventory.complete, false);
+assert.equal(inventory.entries[0].status, null);
+assert.match(inventory.entries[0].issues.join(' '), /too complex/);
+`);
+    const result = await promisify(execFile)(process.execPath, ['--max-old-space-size=64', driver], { cwd, windowsHide: true, timeout: 15_000 });
+    expect(result.stdout).toBe('');
+    expect(result.stderr).toBe('');
+    expect(await readFile(join(cwd, '.failtrace/runs/broad/run.json'), 'utf8')).toBe(text);
+  });
+
   it('bounds nested directories without guessing totals below them', async () => {
     const cwd = await workspace();
     await put(cwd, `unknown/${Array(65).fill('d').join('/')}/output`, 'too deep');

@@ -95,6 +95,8 @@ Version 1.1.0 adds stricter Bisect exit policies, target-first comparison, and c
 
 The source also provides a [read-only storage inventory](docs/ARTIFACTS.md) for retained evidence and known investigation references.
 
+For existing programs that accept an input-file argument, the unreleased [direct execution mode](docs/DIRECT-EXECUTION.md) passes literal arguments and can bind the reduced input without modifying the program. Command-specific help explains each operation and its next steps.
+
 **[Tell us where FailTrace helped or got stuck →](https://github.com/LBarimi/FailTrace/issues/new?template=workflow.yml)**
 
 A first-install problem, a useful investigation, or a second use on your own project helps decide what to improve. Private logs are optional. Our goal is useful, repeated adoption by people and agents.

@@ -1,9 +1,11 @@
 import { execFile } from 'node:child_process';
 import { appendFileSync } from 'node:fs';
+import fsPromises from 'node:fs/promises';
+import { syncBuiltinESMExports } from 'node:module';
 import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { copyBoundedFile, readBoundedFile } from '../src/core/bounded-file.js';
 import { minimizeFailure } from '../src/core/index.js';
 import { MAX_ENV_KEYS, MAX_INPUT_ENTRIES, MAX_JSON_TOKENS, MAX_TEXT_UNITS } from '../src/core/input-budget.js';
@@ -29,7 +31,7 @@ async function retainedInputBytes(directory: string): Promise<number> {
   }
   return bytes;
 }
-afterEach(async () => cleanupDirectories(directories));
+afterEach(async () => { vi.restoreAllMocks(); syncBuiltinESMExports(); await cleanupDirectories(directories); });
 
 describe('minimization input storage budget', () => {
   it('preserves the last reproducing input when cumulative copies exhaust the budget', async () => {
@@ -186,5 +188,26 @@ describe('bounded file snapshots', () => {
     await writeFile(source, '123');
     await expect(copyBoundedFile(source, destination, 3, () => appendFileSync(source, '4567'))).rejects.toThrow('changed');
     expect((await stat(destination)).size).toBeLessThanOrEqual(3);
+  });
+
+  it('rejects replacement between the regular-file check and opening the snapshot', async () => {
+    const cwd = await workspace();
+    const source = join(cwd, 'source.bin');
+    await writeFile(source, 'old');
+    const original = fsPromises.lstat;
+    let replaced = false;
+    vi.spyOn(fsPromises, 'lstat').mockImplementation(async (...args) => {
+      const result = await original(...args);
+      if (!replaced && args[0] === source) {
+        replaced = true;
+        await fsPromises.rename(source, `${source}.original`);
+        await writeFile(source, 'new');
+      }
+      return result;
+    });
+    syncBuiltinESMExports();
+    await expect(readBoundedFile(source, 3)).rejects.toThrow(/changed before/);
+    expect(replaced).toBe(true);
+    expect(await readFile(source, 'utf8')).toBe('new');
   });
 });

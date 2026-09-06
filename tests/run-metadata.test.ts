@@ -1,8 +1,9 @@
 import { execFile } from 'node:child_process';
+import { Dir, type Dirent } from 'node:fs';
 import { mkdir, readFile, readdir, realpath, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { runTrials } from '../src/core/run-trials.js';
 import { loadRun } from '../src/core/run-reader.js';
 import { EMBEDDED_TRIALS_LIMIT, writeRunSummary } from '../src/core/run-metadata.js';
@@ -18,7 +19,7 @@ async function workspace(): Promise<string> {
   directories.push(directory);
   return directory;
 }
-afterEach(async () => cleanupDirectories(directories));
+afterEach(async () => { vi.restoreAllMocks(); await cleanupDirectories(directories); });
 
 describe('durable individual trial records', () => {
   it('recovers a durable trial after the host exits without writing a terminal summary', async () => {
@@ -84,14 +85,42 @@ await runTrials({ command: ${JSON.stringify(fixtureCommand('pass'))}, repeat: 10
     await expect(loadRun(run.artifactDirectory)).rejects.toThrow(/directory/);
   });
 
-  it('recomputes statistics from authoritative recovered records', async () => {
+  it.each(['running', 'completed'] as const)('recomputes statistics from authoritative %s records', async (status) => {
     const run = await runTrials({ command: fixtureCommand('alternate'), cwd: await workspace(), repeat: 4 });
-    run.status = 'running';
-    run.endedAt = null;
+    run.status = status;
+    if (status === 'running') run.endedAt = null;
     const expected = aggregateStatistics(run.trials);
     run.statistics = aggregateStatistics([]);
     await writeRunSummary(run);
     expect((await loadRun(run.artifactDirectory)).statistics).toEqual(expected);
+  });
+
+  it('counts ignored filenames against the saved trial traversal limit', async () => {
+    const run = await runTrials({ command: fixtureCommand('pass'), cwd: await workspace(), repeat: 1 });
+    run.status = 'running'; run.endedAt = null;
+    await writeRunSummary(run);
+    let yielded = 0;
+    // Model a directory containing unrelated files without allocating 100001
+    // real files merely to exercise the I/O enumeration allowance.
+    vi.spyOn(Dir.prototype, Symbol.asyncIterator).mockImplementation(async function* (this: Dir) {
+      try {
+        for (let index = 0; index < MAX_RECORDED_TRIALS + 2; index++) {
+          yielded++;
+          yield { name: `unrelated-${index}` } as Dirent;
+        }
+      } finally { await this.close(); }
+    });
+    await expect(loadRun(run.artifactDirectory)).rejects.toThrow('100000 trial directory-entry');
+    expect(yielded).toBe(MAX_RECORDED_TRIALS + 1);
+  });
+
+  it.each([42, ['ok', null], 'shell-like arguments'])('rejects malformed saved execution arguments %j', async args => {
+    const run = await runTrials({ command: fixtureCommand('pass'), cwd: await workspace(), repeat: 1 });
+    const path = join(run.artifactDirectory, 'run.json');
+    await writeFile(path, JSON.stringify({ ...run, args }));
+    await expect(loadRun(path)).rejects.toThrow(/arguments/i);
+    await writeFile(path, JSON.stringify({ ...run, trials: [{ ...run.trials[0], args }] }));
+    await expect(loadRun(path)).rejects.toThrow(/arguments/i);
   });
 
   it('rejects aggregate reconstruction beyond the allowance even when every file fits the per-document limit', async () => {

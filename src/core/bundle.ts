@@ -8,6 +8,7 @@ import { outputLimits, type OutputLimits } from './output-budget.js';
 import { BundleWriter, DEFAULT_MAX_BUNDLE_BYTES, MAX_BUNDLE_FILES, portableRelativePath, type BundleFileEntry } from './bundle-files.js';
 import { bundleEnvironment, type BundleEnvironmentRequirement } from './bundle-environment.js';
 import { validateRunOptions, VERSION } from './run-trials.js';
+import { INPUT_ARGUMENT, validateCommand } from './command.js';
 
 export interface BundleOptions {
   run: string;
@@ -18,6 +19,8 @@ export interface BundleOptions {
   input?: string;
   /** Portable target command, evaluated from source/. */
   command?: string;
+  /** Direct argument override. Include an entire {input} value to relocate selected input. */
+  args?: string[];
   /** Explicit environment overrides; null unsets a variable. */
   env?: Record<string, string | null>;
   /** Explicitly include these captured values; other captured keys become replay prerequisites. */
@@ -61,6 +64,7 @@ interface ReproductionConfig extends Required<OutputLimits> {
   failtraceVersion: string;
   sourceRunId: string;
   command: string;
+  args?: string[];
   repeat: number;
   concurrency: number;
   timeoutMs: number;
@@ -112,6 +116,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runTrials } from './engine/run-trials.js';
 import { assessRun } from './engine/predicates.js';
+import { bindInputArguments } from './engine/command.js';
 
 export async function replay() {
   const directory = dirname(fileURLToPath(import.meta.url));
@@ -141,6 +146,7 @@ export async function replay() {
   try {
     const summary = await runTrials({
       command: config.command,
+      ...(config.args === undefined ? {} : { args: config.input ? bindInputArguments(config.args, resolve(directory, config.input.path)) : config.args }),
       repeat: config.repeat,
       concurrency: config.concurrency ?? 1,
       timeoutMs: config.timeoutMs,
@@ -199,27 +205,39 @@ function bundleReadme(config: ReproductionConfig): string {
     '5. Run `node repro.mjs`, `sh repro.sh`, or `repro.cmd` from any directory.', '',
     'Replay runs from `source/` using the configured command, predicate, trial budget, timeout, output caps and concurrency. Concurrency can alter failures through shared state or contention.',
     'If repro.json contains an executionRequirement, each replay trial must also emit that checkpoint. Missing completion makes the replay inconclusive.',
+    'If repro.json contains args (including an empty array), command is an executable and arguments are passed literally without a shell. A complete {input} argument is relocated to the selected input.',
     'Exit 1 means at least one target match, 0 means no match in the completed sample, 2 means inconclusive or invalid execution, and 130/143 mean interruption. An unrelated nonzero exit does not match a specific output predicate.',
     'New evidence is saved under `replay-artifacts/runs/`. Creation-time file hashes do not cover later edits or replay output. Review new evidence separately before sharing it.', '',
     'Explicit environment overrides use null to unset a key. Other variables are inherited from the replay environment.',
     config.input ? 'The selected input is under `input/`; replay relocates FAILTRACE_INPUT or FAILTRACE_INPUT_DIR automatically.' : 'No separate input was selected.', '',
     '## Portability limits', '',
-    'Target commands retain platform shell syntax and may require external tools, dependency installation, services and uncaptured state. The bundle does not reconstruct unselected files. Process-tree cleanup remains best effort.', '',
+    'Shell commands retain platform shell syntax. Direct executables must be available on the replay machine; Windows .cmd/.bat shims require shell mode. Targets may require dependency installation, services and uncaptured state. The bundle does not reconstruct unselected files. Process-tree cleanup remains best effort.', '',
   ].join('\n');
 }
 
 /** Build a local, self-contained replay directory without executing its command. */
 export async function createBundle(options: BundleOptions): Promise<BundleResult> {
   checkCancellation(options.signal);
+  if (options.args !== undefined) {
+    validateCommand(options.command ?? 'recorded command', options.args);
+    options = { ...options, args: [...options.args] };
+  }
   const maxBundleBytes = options.maxBundleBytes ?? DEFAULT_MAX_BUNDLE_BYTES;
   if (!Number.isSafeInteger(maxBundleBytes) || maxBundleBytes < 1) throw new Error('maxBundleBytes must be a positive safe integer.');
   if (options.includeEvidence !== undefined && typeof options.includeEvidence !== 'boolean') throw new Error('includeEvidence must be a boolean.');
   if (options.files !== undefined && (!Array.isArray(options.files) || options.files.length > MAX_BUNDLE_FILES)) throw new Error('Select at most 10000 bundle files.');
   const cwd = resolve(options.cwd ?? process.cwd());
-  const run = await loadRun(options.run, cwd);
+  const run = await loadRun(options.run, cwd, options.signal);
   const command = options.command ?? run.command;
+  // An explicit command-only override intentionally selects legacy shell mode.
+  const args = options.args === undefined ? options.command === undefined ? run.args : undefined : options.args;
+  validateCommand(command, args);
   assertPortableCommand(command, run.cwd);
-  validateRunOptions({ command, repeat: run.requestedTrials, concurrency: run.concurrency ?? 1, timeoutMs: run.timeoutMs, predicate: run.predicate ?? { kind: 'nonzero_exit' }, ...outputLimits(run) });
+  if (args !== undefined) {
+    for (const arg of args) if (arg.trim() && arg !== INPUT_ARGUMENT) assertPortableCommand(arg, run.cwd);
+    if (args.includes(INPUT_ARGUMENT) && options.input === undefined) throw new Error('Bundle {input} arguments require an explicit input selection.');
+  }
+  validateRunOptions({ command, ...(args === undefined ? {} : { args }), repeat: run.requestedTrials, concurrency: run.concurrency ?? 1, timeoutMs: run.timeoutMs, predicate: run.predicate ?? { kind: 'nonzero_exit' }, ...outputLimits(run) });
   const files = [...new Set((options.files ?? []).map(portableRelativePath))].sort();
   const sourceRoot = files.length > 0 && run.source?.kind !== 'git' ? await realpath(run.cwd) : resolve(run.cwd);
   if (run.source?.kind !== 'git') {
@@ -274,6 +292,7 @@ export async function createBundle(options: BundleOptions): Promise<BundleResult
       failtraceVersion: VERSION,
       sourceRunId: run.id,
       command,
+      ...(args === undefined ? {} : { args: [...args] }),
       repeat: run.requestedTrials,
       concurrency: run.concurrency ?? 1,
       timeoutMs: run.timeoutMs,

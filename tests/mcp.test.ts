@@ -66,6 +66,34 @@ afterEach(async () => {
 });
 
 describe('official SDK stdio MCP adapter', () => {
+  it('forwards direct arguments through run, verify, minimize and portable bundle overrides', async () => {
+    const { client, cwd, errors, stderr } = await startClient();
+    await writeFile(join(cwd, 'check.mjs'), 'if(process.argv[2] !== "fixed"){console.error("TARGET");process.exitCode=1;}');
+    const before = structured(await client.callTool({ name: 'failtrace_run', arguments: {
+      command: process.execPath, args: ['check.mjs', 'bug'], repeat: 1,
+      predicate: { kind: 'stderr_contains', value: 'TARGET' }, captureContext: { sourceFiles: ['check.mjs'] },
+    } }));
+    expect(before).toMatchObject({ matchedTrials: 1 });
+    const after = structured(await client.callTool({ name: 'failtrace_verify', arguments: {
+      baseline: before.artifactDirectory, cwd, command: process.execPath, args: ['check.mjs', 'fixed'],
+      allowChanges: [{ field: 'command', reason: 'Select the fixed control.' }],
+    } }));
+    expect(after).toMatchObject({ status: 'target_not_observed', plan: { args: ['check.mjs', 'fixed'] } });
+    const bundle = structured(await client.callTool({ name: 'failtrace_bundle', arguments: {
+      run: before.artifactDirectory, command: 'node', args: ['check.mjs', 'bug'], files: ['check.mjs'],
+    } }));
+    expect(JSON.parse(await readFile(String(bundle.configPath), 'utf8'))).toMatchObject({ command: 'node', args: ['check.mjs', 'bug'] });
+    await writeFile(join(cwd, 'input.mjs'), 'import {readFileSync} from "node:fs";if(readFileSync(process.argv[2],"utf8").includes("X")){console.error("TARGET");process.exitCode=1;}');
+    await writeFile(join(cwd, 'input.txt'), 'Xy');
+    const minimized = structured(await client.callTool({ name: 'failtrace_minimize', arguments: {
+      command: process.execPath, args: ['input.mjs', '{input}'], input: 'input.txt', format: 'text', repeat: 1,
+      predicate: { kind: 'stderr_contains', value: 'TARGET' },
+    } }));
+    expect(minimized).toMatchObject({ status: 'completed', finalVerified: true, args: ['input.mjs', '{input}'], minimizedSize: 1 });
+    expect(errors).toEqual([]);
+    expect(stderr.join('')).toBe('');
+  });
+
   it('carries baseline checkpoints into verification and exposes missing evidence through inspection', async () => {
     const { client, cwd, errors, stderr } = await startClient();
     const command = `${node} check.mjs`;

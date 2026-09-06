@@ -1,5 +1,9 @@
 # Compatibility contract for 1.0
 
+## Unreleased direct execution
+
+Optional `args` on Core/MCP command options selects literal executable invocation; the CLI exposes it with `--exec` and repeated `--arg`. Absence preserves the existing shell command contract, while an explicit empty array still selects direct execution. Saved trials and runs retain argument values. Compare and Verify include arguments and execution mode in command identity, and Verify never inherits execution authority from a saved baseline. Minimize and bundle replay bind only entire `{input}` arguments. Use a supporting build throughout; older readers cannot enforce the new identity. See [direct execution and input binding](DIRECT-EXECUTION.md).
+
 ## Unreleased execution checkpoints
 
 The source checkout supports opt-in `executionRequirement` metadata and per-trial `executionMatched` evidence. Default behavior, existing status values and predicate statistics are preserved. A selected requirement changes classification: missing or unknown completion is inconclusive, including target-matching trials. Verify inherits the baseline condition and replay bundles include it. Use a build that supports checkpoints throughout this workflow; published 1.1.0 readers do not enforce these additional fields. See the [complete contract and example](EXECUTION-EVIDENCE.md).

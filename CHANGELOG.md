@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Provide command-specific CLI help and preserve literal `-h`/`--help` option values instead of mistaking them for a help request.
+- Evaluate fresh substring predicates and completion checkpoints during bounded output capture, avoiding post-run log rereads. Truncated, interrupted or unsuccessfully saved output remains inconclusive; Verify still rechecks saved evidence.
+- Recheck regex file limits inside the isolated worker and bound its reads, preventing a file that grows after the initial size check from bypassing the allocation limit.
+- Handle short reads in saved output inspection and compare, propagate cancellation through saved-run loading, and bound all trial-directory entries. Recompute statistics from loaded trials, check inventory JSON complexity before parsing, and compare hashes and previews from the same finite regular-file snapshots.
+- Reject JSON numbers that cannot survive numeric reserialization unchanged, with text-mode guidance, before creating a minimization. Encode candidates compactly and preserve an incomplete result if an encoded candidate exceeds its input allowance.
+
+- Add opt-in literal executable arguments across Core, CLI and MCP, with complete-argument candidate input binding for minimization and portable bundle replay. Preserve shell command defaults, record exact arguments and include execution mode in comparison and Verify context. Verify continues requiring the caller's explicit current execution settings.
+
 - Add a bounded original-workflow benchmark with paired execution/checkpoint costs, independently checked reduction and patch controls, replay, and sanitized aggregate evidence for the unreleased candidate.
 
 - Add a read-only `artifacts` CLI command and `inventoryArtifacts` Core API for bounded logical storage totals, investigation grouping and observed evidence references. Incomplete scans are explicit; saved commands are never executed and no files are deleted.

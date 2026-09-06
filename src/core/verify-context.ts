@@ -98,6 +98,9 @@ export async function captureContext(
   const budget = { bytes: 0, files: 0 };
   try {
     const root = await realpath(cwd);
+    // Git enumerates canonical repository paths. Match exclusions in that same
+    // coordinate system, including working directories reached through aliases.
+    const excludedRoot = excludedDirectory === undefined ? undefined : await realpath(excludedDirectory);
     for (const [key, files] of [
       ['inputs', declaration.inputFiles], ['setup', declaration.setupFiles], ['sourceFiles', declaration.sourceFiles],
     ] as const) {
@@ -129,7 +132,7 @@ export async function captureContext(
         const absolute = resolve(repository, path);
         // Generated evidence cannot turn a read-only experiment into a source change.
         return !path.replaceAll('\\', '/').split('/').includes('.failtrace')
-          && !(excludedDirectory && contains(resolve(excludedDirectory), absolute));
+          && !(excludedRoot && contains(excludedRoot, absolute));
       });
       return fileList(paths);
     };

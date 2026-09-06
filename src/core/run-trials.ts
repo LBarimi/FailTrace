@@ -3,6 +3,7 @@ import { setMaxListeners } from 'node:events';
 import { dirname, join, resolve } from 'node:path';
 import { createRunDirectory, writeTextAtomic } from './artifacts.js';
 import { runTrial } from './runner.js';
+import { validateCommand } from './command.js';
 import { aggregateStatistics, createStatisticsAccumulator } from './statistics.js';
 import { writeRunSummary } from './run-metadata.js';
 import { captureEnvironment, effectiveEnvironment } from './environment.js';
@@ -11,7 +12,7 @@ import { matchesExecution, validateExecutionRequirement } from './execution-evid
 import { captureContext, contextDeclaration, snapshotsEqual } from './verify-context.js';
 import type { RunOptions, RunSummary } from './types.js';
 import { OutputBudget, outputLimits } from './output-budget.js';
-import { diagnosticMessage, MAX_COMMAND_BYTES, MAX_CONCURRENCY, MAX_METADATA_BYTES, MAX_RECORDED_TRIALS,
+import { diagnosticMessage, MAX_CONCURRENCY, MAX_METADATA_BYTES, MAX_RECORDED_TRIALS,
   MetadataBudget, MetadataLimitError, trialMetadataAllowance } from './metadata-budget.js';
 
 export const VERSION = '1.1.0';
@@ -19,10 +20,7 @@ export const DEFAULT_REPEAT = 10;
 export const DEFAULT_TIMEOUT_MS = 30_000;
 
 export function validateRunOptions(options: RunOptions): void {
-  if (typeof options.command !== 'string' || options.command.trim().length === 0 || options.command.includes('\0')) {
-    throw new Error('Command must be a non-empty string without null bytes.');
-  }
-  if (Buffer.byteLength(options.command) > MAX_COMMAND_BYTES) throw new Error('Command exceeds the 64 KiB limit; use a project-owned script.');
+  validateCommand(options.command, options.args);
   const repeat = options.repeat ?? DEFAULT_REPEAT;
   if (!Number.isSafeInteger(repeat) || repeat < 1 || repeat > MAX_RECORDED_TRIALS) {
     throw new Error('Repeat must be a positive safe integer no greater than 100000.');
@@ -65,6 +63,7 @@ export async function runTrialsWithBudget(options: RunOptions, budget: OutputBud
 
 async function executeRun(options: RunOptions, budget: OutputBudget, metadata: MetadataBudget, header: { bytes: number }, source?: RunSummary['source']): Promise<RunSummary> {
   options = { ...options,
+    ...(options.args === undefined ? {} : { args: [...options.args] }),
     ...(options.predicate === undefined ? {} : { predicate: structuredClone(options.predicate) }),
     ...(options.executionRequirement === undefined ? {} : { executionRequirement: { ...options.executionRequirement } }),
     ...(options.captureContext === undefined ? {} : { captureContext: contextDeclaration(options.captureContext) }),
@@ -91,6 +90,7 @@ async function executeRun(options: RunOptions, budget: OutputBudget, metadata: M
     failtraceVersion: VERSION,
     id,
     command: options.command,
+    ...(options.args === undefined ? {} : { args: [...options.args] }),
     cwd,
     requestedTrials: options.repeat ?? DEFAULT_REPEAT,
     concurrency: options.concurrency ?? 1,
@@ -125,7 +125,7 @@ async function executeRun(options: RunOptions, budget: OutputBudget, metadata: M
     let reservation = 0;
     try {
       while (!controller.signal.aborted && !stopScheduling && nextIndex <= summary.requestedTrials) {
-        const allowance = trialMetadataAllowance(summary.command);
+        const allowance = trialMetadataAllowance(summary.command, summary.args);
         try { metadata.reserve(allowance); } catch (error) {
           if (!(error instanceof MetadataLimitError)) throw error;
           summary.metadataLimit = error.details;
@@ -138,6 +138,9 @@ async function executeRun(options: RunOptions, budget: OutputBudget, metadata: M
         const trial = await runTrial({
           index,
           command: summary.command,
+          ...(summary.predicate === undefined ? {} : { predicate: summary.predicate }),
+          ...(summary.executionRequirement === undefined ? {} : { executionRequirement: summary.executionRequirement }),
+          ...(summary.args === undefined ? {} : { args: summary.args }),
           cwd,
           timeoutMs: summary.timeoutMs,
           runDirectory: directory,
@@ -149,9 +152,10 @@ async function executeRun(options: RunOptions, budget: OutputBudget, metadata: M
         summary.trials.push(trial);
         let predicateError: unknown;
         try {
-          trial.failureMatched = await matchesFailure(trial, directory, summary.predicate);
+          // Fresh captures supply substring results; saved evidence is still read and rechecked by Verify.
+          trial.failureMatched ??= await matchesFailure(trial, directory, summary.predicate);
           if (summary.executionRequirement !== undefined) {
-            trial.executionMatched = await matchesExecution(trial, directory, summary.executionRequirement);
+            trial.executionMatched ??= await matchesExecution(trial, directory, summary.executionRequirement);
           }
           if (trial.terminationReason === 'exit' && !trial.spawningFailed) {
             trial.status = trial.failureMatched ? 'failed' : 'passed';

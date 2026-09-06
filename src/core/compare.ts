@@ -1,7 +1,6 @@
-import { createHash } from 'node:crypto';
-import { createReadStream } from 'node:fs';
-import { open } from 'node:fs/promises';
 import { loadRun, safeArtifactPath } from './run-reader.js';
+import { summarizeBoundedFile } from './bounded-file.js';
+import { sameCommand } from './command.js';
 import { aggregateStatistics } from './statistics.js';
 import type { RunStatistics, TrialResult } from './types.js';
 
@@ -47,40 +46,32 @@ export interface ComparisonResult {
 
 export type ComparisonTrialEvidence = Pick<TrialResult, 'status' | 'exitCode' | 'terminationReason' | 'failureMatched' | 'executionMatched'>;
 
-async function digest(path: string, signal?: AbortSignal): Promise<{ hash: string; size: number }> {
-  signal?.throwIfAborted();
-  const hash = createHash('sha256');
-  let size = 0;
-  for await (const chunk of createReadStream(path, { signal })) {
-    hash.update(chunk);
-    size += (chunk as Buffer).length;
-  }
-  return { hash: hash.digest('hex'), size };
-}
-
-async function prefix(path: string, maxBytes: number, signal?: AbortSignal): Promise<string> {
-  signal?.throwIfAborted();
-  const handle = await open(path, 'r');
-  try {
-    const buffer = Buffer.alloc(maxBytes);
-    const { bytesRead } = await handle.read(buffer, 0, maxBytes, 0);
-    signal?.throwIfAborted();
-    return buffer.subarray(0, bytesRead).toString('utf8');
-  } finally { await handle.close(); }
-}
-
 async function compareOutput(a: string, b: string, maxBytes: number, maxLines: number, signal?: AbortSignal): Promise<OutputComparison> {
-  const [first, second] = await Promise.all([digest(a, signal), digest(b, signal)]);
-  const equal = first.hash === second.hash;
+  // maxBytes limits the preview only. Hash every byte in the initial regular
+  // file snapshot, reject changes, and derive the preview from that same read.
+  const controller = new AbortController();
+  const readSignal = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
+  const reads = await Promise.allSettled([a, b].map(async path => {
+    try { return await summarizeBoundedFile(path, Number.MAX_SAFE_INTEGER, maxBytes, readSignal); }
+    catch (error) { controller.abort(error); throw error; }
+  }));
+  const firstRead = reads[0]!;
+  const secondRead = reads[1]!;
+  if (firstRead.status === 'rejected') throw firstRead.reason;
+  if (secondRead.status === 'rejected') throw secondRead.reason;
+  const first = firstRead.value;
+  const second = secondRead.value;
+  const equal = first.sha256 === second.sha256;
   const result: OutputComparison = {
-    equal, sha256A: first.hash, sha256B: second.hash, bytesA: first.size, bytesB: second.size,
+    equal, sha256A: first.sha256, sha256B: second.sha256, bytesA: first.bytes, bytesB: second.bytes,
     truncated: false, diff: [],
   };
   if (equal) return result;
-  const [textA, textB] = await Promise.all([prefix(a, maxBytes, signal), prefix(b, maxBytes, signal)]);
+  const textA = first.prefix.toString('utf8');
+  const textB = second.prefix.toString('utf8');
   const linesA = textA.split('\n');
   const linesB = textB.split('\n');
-  result.truncated = first.size > maxBytes || second.size > maxBytes;
+  result.truncated = first.bytes > maxBytes || second.bytes > maxBytes;
   let index = 0;
   for (; index < Math.max(linesA.length, linesB.length); index++) {
     const left = linesA[index];
@@ -131,18 +122,26 @@ export async function compareRuns(options: CompareOptions): Promise<ComparisonRe
   for (const index of [options.trialA, options.trialB]) {
     if (index !== undefined && (!Number.isSafeInteger(index) || index < 1)) throw new Error('Trial index must be positive.');
   }
-  const first = await loadRun(options.runA, options.cwd);
-  const second = options.runB === undefined ? first : await loadRun(options.runB, options.cwd);
+  const first = await loadRun(options.runA, options.cwd, options.signal);
+  const second = options.runB === undefined ? first : await loadRun(options.runB, options.cwd, options.signal);
   const trialA = selectTrial(first.trials, options.trialA ?? (options.runB ? first.trials[0]?.index : undefined), 'passed', first.executionRequirement !== undefined);
   const trialB = selectTrial(second.trials, options.trialB ?? (options.runB ? second.trials[0]?.index : undefined), 'failed', second.executionRequirement !== undefined);
   const paths = await Promise.all([
     safeArtifactPath(first.artifactDirectory, trialA.stdoutPath), safeArtifactPath(second.artifactDirectory, trialB.stdoutPath),
     safeArtifactPath(first.artifactDirectory, trialA.stderrPath), safeArtifactPath(second.artifactDirectory, trialB.stderrPath),
   ]);
-  const [stdout, stderr] = await Promise.all([
-    compareOutput(paths[0]!, paths[1]!, maxBytes, maxLines, options.signal),
-    compareOutput(paths[2]!, paths[3]!, maxBytes, maxLines, options.signal),
-  ]);
+  const controller = new AbortController();
+  const readSignal = options.signal ? AbortSignal.any([options.signal, controller.signal]) : controller.signal;
+  const comparisons = await Promise.allSettled([[paths[0]!, paths[1]!], [paths[2]!, paths[3]!]].map(async ([a, b]) => {
+    try { return await compareOutput(a!, b!, maxBytes, maxLines, readSignal); }
+    catch (error) { controller.abort(error); throw error; }
+  }));
+  const stdoutResult = comparisons[0]!;
+  const stderrResult = comparisons[1]!;
+  if (stdoutResult.status === 'rejected') throw stdoutResult.reason;
+  if (stderrResult.status === 'rejected') throw stderrResult.reason;
+  const stdout = stdoutResult.value;
+  const stderr = stderrResult.value;
   const statisticsA = aggregateStatistics(first.trials);
   const statisticsB = aggregateStatistics(second.trials);
   const flattenEnvironment = (environment: typeof first.environment): Record<string, unknown> => ({
@@ -162,7 +161,7 @@ export async function compareRuns(options: CompareOptions): Promise<ComparisonRe
     ...(first.executionRequirement === undefined && second.executionRequirement === undefined ? {} : {
       executionRequirementChanged: JSON.stringify(first.executionRequirement) !== JSON.stringify(second.executionRequirement),
     }),
-    commandChanged: first.command !== second.command,
+    commandChanged: !sameCommand(first, second),
     concurrencyChanged: (first.concurrency ?? 1) !== (second.concurrency ?? 1),
     predicateChanged: JSON.stringify(first.predicate ?? { kind: 'nonzero_exit' }) !== JSON.stringify(second.predicate ?? { kind: 'nonzero_exit' }),
     statisticsA, statisticsB, failureRateDelta: statisticsB.failureRate - statisticsA.failureRate,

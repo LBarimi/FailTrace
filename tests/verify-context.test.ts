@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { copyFile, mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, expect, it } from 'vitest';
@@ -68,6 +68,18 @@ it('gives explicit source files precedence over an enclosing Git repository', as
   const result = await verifyFix({ baseline: baseline.artifactDirectory, cwd, command });
   expect(result.status).toBe('target_observed');
   expect(result.changes).toEqual([]);
+});
+
+it('excludes its own custom artifact directory when cwd is reached through an alias', async () => {
+  const cwd = await workspace(true);
+  const parent = await workspace();
+  const alias = join(parent, 'workspace-alias');
+  await symlink(cwd, alias, process.platform === 'win32' ? 'junction' : 'dir');
+  const run = await runTrials({ command, cwd: alias, artifactsDir: 'local-evidence', repeat: 1, captureContext: {} });
+  expect(run.context?.stable).toBe(true);
+  expect(run.context?.before.source).toMatchObject({ kind: 'git', untracked: [] });
+  expect(run.context?.after?.source).toMatchObject({ kind: 'git', untracked: [] });
+  expect(assessBaselineEligibility(run).eligible).toBe(true);
 });
 
 it('hashes declared binary bytes and requires separate allowances for overlapping scopes', async () => {

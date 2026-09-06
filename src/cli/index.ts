@@ -3,7 +3,13 @@ import { readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { bisectRegression, compareRuns, createBundle, inventoryArtifacts, minimizeFailure, runTrials, verifyFix, VERSION } from '../core/index.js';
 import { parseArgs } from './args.js';
-import { formatComparison, formatDemoProgress, formatDemoResult, formatHeader, formatSummary, formatTrial, formatVerification, HELP } from './presentation.js';
+import { formatComparison, formatDemoProgress, formatDemoResult, formatHeader, formatSummary, formatTrial, formatVerification } from './presentation.js';
+import { formatHelp } from './help.js';
+import { commandIdentity } from '../core/command.js';
+
+function displayCommand(value: { command: string; args?: string[] }): string {
+  return value.args === undefined ? value.command : JSON.stringify(commandIdentity(value));
+}
 
 async function environmentFile(path: string): Promise<Record<string, string | null>> {
   const value: unknown = JSON.parse(await readFile(path, 'utf8'));
@@ -16,7 +22,7 @@ async function environmentFile(path: string): Promise<Record<string, string | nu
 
 async function main(): Promise<number> {
   const invocation = parseArgs(process.argv.slice(2));
-  if (invocation.kind === 'help') { process.stdout.write(HELP); return 0; }
+  if (invocation.kind === 'help') { process.stdout.write(formatHelp(invocation.command)); return 0; }
   if (invocation.kind === 'version') { process.stdout.write(`${VERSION}\n`); return 0; }
   if (invocation.kind === 'mcp') {
     const { startMcpServer } = await import('../mcp/index.js');
@@ -68,7 +74,7 @@ async function main(): Promise<number> {
         break;
       }
       case 'run': {
-        print(formatHeader(invocation.command, invocation.repeat, invocation.timeoutMs, invocation.concurrency));
+        print(formatHeader(displayCommand(invocation), invocation.repeat, invocation.timeoutMs, invocation.concurrency));
         const summary = await runTrials({
           ...invocation, signal: controller.signal,
           onTrialComplete: (trial) => print(formatTrial(trial, invocation.repeat)),
@@ -88,7 +94,7 @@ async function main(): Promise<number> {
         break;
       }
       case 'verify': {
-        print(`FailTrace - fix verification\n\nBaseline  ${invocation.baseline}\nCommand   ${invocation.command}\nDirectory ${invocation.cwd}\n\nChecking baseline and context. Eligible candidate trials follow in completion order.\n`);
+        print(`FailTrace - fix verification\n\nBaseline  ${invocation.baseline}\nCommand   ${displayCommand(invocation)}\nDirectory ${invocation.cwd}\n\nChecking baseline and context. Eligible candidate trials follow in completion order.\n`);
         const verification = await verifyFix({
           ...invocation, signal: controller.signal,
           onTrialComplete: (trial) => print(formatTrial(trial, invocation.repeat)),
@@ -99,7 +105,7 @@ async function main(): Promise<number> {
         break;
       }
       case 'bisect': {
-        print(`FailTrace - regression isolation\n\nGood      ${invocation.good}\nBad       ${invocation.bad}\nCommand   ${invocation.command}\n`);
+        print(`FailTrace - regression isolation\n\nGood      ${invocation.good}\nBad       ${invocation.bad}\nCommand   ${displayCommand(invocation)}\n`);
         const search = await bisectRegression({
           ...invocation, signal: controller.signal,
           onCandidate: (candidate) => {
@@ -113,7 +119,7 @@ async function main(): Promise<number> {
         break;
       }
       case 'minimize': {
-        print(`FailTrace - failure minimization\n\nInput     ${invocation.input}\nFormat    ${invocation.format}\nCommand   ${invocation.command}\n`);
+        print(`FailTrace - failure minimization\n\nInput     ${invocation.input}\nFormat    ${invocation.format}\nCommand   ${displayCommand(invocation)}\n`);
         const reduction = await minimizeFailure({
           ...invocation, signal: controller.signal,
           onCandidate: (candidate) => print(`  ${String(candidate.index).padStart(3, '0')}  ${candidate.phase.padEnd(9)} ${String(candidate.units).padStart(5)} units  ${candidate.assessment}${candidate.accepted ? '  accepted' : ''}`),

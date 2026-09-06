@@ -7,6 +7,7 @@ import { terminateProcessTree } from './process-tree.js';
 import { effectiveEnvironment } from './environment.js';
 import { DEFAULT_MAX_OUTPUT_BYTES, DEFAULT_MAX_TOTAL_OUTPUT_BYTES, OutputBudget, type OutputLimit } from './output-budget.js';
 import type { TrialOptions, TrialResult } from './types.js';
+import { SubstringMatcher } from './substring-matcher.js';
 
 interface ExecutionResult {
   exitCode: number | null;
@@ -16,6 +17,8 @@ interface ExecutionResult {
   cleanupError?: string;
   outputLimit?: OutputLimit;
   outputError?: string;
+  failureMatched?: boolean;
+  executionMatched?: boolean;
 }
 
 function commandEnvironment(options: TrialOptions): NodeJS.ProcessEnv {
@@ -38,14 +41,20 @@ async function execute(
   try {
     // Passing the entire command, without an argument array, preserves the
     // platform shell's syntax (cmd.exe /d /s /c on Windows; /bin/sh on POSIX).
-    child = spawn(options.command, {
+    if (options.args !== undefined && process.platform === 'win32' && /\.(cmd|bat)$/i.test(options.command)) {
+      throw new Error('Windows .cmd/.bat scripts require shell mode. Omit args, or invoke the underlying executable directly.');
+    }
+    const spawnOptions = {
       cwd: options.cwd,
       env: commandEnvironment(options),
-      shell: true,
+      shell: options.args === undefined,
       detached: process.platform !== 'win32',
       windowsHide: true,
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
+      stdio: ['ignore', 'pipe', 'pipe'] as ['ignore', 'pipe', 'pipe'],
+    };
+    child = options.args === undefined
+      ? spawn(options.command, spawnOptions)
+      : spawn(options.command, options.args, spawnOptions);
   } catch (error) {
     return {
       exitCode: null,
@@ -105,7 +114,17 @@ async function execute(
   // Covers an abort between the pre-spawn check and listener registration.
   if (options.signal?.aborted) interrupt();
 
-  const capture = async (stream: Readable, file: FileHandle): Promise<void> => {
+  const failureStream = options.predicate?.kind === 'stdout_contains' ? 'stdout'
+    : options.predicate?.kind === 'stderr_contains' ? 'stderr' : undefined;
+  const failureMatcher = options.predicate?.kind === 'stdout_contains' || options.predicate?.kind === 'stderr_contains'
+    ? new SubstringMatcher(options.predicate.value) : undefined;
+  const checkpointMatcher = options.executionRequirement === undefined ? undefined
+    : new SubstringMatcher(options.executionRequirement.contains);
+  const matchersFor = (name: 'stdout' | 'stderr'): SubstringMatcher[] => [
+    ...(failureStream === name && failureMatcher ? [failureMatcher] : []),
+    ...(options.executionRequirement?.stream === name && checkpointMatcher ? [checkpointMatcher] : []),
+  ];
+  const capture = async (stream: Readable, file: FileHandle, matchers: SubstringMatcher[]): Promise<void> => {
     try {
       for await (const value of stream) {
         const chunk = value as Buffer;
@@ -120,6 +139,8 @@ async function execute(
           if (bytesWritten === 0) throw new Error('Output write made no progress.');
           offset += bytesWritten;
         }
+        // Only bytes successfully retained in the evidence may contribute a match.
+        for (const matcher of matchers) matcher.write(chunk.subarray(0, accepted));
         if (accepted < chunk.length) {
           outputLimit ??= accepted < withinTrial
             ? { scope: 'experiment', limitBytes: budget.limitBytes }
@@ -129,6 +150,7 @@ async function execute(
           // retaining any more bytes. Do not let a full pipe stall termination.
         }
       }
+      for (const matcher of matchers) matcher.end();
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code;
       if (stopReason && (code === 'ERR_STREAM_PREMATURE_CLOSE' || code === 'ABORT_ERR')) return;
@@ -136,7 +158,7 @@ async function execute(
       stop('output_error');
     }
   };
-  const captures = [capture(child.stdout!, stdout), capture(child.stderr!, stderr)];
+  const captures = [capture(child.stdout!, stdout, matchersFor('stdout')), capture(child.stderr!, stderr, matchersFor('stderr'))];
 
   try {
     const result = await completion;
@@ -147,6 +169,8 @@ async function execute(
       ...(outputLimit === undefined ? {} : { outputLimit, stopReason: 'output_limit' }),
       ...(outputError === undefined ? {} : { outputError, stopReason: 'output_error' }),
       ...(cleanupError === undefined ? {} : { cleanupError }),
+      ...(failureMatcher === undefined ? {} : { failureMatched: failureMatcher.matched }),
+      ...(checkpointMatcher === undefined ? {} : { executionMatched: checkpointMatcher.matched }),
     };
   } finally {
     clearTimeout(timeout);
@@ -187,9 +211,11 @@ export async function runTrial(options: TrialOptions): Promise<TrialResult> {
         : spawningFailed ? 'spawn_error'
           : execution.signal !== null ? 'signal' : 'exit';
 
+    const completeEvidence = terminationReason === 'exit' && execution.exitCode !== null && error === undefined;
     return {
       index: options.index,
       command: options.command,
+      ...(options.args === undefined ? {} : { args: [...options.args] }),
       startedAt,
       endedAt: new Date().toISOString(),
       durationMs: performance.now() - started,
@@ -201,6 +227,8 @@ export async function runTrial(options: TrialOptions): Promise<TrialResult> {
       terminationReason,
       ...(error === undefined ? {} : { error }),
       ...(execution.outputLimit === undefined ? {} : { outputLimit: execution.outputLimit }),
+      ...(execution.failureMatched === undefined ? {} : { failureMatched: completeEvidence && execution.failureMatched }),
+      ...(execution.executionMatched === undefined ? {} : { executionMatched: completeEvidence && execution.executionMatched }),
       stdoutPath,
       stderrPath,
     };

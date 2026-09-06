@@ -3,6 +3,7 @@ import { lstat, open } from 'node:fs/promises';
 import { join } from 'node:path';
 import { loadRun, safeArtifactPath } from './run-reader.js';
 import { aggregateStatistics } from './statistics.js';
+import { sameCommand } from './command.js';
 import type { RunStatistics, RunSummary, TrialResult, TrialStatus, TerminationReason } from './types.js';
 
 export type RunEvidenceFilter = 'all' | 'matched' | 'unmatched' | 'unhealthy';
@@ -130,7 +131,7 @@ function matchingState(trial: TrialResult): boolean | null {
 /** This is evidence health, not an opinion about which nonmatching exit codes are acceptable. */
 function unhealthyTrial(trial: TrialResult, run: RunSummary): boolean {
   const matched = matchingState(trial);
-  return trial.command !== run.command
+  return !sameCommand(trial, run)
     || (run.executionRequirement !== undefined && trial.executionMatched !== true)
     || trial.terminationReason !== 'exit'
     || trial.signal !== null
@@ -201,7 +202,13 @@ async function inspectOutput(run: RunSummary, options: InspectRunOutputOptions):
     if (offsetBytes > totalBytes) throw new Error('Output offset exceeds the saved output size.');
     const expectedBytes = Math.min(maxBytes, totalBytes - offsetBytes);
     const buffer = Buffer.alloc(expectedBytes);
-    const bytesRead = expectedBytes === 0 ? 0 : (await handle.read(buffer, 0, expectedBytes, offsetBytes)).bytesRead;
+    let bytesRead = 0;
+    while (bytesRead < expectedBytes) {
+      options.signal?.throwIfAborted();
+      const chunk = await handle.read(buffer, bytesRead, expectedBytes - bytesRead, offsetBytes + bytesRead);
+      if (chunk.bytesRead === 0) break;
+      bytesRead += chunk.bytesRead;
+    }
     options.signal?.throwIfAborted();
 
     const [afterHandle, afterPath] = await Promise.all([
@@ -239,7 +246,7 @@ export async function inspectRunEvidence(options: InspectRunEvidenceOptions): Pr
   if (options.view === 'trials') validateTrialOptions(options);
   else validateOutputOptions(options);
   options.signal?.throwIfAborted();
-  const run = await loadRun(options.run, options.cwd);
+  const run = await loadRun(options.run, options.cwd, options.signal);
   options.signal?.throwIfAborted();
   if (options.view === 'output') return inspectOutput(run, options);
 

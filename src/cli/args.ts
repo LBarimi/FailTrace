@@ -1,10 +1,12 @@
 import { validateExecutionRequirement } from '../core/index.js';
+import { validateCommand } from '../core/command.js';
+import { HELP_COMMANDS, type HelpCommand } from './help.js';
 import type { BundleOptions, CompareOptions, ExecutionRequirement, FailurePredicate, InputLimits, MinimizeFormat, OutputLimits, RunOptions, VerifyOptions } from '../core/index.js';
 
 type Common = { cwd?: string; json?: boolean };
-type Experiment = { command: string; repeat: number; timeoutMs: number; predicate?: FailurePredicate; executionRequirement?: ExecutionRequirement } & OutputLimits;
+type Experiment = { command: string; args?: string[]; repeat: number; timeoutMs: number; predicate?: FailurePredicate; executionRequirement?: ExecutionRequirement } & OutputLimits;
 export type CliInvocation =
-  | { kind: 'help' }
+  | { kind: 'help'; command?: HelpCommand }
   | { kind: 'version' }
   | ({ kind: 'demo' } & Common)
   | ({ kind: 'artifacts'; directory?: string; maxEntries?: number } & Common)
@@ -41,16 +43,17 @@ function integer(value: string, name: string, min = 1, max = Number.MAX_SAFE_INT
 const predicateFlags = ['exit-code', 'stdout-contains', 'stderr-contains', 'stdout-regex', 'stderr-regex'];
 const outputFlags = ['max-output-bytes', 'max-total-output-bytes'];
 const executionFlags = ['require-stdout-contains', 'require-stderr-contains'];
-const experiments = ['command', 'repeat', 'timeout', ...predicateFlags, ...executionFlags, 'regex-flags', ...outputFlags];
+const directFlags = ['exec', 'arg'];
+const experiments = ['command', ...directFlags, 'repeat', 'timeout', ...predicateFlags, ...executionFlags, 'regex-flags', ...outputFlags];
 const allowed: Record<string, string[]> = {
   demo: ['cwd', 'json'],
   artifacts: ['directory', 'max-entries', 'cwd', 'json'],
-  run: ['repeat', 'timeout', 'concurrency', ...outputFlags, ...predicateFlags, ...executionFlags, 'regex-flags', 'capture-env', 'capture-context', 'context-input', 'context-setup', 'context-source', 'cwd', 'json'],
-  verify: ['command', 'cwd', 'repeat', 'timeout', 'concurrency', ...outputFlags, 'healthy-exit-code', 'allow-change', 'json'],
+  run: [...directFlags, 'repeat', 'timeout', 'concurrency', ...outputFlags, ...predicateFlags, ...executionFlags, 'regex-flags', 'capture-env', 'capture-context', 'context-input', 'context-setup', 'context-source', 'cwd', 'json'],
+  verify: ['command', ...directFlags, 'cwd', 'repeat', 'timeout', 'concurrency', ...outputFlags, 'healthy-exit-code', 'allow-change', 'json'],
   compare: ['trial-a', 'trial-b', 'max-lines', 'max-bytes', 'cwd', 'json'],
   bisect: [...experiments, 'good', 'bad', 'min-failures', 'healthy-exit-code', 'inconclusive-exit-code', 'cwd', 'json'],
   minimize: [...experiments, 'input', 'format', 'min-failures', 'max-evaluations', 'max-input-bytes', 'max-candidate-bytes', 'cwd', 'json'],
-  bundle: ['file', 'input', 'command', 'output', 'env-file', 'include-env', 'include-evidence', 'max-bundle-bytes', 'cwd', 'json'],
+  bundle: ['file', 'input', 'command', ...directFlags, 'output', 'env-file', 'include-env', 'include-evidence', 'max-bundle-bytes', 'cwd', 'json'],
   mcp: ['cwd'],
 };
 
@@ -84,23 +87,23 @@ export function parseArgs(argv: string[]): CliInvocation {
   const kind = argv[0] ?? '';
   const flags = allowed[kind];
   if (!flags) throw new Error(`Unknown command: ${kind}. Use "failtrace --help".`);
-  if (argv.slice(1).some((value) => value === '--help' || value === '-h')) return { kind: 'help' };
   const values = new Map<string, string[]>();
   const positional: string[] = [];
   for (let index = 1; index < argv.length; index++) {
     const argument = argv[index]!;
+    if (argument === '--help' || argument === '-h') return { kind: 'help', command: kind as typeof HELP_COMMANDS[number] };
     if (!argument.startsWith('--')) { positional.push(argument); continue; }
     const equals = argument.indexOf('=');
     const flag = argument.slice(2, equals === -1 ? undefined : equals);
     if (!flags.includes(flag)) throw new Error(`Unexpected option: --${flag}.\n${usageHint(kind)}`);
-    if (values.has(flag) && !['file', 'include-env', 'context-input', 'context-setup', 'context-source', 'healthy-exit-code', 'inconclusive-exit-code', 'allow-change'].includes(flag)) throw new Error(`Option --${flag} may only be provided once.`);
+    if (values.has(flag) && !['arg', 'file', 'include-env', 'context-input', 'context-setup', 'context-source', 'healthy-exit-code', 'inconclusive-exit-code', 'allow-change'].includes(flag)) throw new Error(`Option --${flag} may only be provided once.`);
     if (flag === 'json' || flag === 'capture-context' || flag === 'include-evidence') {
       if (equals !== -1) throw new Error(`--${flag} does not take a value.`);
       values.set(flag, ['true']);
       continue;
     }
     const value = equals === -1 ? argv[++index] : argument.slice(equals + 1);
-    if (value === undefined || value === '' || (equals === -1 && value.startsWith('--'))) throw new Error(`Option --${flag} requires a value.`);
+    if (value === undefined || (flag !== 'arg' && (value === '' || (equals === -1 && value.startsWith('--'))))) throw new Error(`Option --${flag} requires a value.`);
     values.set(flag, [...(values.get(flag) ?? []), value]);
   }
   const get = (name: string): string | undefined => values.get(name)?.[0];
@@ -110,6 +113,13 @@ export function parseArgs(argv: string[]): CliInvocation {
     return value;
   };
   const cwd = get('cwd');
+  const executable = get('exec');
+  if (values.has('arg') && executable === undefined) throw new Error('--arg requires --exec. Shell commands keep their arguments inside the quoted command.');
+  if (executable !== undefined && (values.has('command') || (kind === 'run' && positional.length > 0))) {
+    throw new Error('Choose --exec with literal --arg values, or one shell command; do not combine them.');
+  }
+  const direct = executable === undefined ? {} : { args: values.get('arg') ?? [] };
+  if (executable !== undefined) validateCommand(executable, direct.args);
   const limits: OutputLimits = {
     ...(get('max-output-bytes') === undefined ? {} : { maxOutputBytes: integer(get('max-output-bytes')!, 'Max output bytes') }),
     ...(get('max-total-output-bytes') === undefined ? {} : { maxTotalOutputBytes: integer(get('max-total-output-bytes')!, 'Max total output bytes') }),
@@ -126,7 +136,7 @@ export function parseArgs(argv: string[]): CliInvocation {
   if (kind === 'verify') {
     const baseline = positional[0];
     if (!baseline?.trim()) throw new Error('Provide a baseline run ID or path to verify.');
-    const command = required('command');
+    const command = executable ?? required('command');
     if (!command.trim() || command.includes('\0')) throw new Error('Provide an explicit non-empty verification command.');
     const directory = required('cwd');
     if (!directory.trim() || directory.includes('\0')) throw new Error('Provide an explicit verification working directory.');
@@ -143,7 +153,7 @@ export function parseArgs(argv: string[]): CliInvocation {
       throw new Error('Each --allow-change field may only be provided once.');
     }
     return {
-      kind, baseline, command, cwd: directory, ...(values.has('json') ? { json: true } : {}),
+      kind, baseline, command, ...direct, cwd: directory, ...(values.has('json') ? { json: true } : {}),
       ...limits,
       ...(get('repeat') === undefined ? {} : { repeat: integer(get('repeat')!, 'Repeat') }),
       ...(get('timeout') === undefined ? {} : { timeoutMs: parseTimeout(get('timeout')!) }),
@@ -169,7 +179,8 @@ export function parseArgs(argv: string[]): CliInvocation {
       kind, run: positional[0], ...common,
       ...(values.has('file') ? { files: values.get('file')! } : {}),
       ...(get('input') === undefined ? {} : { input: get('input')! }),
-      ...(get('command') === undefined ? {} : { command: get('command')! }),
+      ...(executable === undefined && get('command') === undefined ? {} : { command: executable ?? get('command')! }),
+      ...direct,
       ...(get('output') === undefined ? {} : { destination: get('output')! }),
       ...(get('env-file') === undefined ? {} : { envFile: get('env-file')! }),
       ...(values.has('include-env') ? { includeEnv: values.get('include-env')! } : {}),
@@ -177,7 +188,7 @@ export function parseArgs(argv: string[]): CliInvocation {
       ...(get('max-bundle-bytes') === undefined ? {} : { maxBundleBytes: integer(get('max-bundle-bytes')!, 'Max bundle bytes') }),
     };
   }
-  const command = kind === 'run' ? positional[0] : required('command');
+  const command = executable ?? (kind === 'run' ? positional[0] : required('command'));
   if (!command?.trim() || command.includes('\0')) throw new Error('Provide one quoted target command: failtrace run "npm test".');
   const repeat = integer(get('repeat') ?? (kind === 'run' ? '10' : kind === 'bisect' ? '5' : '1'), 'Repeat');
   const timeoutMs = parseTimeout(get('timeout') ?? '30s');
@@ -188,7 +199,7 @@ export function parseArgs(argv: string[]): CliInvocation {
     stream: execution[0] === 'require-stdout-contains' ? 'stdout' : 'stderr', contains: get(execution[0]!)!,
   };
   if (executionRequirement !== undefined) validateExecutionRequirement(executionRequirement);
-  const experiment: Experiment = { command, repeat, timeoutMs, ...limits, ...(predicate === undefined ? {} : { predicate }),
+  const experiment: Experiment = { command, ...direct, repeat, timeoutMs, ...limits, ...(predicate === undefined ? {} : { predicate }),
     ...(executionRequirement === undefined ? {} : { executionRequirement }) };
   if (kind === 'run') {
     const captureEnv = get('capture-env')?.split(',').map((key) => key.trim());

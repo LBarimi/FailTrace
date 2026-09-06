@@ -7,7 +7,8 @@ import { assessRun, validatePredicate } from './predicates.js';
 import { DEFAULT_TIMEOUT_MS, runTrialsWithBudget, validateRunOptions, VERSION } from './run-trials.js';
 import { OutputBudget, outputLimits, type OutputLimits } from './output-budget.js';
 import { copyBoundedFile } from './bounded-file.js';
-import { CandidateStorageBudget, CandidateStorageLimitError, inputLimits, type InputLimits, type CandidateStorageLimit } from './input-budget.js';
+import { bindInputArguments } from './command.js';
+import { CandidateInputLimitError, CandidateStorageBudget, CandidateStorageLimitError, inputLimits, type InputLimits, type CandidateStorageLimit } from './input-budget.js';
 import type { ExecutionRequirement, FailurePredicate } from './types.js';
 import { diagnosticMessage, MAX_EVALUATIONS, MetadataBudget, MetadataLimitError, type MetadataLimit } from './metadata-budget.js';
 
@@ -15,6 +16,8 @@ export type { MinimizeFormat } from './minimize-input.js';
 
 export interface MinimizeOptions extends OutputLimits, InputLimits {
   command: string;
+  /** Direct executable arguments; an entire {input} value binds each candidate path. */
+  args?: string[];
   input: string;
   format: MinimizeFormat;
   cwd?: string;
@@ -47,6 +50,7 @@ export interface MinimizeResult extends OutputLimits, InputLimits {
   status: 'completed' | 'not_reproduced' | 'inconclusive' | 'interrupted' | 'limit_reached';
   command: string;
   format: MinimizeFormat;
+  args?: string[];
   cwd: string;
   inputPath: string;
   artifactDirectory: string;
@@ -119,6 +123,7 @@ export async function minimizeFailure(options: MinimizeOptions): Promise<Minimiz
   const minFailures = options.minFailures ?? 1;
   const maxEvaluations = options.maxEvaluations ?? 200;
   validateRunOptions({ ...options, repeat, timeoutMs });
+  if (options.args !== undefined) options.args = [...options.args];
   const limits = outputLimits(options);
   const outputBudget = new OutputBudget(limits.maxTotalOutputBytes);
   const metadata = new MetadataBudget();
@@ -155,6 +160,7 @@ export async function minimizeFailure(options: MinimizeOptions): Promise<Minimiz
   const result: MinimizeResult = {
     schemaVersion: 1, failtraceVersion: VERSION, id, status: 'inconclusive', ...limits, ...inputBounds,
     command: options.command, format: options.format, cwd, inputPath, artifactDirectory,
+    ...(options.args === undefined ? {} : { args: [...options.args] }),
     originalPath, minimizedPath: join(artifactDirectory, 'minimized', inputName(options.format)),
     originalSize: candidateSize(initial), minimizedSize: candidateSize(initial),
     startedAt: new Date().toISOString(), endedAt: null, repeat, minFailures, timeoutMs, maxEvaluations,
@@ -184,6 +190,7 @@ export async function minimizeFailure(options: MinimizeOptions): Promise<Minimiz
     environment.FAILTRACE_INPUT_DIR = options.format === 'files' ? candidatePath : undefined;
     const run = await runTrialsWithBudget({
       command: options.command, repeat, timeoutMs, cwd, artifactsDir: directory,
+      ...(options.args === undefined ? {} : { args: bindInputArguments(options.args, candidatePath) }),
       ...limits,
       stopWhenDecided: { minFailures },
       env: environment, predicate: result.predicate,
@@ -228,7 +235,7 @@ export async function minimizeFailure(options: MinimizeOptions): Promise<Minimiz
         ? remaining.map((key) => node[Number(key)]!)
         : Object.fromEntries(remaining.map((key) => [key, node[String(key)]!]));
       const value = replaceAtPath(current.value, path, replacement);
-      return accept({ format: 'json', value, text: `${JSON.stringify(value, null, 2)}\n` });
+      return accept({ format: 'json', value, text: JSON.stringify(value) });
     });
     if (current.format !== 'json') return;
     const remaining = atPath(current.value, path);
@@ -270,10 +277,10 @@ export async function minimizeFailure(options: MinimizeOptions): Promise<Minimiz
             : sawInconclusive ? 'inconclusive' : 'completed';
   } catch (error) {
     result.error = diagnosticMessage(error);
-    if (error instanceof CandidateStorageLimitError || error instanceof MetadataLimitError) {
+    if (error instanceof CandidateInputLimitError || error instanceof CandidateStorageLimitError || error instanceof MetadataLimitError) {
       result.status = options.signal?.aborted ? 'interrupted' : 'limit_reached';
       if (error instanceof CandidateStorageLimitError) result.storageLimit = error.details;
-      else result.metadataLimit = error.details;
+      else if (error instanceof MetadataLimitError) result.metadataLimit = error.details;
       result.finalVerified = false;
       result.minimizedPath = bestPath;
       result.minimizedSize = candidateSize(current);

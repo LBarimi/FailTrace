@@ -11,6 +11,7 @@ import { captureContext, snapshotsEqual, validRunContext } from './verify-contex
 import type { ContextSnapshot, RunContext } from './verify-context.js';
 import type { EnvironmentSnapshot, ExecutionRequirement, FailurePredicate, RunOptions, RunSummary, TrialResult } from './types.js';
 import { outputLimits, type OutputLimits } from './output-budget.js';
+import { commandIdentity, sameCommand } from './command.js';
 
 export type VerifyChangeField = 'command' | 'source' | 'inputs' | 'setup' | 'environment' | 'timeout' | 'concurrency' | 'outputLimits';
 export interface VerifyAllowedChange { field: VerifyChangeField; reason: string }
@@ -18,6 +19,8 @@ export interface VerifyOptions extends OutputLimits {
   baseline: string;
   /** Always supplied by the current caller; saved evidence grants no execution authority. */
   command: string;
+  /** Explicit current direct arguments; never inherited from recorded evidence. */
+  args?: string[];
   cwd: string;
   repeat?: number;
   timeoutMs?: number;
@@ -67,6 +70,7 @@ export interface VerifyResult {
   healthyExitCodes: number[];
   plan: {
     command: string; cwd: string; repeat: number; timeoutMs: number; concurrency: number;
+    args?: string[];
     maxOutputBytes: number; maxTotalOutputBytes: number;
     predicate: FailurePredicate | null; captureEnv: string[];
     executionRequirement?: ExecutionRequirement;
@@ -98,7 +102,7 @@ function evidence(run: RunSummary, codes: number[]): VerifyRunEvidence {
     if (['signal', 'timeout', 'spawn_error', 'interrupted', 'output_limit', 'output_error'].includes(trial.terminationReason)
       || trial.timedOut === true || trial.spawningFailed === true || (trial.signal !== null && trial.signal !== undefined)
       || trial.error !== undefined || trial.outputLimit !== undefined) infrastructureTrials++;
-    else if (!cleanExit(trial) || trial.command !== run.command || trial.index !== offset + 1) invalidEvidenceTrials++;
+    else if (!cleanExit(trial) || !sameCommand(trial, run) || trial.index !== offset + 1) invalidEvidenceTrials++;
     else if (!trial.failureMatched && !codes.includes(trial.exitCode!)) unrelatedFailureTrials++;
     else if (run.executionRequirement !== undefined && trial.executionMatched !== true) executionEvidenceMissingTrials++;
     else healthyTrials++;
@@ -128,7 +132,7 @@ function healthReasons(run: RunSummary, codes: number[]): string[] {
   if (run.status !== 'completed' || run.error !== undefined || !run.endedAt) reasons.push('Run did not complete cleanly.');
   if (run.metadataLimit !== undefined) reasons.push('Run exceeded its metadata allowance; the preselected sample is incomplete.');
   if (run.decision !== undefined) reasons.push('Threshold-stopped runs are not fixed-budget verification evidence.');
-  if (run.trials.length !== run.requestedTrials || run.trials.some((trial, index) => trial.index !== index + 1 || trial.command !== run.command)) {
+  if (run.trials.length !== run.requestedTrials || run.trials.some((trial, index) => trial.index !== index + 1 || !sameCommand(trial, run))) {
     reasons.push('Run does not contain every preselected trial in index order.');
   }
   const observed = evidence(run, codes);
@@ -181,12 +185,12 @@ function environmentIdentity(env: EnvironmentSnapshot): unknown {
 }
 
 function changesBetween(
-  baseline: RunSummary, current: { command: string; timeoutMs: number; concurrency: number; environment: EnvironmentSnapshot; context: ContextSnapshot } & Required<OutputLimits>,
+  baseline: RunSummary, current: { command: string; args?: string[]; timeoutMs: number; concurrency: number; environment: EnvironmentSnapshot; context: ContextSnapshot } & Required<OutputLimits>,
   allowed: VerifyAllowedChange[],
 ): VerifyContextChange[] {
   const previous = baseline.context!.before;
   const pairs: [VerifyChangeField, unknown, unknown][] = [
-    ['command', baseline.command, current.command], ['timeout', baseline.timeoutMs, current.timeoutMs],
+    ['command', commandIdentity(baseline), commandIdentity(current)], ['timeout', baseline.timeoutMs, current.timeoutMs],
     ['concurrency', baseline.concurrency, current.concurrency],
     ['outputLimits', { maxOutputBytes: baseline.maxOutputBytes ?? null, maxTotalOutputBytes: baseline.maxTotalOutputBytes ?? null },
       { maxOutputBytes: current.maxOutputBytes, maxTotalOutputBytes: current.maxTotalOutputBytes }],
@@ -211,9 +215,11 @@ export async function verifyFix(options: VerifyOptions): Promise<VerifyResult> {
   if (typeof options.baseline !== 'string' || !options.baseline.trim() || options.baseline.includes('\0')) throw new Error('Verify requires a baseline run ID or path.');
   // Validate explicit execution authority before opening any saved run.
   validateRunOptions({ command: options.command, ...(options.repeat === undefined ? {} : { repeat: options.repeat }),
+    ...(options.args === undefined ? {} : { args: options.args }),
     ...outputLimits(options),
     ...(options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs }),
     ...(options.concurrency === undefined ? {} : { concurrency: options.concurrency }) });
+  if (options.args !== undefined) options.args = [...options.args];
   const codes = healthyCodes(options.healthyExitCodes);
   const allowed = structuredClone(options.allowChanges ?? []);
   const fields: VerifyChangeField[] = ['command', 'source', 'inputs', 'setup', 'environment', 'timeout', 'concurrency', 'outputLimits'];
@@ -230,6 +236,7 @@ export async function verifyFix(options: VerifyOptions): Promise<VerifyResult> {
     startedAt: new Date().toISOString(), endedAt: null, baseline: null, candidate: null,
     baselineEligibility: { eligible: false, reasons: [] }, changes: [], reasons: [], healthyExitCodes: codes,
     plan: { command: options.command, cwd, repeat: options.repeat ?? 10, timeoutMs: options.timeoutMs ?? 30_000,
+      ...(options.args === undefined ? {} : { args: [...options.args] }),
       ...outputLimits(options),
       concurrency: options.concurrency ?? 1, predicate: null, captureEnv: [], healthyExitCodes: codes, allowChanges: structuredClone(allowed) },
   };
@@ -237,7 +244,7 @@ export async function verifyFix(options: VerifyOptions): Promise<VerifyResult> {
   try {
     if (options.signal?.aborted) { report.status = 'interrupted'; report.reasons.push('Verification was interrupted before execution.'); return report; }
     let baseline: RunSummary;
-    try { baseline = await loadRun(options.baseline, cwd); } catch {
+    try { baseline = await loadRun(options.baseline, cwd, options.signal); } catch {
       report.reasons.push('Baseline could not be loaded. Provide a readable run ID or run.json and capture a fresh baseline if its evidence is incomplete.');
       report.baselineEligibility.reasons = [...report.reasons];
       return report;
@@ -280,6 +287,7 @@ export async function verifyFix(options: VerifyOptions): Promise<VerifyResult> {
     try {
       candidate = await runTrials({
         command: plan.command, cwd, repeat: plan.repeat, timeoutMs: plan.timeoutMs, concurrency: plan.concurrency,
+        ...(plan.args === undefined ? {} : { args: plan.args }),
         maxOutputBytes: plan.maxOutputBytes, maxTotalOutputBytes: plan.maxTotalOutputBytes,
         predicate: plan.predicate!, captureEnv: plan.captureEnv, captureContext: baseline.context!.declaration,
         ...(plan.executionRequirement === undefined ? {} : { executionRequirement: plan.executionRequirement }),

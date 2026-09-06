@@ -14,6 +14,11 @@ export interface InputLimits {
   maxCandidateBytes?: number;
 }
 export interface CandidateStorageLimit { limitBytes: number; usedBytes: number; requestedBytes: number }
+export class CandidateInputLimitError extends Error {
+  constructor(limitBytes: number) {
+    super(`Encoded candidate exceeds the ${limitBytes} byte input limit; best available input is preserved without final verification.`);
+  }
+}
 export class CandidateStorageLimitError extends Error {
   constructor(readonly details: CandidateStorageLimit) {
     super('Candidate storage budget exhausted; best available input is preserved without a final verification.');

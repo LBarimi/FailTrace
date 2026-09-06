@@ -1,4 +1,4 @@
-import { readFile, realpath, writeFile } from 'node:fs/promises';
+import { appendFile, mkdir, open, readFile, realpath, rename, rm, writeFile, type FileHandle } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { runTrials } from '../src/core/run-trials.js';
@@ -68,6 +68,59 @@ describe('run comparison', () => {
     expect(comparison.stdout).toMatchObject({ equal: true, diff: [], truncated: false });
     await expect(compareRuns({ runA: run.artifactDirectory })).rejects.toThrow(/no failed/);
     await expect(compareRuns({ runA: run.artifactDirectory, trialA: 5 })).rejects.toThrow(/does not exist/);
+  });
+
+  it('preserves complete diff prefixes across short filesystem reads', async () => {
+    const run = await runTrials({ command: fixtureCommand('alternate'), repeat: 2, cwd: await workspace() });
+    await writeFile(join(run.artifactDirectory, run.trials[0]!.stdoutPath), 'first complete output\n');
+    await writeFile(join(run.artifactDirectory, run.trials[1]!.stdoutPath), 'second complete output\n');
+    const probe = await open(join(run.artifactDirectory, run.trials[0]!.stdoutPath), 'r');
+    type BufferRead = (this: FileHandle, buffer: Buffer, offset: number, length: number, position: number | null) => Promise<{ bytesRead: number; buffer: Buffer }>;
+    const prototype = Object.getPrototypeOf(probe) as { read: BufferRead };
+    const original = prototype.read;
+    await probe.close();
+    prototype.read = function (buffer, offset, length, position) {
+      return original.call(this, buffer, offset, Math.min(length, 3), position);
+    };
+    try {
+      const comparison = await compareRuns({ runA: run.artifactDirectory });
+      expect(comparison.stdout).toMatchObject({ truncated: false, diff: ['-first complete output', '+second complete output', ' '] });
+    } finally { prototype.read = original; }
+  });
+
+  it.each(['growth', 'replacement'] as const)('rejects output %s while hashing instead of mixing evidence snapshots', async change => {
+    const run = await runTrials({ command: fixtureCommand('alternate'), repeat: 2, cwd: await workspace() });
+    const path = join(run.artifactDirectory, run.trials[0]!.stdoutPath);
+    const contents = await readFile(path);
+    const probe = await open(path, 'r');
+    const identity = await probe.stat({ bigint: true });
+    type BufferRead = (this: FileHandle, buffer: Buffer, offset: number, length: number, position: number | null) => Promise<{ bytesRead: number; buffer: Buffer }>;
+    const prototype = Object.getPrototypeOf(probe) as { read: BufferRead };
+    const original = prototype.read;
+    await probe.close();
+    let changed = false;
+    prototype.read = async function (buffer, offset, length, position) {
+      const result = await original.call(this, buffer, offset, length, position);
+      const current = await this.stat({ bigint: true });
+      if (!changed && current.dev === identity.dev && current.ino === identity.ino) {
+        changed = true;
+        if (change === 'growth') await appendFile(path, 'unexpected extra output');
+        else { await rename(path, `${path}.original`); await writeFile(path, contents); }
+      }
+      return result;
+    };
+    try {
+      await expect(compareRuns({ runA: run.artifactDirectory })).rejects.toThrow(/changed/);
+      expect(changed).toBe(true);
+    } finally { prototype.read = original; }
+  });
+
+  it('rejects a non-regular output before opening it as a stream', async () => {
+    const run = await runTrials({ command: fixtureCommand('alternate'), repeat: 2, cwd: await workspace() });
+    const path = join(run.artifactDirectory, run.trials[0]!.stdoutPath);
+    await rm(path);
+    await mkdir(path);
+    await expect(compareRuns({ runA: run.artifactDirectory })).rejects.toThrow(/regular file/);
   });
 
   it('rejects unsafe artifact paths from saved metadata', async () => {

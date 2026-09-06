@@ -8,6 +8,7 @@ import type { RunSummary, TrialResult } from './types.js';
 import { outputLimits } from './output-budget.js';
 import { readBoundedFile } from './bounded-file.js';
 import { MAX_INVESTIGATION_METADATA_BYTES, MAX_RECORDED_TRIALS } from './metadata-budget.js';
+import { validateCommand } from './command.js';
 
 /** Resolve a referenced artifact without accepting escapes or symbolic links. */
 export async function safeArtifactPath(directory: string, path: string): Promise<string> {
@@ -32,6 +33,7 @@ export async function safeArtifactPath(directory: string, path: string): Promise
 function validateTrial(value: unknown): asserts value is TrialResult {
   if (!value || typeof value !== 'object') throw new Error('Invalid trial metadata.');
   const trial = value as TrialResult;
+  validateCommand(trial.command, trial.args);
   if (trial.executionMatched !== undefined && typeof trial.executionMatched !== 'boolean') throw new Error('Invalid execution evidence metadata.');
   if (!Number.isSafeInteger(trial.index) || trial.index < 1 || typeof trial.command !== 'string'
     || !Number.isFinite(trial.durationMs) || trial.durationMs < 0
@@ -48,7 +50,8 @@ function validateTrial(value: unknown): asserts value is TrialResult {
 }
 
 /** Load an ID, run directory, or run.json, relocating file references to its actual directory. */
-export async function loadRun(reference: string, cwd = process.cwd()): Promise<RunSummary> {
+export async function loadRun(reference: string, cwd = process.cwd(), signal?: AbortSignal): Promise<RunSummary> {
+  signal?.throwIfAborted();
   if (typeof reference !== 'string' || !reference.trim() || reference.includes('\0')) throw new Error('Provide a run ID or path.');
   let path = resolve(cwd, reference);
   let info;
@@ -60,11 +63,13 @@ export async function loadRun(reference: string, cwd = process.cwd()): Promise<R
   if (info.isDirectory()) path = join(path, 'run.json');
   path = await realpath(path);
   if ((await stat(path)).size > MAX_METADATA_BYTES) throw new Error('Run metadata exceeds the 32 MiB reader limit.');
-  const header = await readBoundedFile(path, MAX_METADATA_BYTES);
+  const header = await readBoundedFile(path, MAX_METADATA_BYTES, signal);
+  signal?.throwIfAborted();
   let totalMetadataBytes = header.length;
   const value: unknown = JSON.parse(header.toString('utf8'));
   if (!value || typeof value !== 'object') throw new Error('Invalid run metadata.');
   const run = value as StoredRunSummary;
+  validateCommand(run.command, run.args);
   if (![1, 2].includes(run.schemaVersion) || (run.schemaVersion === 2 && run.trialStorage !== 'individual')
     || (run.schemaVersion === 1 && run.trialStorage !== undefined)
     || typeof run.id !== 'string' || typeof run.command !== 'string'
@@ -99,10 +104,11 @@ export async function loadRun(reference: string, cwd = process.cwd()): Promise<R
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
     if (trialsDirectory) {
-      let directories = 0;
+      let entries = 0;
       for await (const entry of await opendir(trialsDirectory)) {
+        signal?.throwIfAborted();
+        if (++entries > MAX_RECORDED_TRIALS) throw new Error('Run exceeds the 100000 trial directory-entry reader limit.');
         if (!/^\d+$/.test(entry.name)) continue;
-        if (++directories > MAX_RECORDED_TRIALS) throw new Error('Run exceeds the 100000 trial directory reader limit.');
         const index = Number(entry.name);
         if (!Number.isSafeInteger(index) || index < 1 || index > run.requestedTrials
           || entry.name !== String(index).padStart(3, '0') || !entry.isDirectory()) {
@@ -119,7 +125,7 @@ export async function loadRun(reference: string, cwd = process.cwd()): Promise<R
         if (trialInfo.size > MAX_INVESTIGATION_METADATA_BYTES - totalMetadataBytes) {
           throw new Error('Run metadata reconstruction exceeds the 96 MiB aggregate limit.');
         }
-        const bytes = await readBoundedFile(trialPath, Math.min(MAX_METADATA_BYTES, MAX_INVESTIGATION_METADATA_BYTES - totalMetadataBytes));
+        const bytes = await readBoundedFile(trialPath, Math.min(MAX_METADATA_BYTES, MAX_INVESTIGATION_METADATA_BYTES - totalMetadataBytes), signal);
         totalMetadataBytes += bytes.length;
         const trial: unknown = JSON.parse(bytes.toString('utf8'));
         validateTrial(trial);
@@ -132,14 +138,17 @@ export async function loadRun(reference: string, cwd = process.cwd()): Promise<R
     if (run.trialCount !== undefined && run.trials.length !== run.trialCount) throw new Error('Run is missing committed trial records.');
     delete run.trialStorage;
     delete run.trialCount;
-    run.statistics = aggregateStatistics(run.trials);
   }
   const indices = new Set<number>();
   for (const trial of run.trials) {
+    signal?.throwIfAborted();
     validateTrial(trial);
     if (indices.has(trial.index)) throw new Error('Run contains duplicate trial indices.');
     if (trial.index > run.requestedTrials) throw new Error('Trial index exceeds the requested budget.');
     indices.add(trial.index);
   }
+  // Embedded summaries can also be stale after a producer crashes or edits a
+  // record. Both storage schemas derive counts from their actual trial evidence.
+  run.statistics = aggregateStatistics(run.trials);
   return { ...run, schemaVersion: 1 };
 }

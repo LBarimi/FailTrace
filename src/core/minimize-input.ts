@@ -1,7 +1,7 @@
 import { lstat, mkdir, opendir, realpath, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { copyBoundedFile, readBoundedFile } from './bounded-file.js';
-import { DEFAULT_MAX_INPUT_BYTES, MAX_ENV_KEYS, MAX_INPUT_DEPTH, MAX_INPUT_ENTRIES, MAX_INPUT_FILES, type CandidateStorageBudget } from './input-budget.js';
+import { CandidateInputLimitError, DEFAULT_MAX_INPUT_BYTES, MAX_ENV_KEYS, MAX_INPUT_DEPTH, MAX_INPUT_ENTRIES, MAX_INPUT_FILES, type CandidateStorageBudget } from './input-budget.js';
 import { assertJsonComplexity, textUnits } from './input-complexity.js';
 
 export type MinimizeFormat = 'text' | 'json' | 'files' | 'env';
@@ -65,7 +65,7 @@ export async function readMinimizeInput(inputPath: string, format: MinimizeForma
   if (!entry.isFile()) throw new Error(`${format} input must be a regular file.`);
   const text = (await readBoundedFile(inputPath, maxBytes)).toString('utf8');
   if (format === 'text') { textUnits(text); return { format, text }; }
-  assertJsonComplexity(text);
+  assertJsonComplexity(text, format === 'json');
   let value: JsonValue;
   try { value = JSON.parse(text) as JsonValue; }
   catch { throw new Error(`${format} input must contain valid JSON.`); }
@@ -107,9 +107,9 @@ export function inputName(format: MinimizeFormat): string {
 export async function writeCandidate(candidate: Candidate, path: string, originalDirectory: string, budget?: CandidateStorageBudget, maxBytes = DEFAULT_MAX_INPUT_BYTES): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
   if (candidate.format !== 'files') {
-    const text = candidate.format === 'env' ? `${JSON.stringify(candidate.values, null, 2)}\n` : candidate.text;
+    const text = candidate.format === 'env' ? JSON.stringify(candidate.values) : candidate.text;
     const bytes = Buffer.byteLength(text);
-    if (bytes > maxBytes) throw new Error(`Encoded candidate exceeds the ${maxBytes} byte input limit.`);
+    if (bytes > maxBytes) throw new CandidateInputLimitError(maxBytes);
     budget?.reserve(bytes);
     await writeFile(path, text, { encoding: 'utf8', flag: 'wx' });
     return;
