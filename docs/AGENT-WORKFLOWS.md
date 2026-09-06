@@ -2,7 +2,7 @@
 
 **NUnit integration in 1.3.0:** [NUnit and Unity unit tests](UNIT-TESTS.md) use existing MCP tools with `predicate.kind: "nunit_test"`, a fresh `{testReport}` destination and structured `trial.unitTest` evidence. The guide covers baseline capture, patch verification and missing/skipped tests. Version 1.2.0 does not provide this predicate; see the README for publication status.
 
-This guide targets published FailTrace 1.2.0. Version 1.2.0 adds [execution checkpoints](EXECUTION-EVIDENCE.md); use a supporting version throughout that workflow. See the [installation instructions](../README.md#quick-start) for verified npm and GitHub package commands.
+This guide targets published FailTrace 1.3.0. Version 1.2.0 adds [execution checkpoints](EXECUTION-EVIDENCE.md); use a supporting version throughout that workflow. See the [installation instructions](../README.md#quick-start) for verified npm and GitHub package commands.
 
 Ask your agent to measure a flaky command, compare the saved evidence, or reduce a reproducing input. FailTrace performs the repeated experiments locally and returns inspectable results; the agent uses those results to investigate the code.
 
@@ -15,10 +15,10 @@ Install FailTrace from the npm registry, connect the local server, and try an ex
 With Node.js **22.12 or newer**, no checkout or global install is required:
 
 ```sh
-npx --yes failtrace@1.2.0 mcp --cwd "/absolute/path/to/project"
+npx --yes failtrace@1.3.0 mcp --cwd "/absolute/path/to/project"
 ```
 
-Replace the project path with an absolute path. Relative paths can resolve from a client-specific launch directory. Pinning `1.2.0` keeps tool names and schemas stable across reconnects. `--yes` accepts npm's first-use package installation without an interactive prompt that could block the MCP handshake; see the [official npm `npx` command reference](https://docs.npmjs.com/cli/v12/commands/npx/). FailTrace reserves stdout for protocol messages; npm notices and server diagnostics use stderr, while target-command stdout/stderr is written into run evidence.
+Replace the project path with an absolute path. Relative paths can resolve from a client-specific launch directory. Pinning `1.3.0` keeps tool names and schemas stable across reconnects. `--yes` accepts npm's first-use package installation without an interactive prompt that could block the MCP handshake; see the [official npm `npx` command reference](https://docs.npmjs.com/cli/v12/commands/npx/). FailTrace reserves stdout for protocol messages; npm notices and server diagnostics use stderr, while target-command stdout/stderr is written into run evidence.
 
 The client starts and owns this stdio process. Running it directly in a terminal waits for MCP requests; it is not an interactive prompt.
 
@@ -27,7 +27,7 @@ The client starts and owns this stdio process. Running it directly in a terminal
 If repeated `npx` startup or registry access is unsuitable, install the same exact version once:
 
 ```sh
-npm install --global failtrace@1.2.0
+npm install --global failtrace@1.3.0
 failtrace mcp --cwd "/absolute/path/to/project"
 ```
 
@@ -45,7 +45,7 @@ Clients that accept `mcpServers` JSON can use this configuration shape with thei
       "command": "npx",
       "args": [
         "--yes",
-        "failtrace@1.2.0",
+        "failtrace@1.3.0",
         "mcp",
         "--cwd",
         "/absolute/path/to/project"
@@ -307,4 +307,4 @@ do not authorize client reconfiguration, publishing, or unrelated changes.
 | Verify tool is missing | Install 0.5.0 or later, or use the manual run/compare procedure with versions through 0.4.0. |
 | Bundle does not replay | Explicit source-file selection, target dependency setup, selected input, environment removals, and command portability. |
 
-Client setup references were checked against official documentation on **2026-09-04**. Published implementation sources are the repository's [MCP adapter](https://github.com/LBarimi/FailTrace/blob/main/src/mcp/index.ts) and [Core](https://github.com/LBarimi/FailTrace/tree/main/src/core). For version 1.2.0 additions, inspect `src/mcp/index.ts` and `src/core` in the source checkout. See the [README](../README.md) for availability.
+Client setup references were checked against official documentation on **2026-09-04**. Published implementation sources are the repository's [MCP adapter](https://github.com/LBarimi/FailTrace/blob/main/src/mcp/index.ts) and [Core](https://github.com/LBarimi/FailTrace/tree/main/src/core). For version 1.3.0 additions, inspect `src/mcp/index.ts` and `src/core` in the source checkout. See the [README](../README.md) for availability.

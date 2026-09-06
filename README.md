@@ -13,10 +13,10 @@ Use FailTrace from the **CLI or an MCP client** to repeat commands, compare fail
 
 ## Quick start
 
-Requires **Node.js 22.12+ and npm**. Run from any directory:
+Requires **Node.js 22.12+ and npm**. No source checkout is needed:
 
 ```sh
-npx --yes failtrace@1.2.0 demo
+npx --yes failtrace@1.3.0 demo
 ```
 
 ![Animated FailTrace demo: record failures, shrink the input, reject an unrelated crash, and check the next patch](docs/assets/demo.gif)
@@ -29,14 +29,14 @@ The demo saves its evidence under `.failtrace/` and prints a command to replay t
 
 Give your agent a consistent way to run debugging experiments and return the evidence behind its conclusions.
 
-- **Follow the same failure.** Define a target message, exit code, or regular expression before investigating.
+- **Follow the same failure.** Select an exact NUnit test, target message, exit code, or regular expression before investigating.
 - **Inspect saved work.** Get structured counts and bounded summaries, then page through the trial logs you need without running the command again.
 - **Recheck a patch.** Verify compares a candidate with a captured baseline and separates target observations from unrelated errors or incomplete evidence.
 
 Connect the local stdio MCP server through your client's configuration:
 
 ```sh
-npx --yes failtrace@1.2.0 mcp --cwd "/absolute/path/to/your/project"
+npx --yes failtrace@1.3.0 mcp --cwd "/absolute/path/to/your/project"
 ```
 
 **[Connect your MCP client and try an investigation →](docs/AGENT-WORKFLOWS.md)**
@@ -61,14 +61,14 @@ An installed MCP server makes the tools available; the agent still chooses when 
 
 **[Try the original Unity example or connect your NUnit test →](docs/UNIT-TESTS.md)**
 
-This integration requires **1.3.0 or newer**. The 1.3.0 release is being prepared; the guide currently includes source-build instructions. Unity validation covers the documented Windows EditMode example.
+Available in **1.3.0** through CLI and MCP. Unity validation covers the documented Windows EditMode example.
 
 ## Use it on your own failure
 
 Run this from your project, replacing the command and error message with your own:
 
 ```sh
-npx --yes failtrace@1.2.0 run "npm test -- checkout" --repeat 20 --stderr-contains "checkout failed"
+npx --yes failtrace@1.3.0 run "npm test -- checkout" --repeat 20 --stderr-contains "checkout failed"
 ```
 
 FailTrace saves each trial's output and prints an investigation ID. Exit `1` can mean the failure you are investigating was recorded. Add `--json` for automation, and use the [command reference](docs/CLI.md) to inspect or continue that investigation.
@@ -91,7 +91,7 @@ The target command can use any runtime; FailTrace itself requires Node.js. Input
 
 - Repetition and Bisect report observations under chosen settings. They do not provide statistical confidence; concurrency can change failure behavior.
 - Minimization rechecks its result but does not promise the smallest possible input. Check `status` and `finalVerified`.
-- Verify's `target_not_observed` means no target match in a healthy, comparable sample. It does not prove that the intended test path ran or that the defect was eliminated.
+- Verify's `target_not_observed` means no target match in a healthy, comparable sample. Execution checkpoints and NUnit reports add evidence about the selected check; a finite sample does not prove that the defect was eliminated.
 - Bundles include selected files and the Node Core engine. Target dependencies, services, and uncaptured environment state still need setup.
 - Commands run with your local permissions. Cleanup is best effort. Logs, commands, source, and inputs can contain private information: review them before sharing.
 
@@ -99,11 +99,9 @@ The target command can use any runtime; FailTrace itself requires Node.js. Input
 
 ## Availability and contributing
 
-**Prepared for 1.3.0; publication pending:** [Investigate an existing NUnit or Unity unit test](docs/UNIT-TESTS.md). Select an exact test through CLI or MCP, preserve a fresh NUnit 3 report per trial, and verify a patch without accepting missing or skipped tests. Includes an original Unity inventory example. Published npm 1.2.0 does not include this integration.
+**1.3.0 is published on npm and as a [GitHub release](https://github.com/LBarimi/FailTrace/releases/tag/v1.3.0), with a matching [MCP Registry entry](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.LBarimi%2Ffailtrace/versions/1.3.0).** The commands above use that exact package. See [installation alternatives](docs/INSTALL.md), the [1.x compatibility contract](docs/COMPATIBILITY.md), and [migration from 0.x](docs/MIGRATING-TO-1.md).
 
-**1.2.0 is published on npm and as a [GitHub release](https://github.com/LBarimi/FailTrace/releases/tag/v1.2.0).** The commands above use that exact package. See [installation alternatives](docs/INSTALL.md), the [1.x compatibility contract](docs/COMPATIBILITY.md), and [migration from 0.x](docs/MIGRATING-TO-1.md).
-
-Version 1.2.0 adds literal executable arguments, completed-check evidence, read-only storage inspection and stronger saved-evidence checks. Review the migration notes when upgrading existing workflows. [Changes and migration notes](CHANGELOG.md#120) · [Product roadmap](docs/ROADMAP.md)
+Version 1.3.0 connects existing NUnit and Unity tests to the same Core, CLI and MCP workflow, with fresh per-trial reports and saved-evidence checks during Verify. [Changes and migration notes](CHANGELOG.md#130) · [Product roadmap](docs/ROADMAP.md)
 
 **Try an original investigation:** [trace a lost data revision or an overlapping update](docs/WORKFLOWS.md) using original runnable examples. They reduce a reproducer and distinguish a working patch from a checker that was silently skipped using [completed-check signals](docs/EXECUTION-EVIDENCE.md). These examples ship with 1.2.0.
 

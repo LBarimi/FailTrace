@@ -8,9 +8,9 @@ FailTrace helps developers and coding agents turn a difficult failure into repea
 
 This expresses product emphasis. An investigation can use just the operations it needs; a small defect may need only a baseline and verification. MCP exposes the same Core engine and remains supported.
 
-| Capability | Published 1.2.0 | Next emphasis |
+| Capability | Published 1.3.0 | Next emphasis |
 | --- | --- | --- |
-| Predicate | Nonzero/exact exit, stdout/stderr substring and regex | Separate the intended defect from execution problems |
+| Predicate | Nonzero/exact exit, stdout/stderr substring and regex, exact NUnit test | Separate the intended defect from execution problems |
 | Compare | Saved outputs, hashes, statistics, selected environment and interpretation warnings | Help callers choose comparable evidence |
 | Bisect | Repeated first-parent classification in an isolated worktree with explicit exit policies | Preserve inconclusive outcomes and source evidence |
 | Minimize | Text, JSON, files and environment keys, with a separate final recheck | Preserve the target and make candidate-input setup easier |

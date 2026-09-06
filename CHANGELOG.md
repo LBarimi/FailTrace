@@ -2,7 +2,7 @@
 
 ## 1.3.0
 
-Release preparation: matching package, runtime and MCP metadata. See the [README](README.md#availability-and-contributing) for verified publication status.
+Published on npm and as the [1.3.0 GitHub release](https://github.com/LBarimi/FailTrace/releases/tag/v1.3.0), with matching reviewed archive bytes, a fresh public installation and an active MCP Registry record. NUnit run, Verify, skipped/missing-test rejection and inspection were exercised through the public npx MCP server. See the [README](README.md#availability-and-contributing) for installation.
 
 - Add an NUnit 3 test predicate to Core, CLI and existing MCP tools. Follow an exact test fullname and optional failure message through run, bisect, minimize, Verify and replay. Assign a fresh result path per trial through `{testReport}` or `FAILTRACE_TEST_REPORT`.
 - Return bounded test outcomes, report counts, reasons and digests. Missing/skipped/ambiguous tests, unrelated failures, unhealthy processes and incomplete reports are inconclusive. Verify rereads saved XML instead of trusting a claimed pass.

@@ -1,6 +1,6 @@
 # Command reference
 
-**Since 1.3.0:** `--nunit-test FULLNAME` and optional `--nunit-message TEXT` select NUnit 3 evidence for run/bisect/minimize. Pass a complete `--arg "{testReport}"` to the runner's report option, or use `FAILTRACE_TEST_REPORT` in a wrapper. Verify inherits the selected test. See the [unit-test guide](UNIT-TESTS.md); these flags are unavailable in published 1.2.0.
+**Since 1.3.0:** `--nunit-test FULLNAME` and optional `--nunit-message TEXT` select NUnit 3 evidence for run/bisect/minimize. Pass a complete `--arg "{testReport}"` to the runner's report option, or use `FAILTRACE_TEST_REPORT` in a wrapper. Verify inherits the selected test. See the [unit-test guide](UNIT-TESTS.md); these flags are unavailable in version 1.2.0.
 
 Since 1.2.0, **command-specific help** is available: `failtrace minimize --help`, `failtrace verify --help`, and each other command show their own options, examples, result meanings, and next steps. `failtrace --help` remains the short command overview. Help does not run a target, read investigation evidence, or create artifacts.
 
@@ -8,7 +8,7 @@ Version 1.2.0 also adds the read-only `artifacts` command. It reports bounded st
 
 Version 1.2.0 adds optional `--require-stdout-contains` / `--require-stderr-contains` checkpoints for run, bisect and minimize; Verify and bundle replay inherit the recorded condition. These options are unavailable in version 1.1.0. Missing required evidence produces an inconclusive result; ordinary trial status/statistics still describe the failure predicate separately. See [execution evidence](EXECUTION-EVIDENCE.md).
 
-This guide targets FailTrace 1.2.0. See the [installation instructions](../README.md#quick-start) for verified npm and GitHub package commands.
+This guide targets FailTrace 1.3.0. See the [installation instructions](../README.md#quick-start) for verified npm and GitHub package commands.
 
 See the [README](../README.md) for installation and the guided demo, and [agent workflows](AGENT-WORKFLOWS.md) for client setup.
 
@@ -170,7 +170,7 @@ Use `--command "node relative-script.js"` when the original command contains mac
 ## MCP for coding agents
 
 ```sh
-npx --yes failtrace@1.2.0 mcp --cwd "/absolute/path/to/project"
+npx --yes failtrace@1.3.0 mcp --cwd "/absolute/path/to/project"
 ```
 
 The stdio adapter uses the official Model Context Protocol SDK and exposes these tools:
@@ -196,7 +196,7 @@ For clients using an `mcpServers` configuration, launch the pinned registry pack
       "command": "npx",
       "args": [
         "--yes",
-        "failtrace@1.2.0",
+        "failtrace@1.3.0",
         "mcp",
         "--cwd",
         "/absolute/path/to/project"
@@ -206,7 +206,7 @@ For clients using an `mcpServers` configuration, launch the pinned registry pack
 }
 ```
 
-Use an absolute project path. Pinning the version prevents an unnoticed schema change, and `--yes` prevents an interactive npm prompt from blocking stdio startup. Use `npx.cmd` when a native Windows client does not resolve npm's command shim. For a preinstalled fallback, run `npm install --global failtrace@1.2.0` and configure `failtrace` (`failtrace.cmd` on Windows) with the remaining arguments. The CLI and Core work independently of MCP. Algorithms live in Core, and the adapter makes direct Core calls. See the [client-specific setup and inspection examples](AGENT-WORKFLOWS.md).
+Use an absolute project path. Pinning the version prevents an unnoticed schema change, and `--yes` prevents an interactive npm prompt from blocking stdio startup. Use `npx.cmd` when a native Windows client does not resolve npm's command shim. For a preinstalled fallback, run `npm install --global failtrace@1.3.0` and configure `failtrace` (`failtrace.cmd` on Windows) with the remaining arguments. The CLI and Core work independently of MCP. Algorithms live in Core, and the adapter makes direct Core calls. See the [client-specific setup and inspection examples](AGENT-WORKFLOWS.md).
 
 ## Artifacts and exit codes
 

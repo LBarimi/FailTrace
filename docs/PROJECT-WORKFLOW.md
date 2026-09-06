@@ -2,14 +2,14 @@
 
 The baseline command has several settings worth keeping: the target signature, trial budget, timeout and files that define the experiment. Put those settings in an inspectable project script so the next investigation starts with the same conditions.
 
-The following pattern works with **published 1.2.0** and an existing npm project. It does not require a new FailTrace configuration format or background service. For other projects, use the same explicit commands in the project's existing task runner.
+The following pattern works with **published 1.3.0** and an existing npm project. It does not require a new FailTrace configuration format or background service. For other projects, use the same explicit commands in the project's existing task runner.
 
 ## Name the two actions
 
 Install and pin FailTrace in the project:
 
 ```sh
-npm install --save-dev failtrace@1.2.0
+npm install --save-dev failtrace@1.3.0
 ```
 
 Merge these entries into the existing `scripts` object in `package.json`. Replace the target command, signature and file paths with the actual ones from your project; each context path must identify an existing regular file.
