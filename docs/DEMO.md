@@ -1,6 +1,6 @@
 # What the guided demo shows
 
-Run the published example with `npx --yes failtrace@1.1.0 demo`. It works from any directory and writes to `.failtrace/demos/<id>/`.
+Run the published example with `npx --yes failtrace@1.2.0 demo`. It works from any directory and writes to `.failtrace/demos/<id>/`.
 
 The target is deliberately controlled so the workflow is easy to inspect:
 

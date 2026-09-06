@@ -2,7 +2,7 @@
 
 ## 1.2.0
 
-Release preparation: matching package, runtime and MCP metadata. See the [README](README.md#availability-and-contributing) for verified publication status.
+Published on npm and as the [1.2.0 GitHub release](https://github.com/LBarimi/FailTrace/releases/tag/v1.2.0), with matching reviewed archive bytes, a fresh public installation and an active MCP Registry record. See the [README](README.md#availability-and-contributing) for installation.
 
 - Provide command-specific CLI help and preserve literal `-h`/`--help` option values instead of mistaking them for a help request.
 - Evaluate fresh substring predicates and completion checkpoints during bounded output capture, avoiding post-run log rereads. Truncated, interrupted or unsuccessfully saved output remains inconclusive; Verify still rechecks saved evidence.

@@ -8,7 +8,7 @@ FailTrace helps developers and coding agents turn a difficult failure into repea
 
 This expresses product emphasis. An investigation can use just the operations it needs; a small defect may need only a baseline and verification. MCP exposes the same Core engine and remains supported.
 
-| Capability | Published 1.1.0 | Next emphasis |
+| Capability | Published 1.2.0 | Next emphasis |
 | --- | --- | --- |
 | Predicate | Nonzero/exact exit, stdout/stderr substring and regex | Separate the intended defect from execution problems |
 | Compare | Saved outputs, hashes, statistics, selected environment and interpretation warnings | Help callers choose comparable evidence |
@@ -34,7 +34,7 @@ Original authored workflow fixtures exercise affected implementations, valid fix
 
 - Observe whether named project actions reduce repeated setup for commands, signatures and baseline context; improve the steps that cause actual friction.
 - Keep storage operations bounded and reviewable. Automatic deletion needs a separate ownership and active-access contract; legacy paths and reported states do not supply one. Require evidence of user need before adding that broader protocol.
-- Preserve OS/Node, installed-package, replay and performance gates. Record local-only validation accurately while publication is pending.
+- Preserve OS/Node, installed-package, replay and performance gates. Record the tested source revision and archive separately from independent use.
 - Collect voluntary observations of time to first useful result, interpretation errors and second use. Let those observations determine further features.
 
 ## Boundaries
