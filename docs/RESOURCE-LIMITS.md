@@ -2,7 +2,7 @@
 
 **NUnit integration in 1.3.0:** XML reads are limited to 4 MiB per report, with 10,000 cases, 100,000 elements and 64 nesting levels. Target-written XML is separate from piped stdout/stderr budgets and no filesystem quota is implied. See [NUnit evidence limits](UNIT-TESTS.md#evidence-and-limits).
 
-These controls require FailTrace 1.0 and are absent from 0.6.0. See [installation and publication status](../README.md#quick-start) when selecting a package version.
+This page defines resource scopes for current investigations. [Documentation index](README.md) · [Compatibility](COMPATIBILITY.md)
 
 Repeated commands can emit unlimited output even when their input is small. An unattended debugging agent needs a finite evidence allowance and an explicit outcome when evidence is incomplete.
 
@@ -43,7 +43,7 @@ Bundles record the source run's caps and replay with them. Older source runs use
 
 Output byte budgets do not account for metadata, copied minimization inputs, Git worktrees, dependency installations, files written directly by the target, or previous investigations. The budgets below separately bound managed input copies and run metadata. They are not a total filesystem quota. No automatic deletion or retention schedule is applied.
 
-Version 1.2.0 provides a [bounded read-only inventory](ARTIFACTS.md) of accumulated storage and known evidence links. Scan completeness and reported state do not grant deletion authority.
+Use the [bounded read-only inventory](ARTIFACTS.md) to inspect accumulated storage and known evidence links. Its 1.4.0 `--max-bytes` check can stop a surrounding workflow when storage is over a chosen budget or the scan is incomplete. It does not reserve space, enforce a filesystem quota, or delete evidence.
 
 Commands still run with local permissions. Timeout and descendant cleanup remain best effort, and a target can use files or processes outside these output pipes. Review sensitive output before sharing evidence.
 

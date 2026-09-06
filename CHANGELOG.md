@@ -1,116 +1,90 @@
 # Changelog
 
+User-visible changes are listed here. [Compatibility](docs/COMPATIBILITY.md) covers integration contracts; [release validation](docs/RELEASE-VALIDATION.md) holds archive identities and installation checks.
+
+## 1.4.0
+
+- Add an optional read-only storage budget check: `artifacts --max-bytes N` and Core `inventoryArtifacts({ maxBytes })`. Complete checks distinguish within/over budget; partial scans remain inconclusive. No automatic deletion or write quota is introduced.
+- Shorten the README, add task-based documentation navigation, and consolidate repeated setup and release information.
+- Refresh the original demo animation and static alternatives from checked CLI results.
+- Check installation versions, package/runtime/MCP metadata, demo asset identities, and local documentation links automatically.
+
+Version 1.4.0 adds the storage budget option. Installation examples follow the verified public version declared in [Install](docs/INSTALL.md).
+
 ## 1.3.0
 
-Published on npm and as the [1.3.0 GitHub release](https://github.com/LBarimi/FailTrace/releases/tag/v1.3.0), with matching reviewed archive bytes, a fresh public installation and an active MCP Registry record. NUnit run, Verify, skipped/missing-test rejection and inspection were exercised through the public npx MCP server. See the [README](README.md#availability-and-contributing) for installation.
-
-- Add an NUnit 3 test predicate to Core, CLI and existing MCP tools. Follow an exact test fullname and optional failure message through run, bisect, minimize, Verify and replay. Assign a fresh result path per trial through `{testReport}` or `FAILTRACE_TEST_REPORT`.
-- Return bounded test outcomes, report counts, reasons and digests. Missing/skipped/ambiguous tests, unrelated failures, unhealthy processes and incomplete reports are inconclusive. Verify rereads saved XML instead of trusting a claimed pass.
-- Add an isolated original Unity EditMode inventory example and an agent workflow guide. Load the XML parser only for NUnit interpretation; NUnit bundles include its runtime and licenses for offline Core replay.
+- Follow an exact NUnit 3 test and optional failure message through Core, CLI and MCP investigations, with a fresh report destination for every trial.
+- Treat missing/skipped/ambiguous tests, unrelated failures and incomplete reports as inconclusive; Verify rereads the saved XML.
+- Include an original EditMode example, a unit-test guide and offline NUnit bundle replay support.
 
 ## 1.2.0
 
-Published on npm and as the [1.2.0 GitHub release](https://github.com/LBarimi/FailTrace/releases/tag/v1.2.0), with matching reviewed archive bytes, a fresh public installation and an active MCP Registry record. See the [README](README.md#availability-and-contributing) for installation.
-
-- Provide command-specific CLI help and preserve literal `-h`/`--help` option values instead of mistaking them for a help request.
-- Evaluate fresh substring predicates and completion checkpoints during bounded output capture, avoiding post-run log rereads. Truncated, interrupted or unsuccessfully saved output remains inconclusive; Verify still rechecks saved evidence.
-- Recheck regex file limits inside the isolated worker and bound its reads, preventing a file that grows after the initial size check from bypassing the allocation limit.
-- Handle short reads in saved output inspection and compare, propagate cancellation through saved-run loading, and bound all trial-directory entries. Recompute statistics from loaded trials, check inventory JSON complexity before parsing, and compare hashes and previews from the same finite regular-file snapshots.
-- Reject JSON numbers that cannot survive numeric reserialization unchanged, with text-mode guidance, before creating a minimization. Encode candidates compactly and preserve an incomplete result if an encoded candidate exceeds its input allowance.
-
-- Add opt-in literal executable arguments across Core, CLI and MCP, with complete-argument candidate input binding for minimization and portable bundle replay. Preserve shell command defaults, record exact arguments and include execution mode in comparison and Verify context. Verify continues requiring the caller's explicit current execution settings.
-
-- Add a bounded original-workflow benchmark with paired execution/checkpoint costs, independently checked reduction and patch controls, replay, and sanitized aggregate evidence for the recorded source candidate.
-
-- Add a read-only `artifacts` CLI command and `inventoryArtifacts` Core API for bounded logical storage totals, investigation grouping and observed evidence references. Incomplete scans are explicit; saved commands are never executed and no files are deleted.
-
-- Replace external case studies and product-specific setup sections with original authored workflows and generic MCP configuration.
-
-- Add optional execution checkpoints across Core, CLI and MCP. Verify inherits the baseline checkpoint and refuses to interpret a skipped check as healthy candidate evidence; inspection, comparison, bisect, minimization and bundle replay preserve the condition. Existing behavior is unchanged when the option is absent.
-- Add an original event-import fixture with an independent checker and corrected implementation, including skipped-check and unrelated-error validation.
-- Split cumulative MCP and bundle integration tests into independent cases, preserving their assertions and execution timeouts.
+- Add command-specific help; preserve literal `-h` and `--help` option values.
+- Stream substring predicates and execution checkpoints during output capture; preserve inconclusive results for truncated or unsaved evidence.
+- Bound regex worker reads and saved-output snapshots against growing or changing files.
+- Bound saved metadata complexity and directory traversal, honor short reads and cancellation, and recompute statistics from saved trials.
+- Reject JSON reductions that cannot preserve numeric values; retain incomplete evidence when candidate encoding exceeds its allowance.
+- Add literal executable arguments across Core, CLI, MCP and replay, including complete-argument `{input}` binding.
+- Add read-only artifact inventory with logical storage totals and known evidence references.
+- Add execution checkpoints; Verify and replay require the recorded check to have completed.
+- Add original data-import and asynchronous-update examples, workflow benchmarks, and independent integration-test cases.
 
 ## 1.1.0
 
-Published on npm and as the [1.1.0 GitHub release](https://github.com/LBarimi/FailTrace/releases/tag/v1.1.0), with verified public archive bytes, independent installation and an active MCP Registry record. See the [README](README.md#availability-and-contributing) for installation.
-
-- Prefer recorded target matches over infrastructure failures in automatic same-run comparisons, and expose selected trial status, exit code, match evidence and interpretation warnings through Core, CLI and MCP. Explicit trial choices and first-trial selection between two runs are preserved. Unknown Verify options now show an executable syntax hint.
-
-- Tighten Bisect candidate health: nonmatching exits must be healthy (default `0`); unrelated failures stop with an inconclusive result and a trial-specific reason. Core, CLI and MCP can declare other healthy exits or explicit inconclusive exits, which take precedence over target matches. See the compatibility migration note before upgrading workflows that deliberately use nonzero healthy exits.
-
-- Put the CLI demo and coding-agent workflow first in the README, with an animation of the controlled demo, a static alternative, and clearer installation guidance. The recording uses the published 1.0.0 demo; it is not a performance measurement or an autonomous-agent session.
-
-- Document bounded 1.0.0 benchmark samples and their limits, and add an optional workflow report for first-use friction and repeat use. These are measurement and feedback tools, not evidence of independent adoption.
+- Prefer actual target matches over unrelated execution failures in automatic comparisons; expose selected-trial evidence and warnings.
+- Require healthy nonmatches during Bisect; add explicit healthy/inconclusive exit policies. [Review the migration contract](docs/COMPATIBILITY.md) before upgrading custom nonzero-exit workflows.
+- Improve Verify syntax errors, MCP setup guidance, the demo animation and optional workflow reporting.
 
 ## 1.0.0
 
-Promotes the publicly verified 1.0.0-rc.1 engine with matching package/runtime/MCP version metadata and 1.0 documentation. The [1.0.0 release](https://github.com/LBarimi/FailTrace/releases/tag/v1.0.0) records the reviewed archive and checksum; public npm installation and the matching MCP Registry record were verified.
-
-- Preserve the six OS/Node CI gates and add an installed-package check pinned to the declared minimum Node.js 22.12.0. Release preparation also requires this minimum-runtime gate.
-
-- Validate minimization complexity before allocating JSON trees or character arrays: bound JSON containers/values/keys, Unicode text units, environment keys and directory entries including empty folders. Oversized input fails before command execution or investigation creation; original files remain intact.
-
-- Define the 1.x public compatibility contract and migration from 0.x. Add offline saved-record fixtures generated by verified public 0.3.1–0.6.0 packages, covering completed and unfinished storage, comparison/inspection, explicit old-baseline Verify migration, and new bundle replay. Fixture paths and timings are disclosed placeholders; target bytes and source hashes are preserved.
-
-- Bundles now exclude original metadata/logs and captured environment values by default. Explicit evidence/environment selections, a relative file/hash manifest and recorded environment prerequisites make sharing reviewable without altering original evidence. Missing prerequisites stop replay before target execution. New reproduction configurations use schema 2; existing self-contained bundles retain their original engine and behavior.
-- Bound complete bundle copies, including generated files, to an explicit byte allowance (512 MiB default), with file/depth limits and immutable local/Git copy checks. Failed creation cleans only its fresh, owned destination.
-- Bound generated run metadata and saved-run reconstruction, with scheduling limits and explicit inconclusive evidence when the metadata allowance is exhausted. Existing recorded trials remain readable; unstarted trials are not invented. Diagnostic strings are bounded without discarding failure status.
-- Bisect results now use schema 2: candidate summaries contain complete trial/match counts and a `metadataPath`, without duplicating full trial arrays. Core callers that need individual trials must call `loadRun(candidate.run.metadataPath)`. Stored run schemas 1 and 2 remain readable within the documented resource limits.
-- Bound minimization input size and cumulative retained input copies. Storage exhaustion preserves the best available input and existing evidence without claiming a final verification. Bounded snapshot copies reject changing sources and preserve original files; JSON/directory depth limits prevent recursive stack exhaustion.
-
-- Bound retained command output by default: 16 MiB combined stdout/stderr per trial and 256 MiB across a run or all candidates in a bisect/minimization. Core, CLI and MCP accept explicit byte caps. Limits preserve partial evidence and stop inconclusively; output write failures cannot become healthy predicate nonmatches.
-- Verify inherits output caps and requires an explicit reason for changed limits. Replay bundles preserve the source run's caps. Saved inspection and agent responses expose incomplete-output details.
+- Establish the [1.x compatibility contract](docs/COMPATIBILITY.md), [0.x migration path](docs/MIGRATING-TO-1.md), and minimum Node.js 22.12.0 package gate.
+- Bound output by default: 16 MiB per trial and 256 MiB per run or bisect/minimization. Truncated output cannot become healthy evidence.
+- Bound metadata, input copies, JSON/directory complexity and scheduling; preserve incomplete investigations when limits are reached.
+- Store compact schema-2 Bisect summaries. Load full candidate trials through `loadRun(candidate.run.metadataPath)`.
+- Exclude original logs/metadata and captured environment values from bundles by default; require explicit selections and record replay prerequisites.
+- Bound complete bundle copies to 512 MiB by default, add file/hash manifests, and retain self-contained replay behavior.
+- Require a declared reason when Verify changes inherited output limits; support explicit migration of older baselines.
+- Add offline saved-record compatibility fixtures and installed-package validation.
 
 ## 1.0.0-rc.1 — 2026-09-05
 
-The [public GitHub candidate](https://github.com/LBarimi/FailTrace/releases/tag/v1.0.0-rc.1) validated the changes above before the final version was prepared. Its exact archive passed all seven CI gates, performance checks, independent installation, anonymous download hash verification, the public-URL demo and bundle replay. The candidate was not published to npm or the MCP Registry.
+- Validate the 1.0 contract and resource controls in a public GitHub candidate. This candidate was not published to npm or the MCP Registry.
 
 ## 0.6.0 — 2026-09-05
 
-- Extended the guided demo into one measurement-to-replay flow without removing its 7/3 repetition, `["BUG"]` reduction or replay bundle. The minimized input becomes a captured baseline; the demo observes the unchanged target, rejects an unrelated crash as inconclusive, reports a healthy fixed candidate sample without claiming elimination, then restores the affected implementation for replay.
-- Added bounded, read-only saved-run inspection through public Core `inspectRunEvidence` and MCP `failtrace_inspect_run`. Agents can page complete trial evidence and stdout/stderr byte ranges without executing recorded commands or supplying arbitrary artifact paths; output changes during a read are rejected.
-- Replaced global npm-root path assembly with version-pinned one-command `npx` setup for stdio MCP clients. Installed-package smoke tests now verify all seven MCP tools, read-only inspection annotations, paged evidence and output chunks.
-- Added sanitized five-sample 0.5.0 benchmark evidence and README medians from one Windows x64/Node.js 24 host. The README table keeps timing ranges, logical metadata writes, concurrency semantics and threshold-sampling limits with the measurements.
+- Extend the guided demo from repeated failure through reduction, baseline capture, unrelated-crash rejection, patch checking and replay.
+- Add bounded read-only saved-trial and output inspection through Core and `failtrace_inspect_run`.
+- Provide version-pinned MCP setup and installed-package checks for all seven tools.
+- Record bounded benchmark samples and their interpretation limits.
 
 ## 0.5.0 — 2026-09-05
 
-- Added fixed-budget code-fix verification through Core `verifyFix`, `failtrace verify`, and the `failtrace_verify` MCP tool. Results distinguish a remaining target, a healthy sample with no target observed, unrelated failures, infrastructure failures and inconclusive evidence without claiming elimination or statistical improvement.
-- Added opt-in baseline context capture with explicit input, setup and source file hashes or bounded Git identity. Verify requires the caller's current command and canonical working directory, records intentional changes and refuses missing, unstable or unsupported evidence.
-- Hardened Git context against hidden index flags, clean-filter normalization, submodules, symlinks and unresolved index entries by hashing tracked working-tree bytes and failing closed when identity is incomplete.
-- Added installed Core/CLI/MCP verification checks and cancellation coverage. Package smoke verifies that an unrelated error cannot become a successful fix result.
+- Add Verify across Core, CLI and MCP with fixed-budget candidate trials and explicit observed/inconclusive outcomes.
+- Capture source, input, setup and selected environment context before editing; require an explicit current command and working directory.
+- Reject incomplete Git identity and unstable context; test that unrelated errors cannot become successful fix results.
 
 ## 0.4.0 — 2026-09-05
 
-- Added opt-in `run --concurrency N` and the equivalent Core/MCP run option, keeping sequential execution as the default. Progress follows completion order with explicit trial indices; results remain index-sorted.
-- Bisect/minimize use sequential threshold decisions to avoid unnecessary trials while retaining independent final minimization verification. Regular runs still attempt the full requested count.
-- Run statistics update incrementally. Individual trial records are authoritative, run summaries are written initially and at finalization, and large summaries use compact storage reconstructed by `loadRun`.
-- File-set minimization requests copy-on-write copies with ordinary-copy fallback. Bundles preserve run concurrency and replay the original full trial budget.
-- Added reproducible performance benchmarks and guidance for external dependency caches. See `docs/PERFORMANCE.md` for measured scope, remaining costs, and deferred optimizations.
+- Add optional run concurrency, keeping sequential execution as the default.
+- Stop sequential Bisect/minimize classification when its threshold is decided; retain independent final reduction checks.
+- Update statistics incrementally and reconstruct compact summaries from authoritative trial records.
+- Introduce copy-on-write input copies with fallback (replaced by bounded copies in 1.0), replay settings, and reproducible benchmarks.
 
 ## 0.3.1 — 2026-09-05
 
-- Installation guides use the public npm package for the demo, regular CLI use, and agent setup. The versioned GitHub archive remains an alternative.
-- Restricted packaged examples to the built-in demo files so locally installed case dependencies and investigation evidence cannot enter release archives. Installed-package checks enforce that boundary.
-- Included MCP Registry identity and server metadata for discovery of the existing stdio tools.
-
-The Core investigation behavior is unchanged; this patch updates distribution, documentation, and examples.
+- Document npm installation, restrict packaged examples to reviewed files, and include MCP Registry metadata.
 
 ## 0.3.0 — 2026-09-04
 
-First prebuilt GitHub release, focused on getting from installation to useful evidence.
-
-- `failtrace demo` works from any directory. It measures a deterministic flaky command, reduces a JSON input to `["BUG"]`, and builds a replayable reproduction. Completed demos exit successfully while preserving their expected target failures as evidence.
-- Packages include the compiled CLI/Core/MCP server, examples, and documentation. CI installs the actual packed artifact outside the source checkout and verifies public entry points, production dependencies, and the demo.
-- MCP run results include `matchedTrials` across all recorded trials, including those omitted from compact responses. Server instructions explain how to choose and chain the existing investigation tools.
-- README, MCP setup guides, contributor guidance, and optional workflow-report forms focus on installation and real debugging use.
-- The README preview is generated from a real demo result with `node scripts/render-demo.mjs`.
-
-This release does not change the Core investigation algorithms. Regression conclusions remain sampled first-parent boundaries; minimization is local to supported removals; bundles require the target's own dependencies and setup.
+- Ship the prebuilt CLI, Core and MCP server with a guided demo that runs from any working directory.
+- Validate installed artifacts outside the checkout; expose complete target-match counts to MCP clients.
+- Generate the README preview from checked original demo results.
 
 ## 0.2.0 — source implementation
 
-Added failure predicates and comparisons, repeated-trial regression isolation, text/JSON/files/environment minimization, portable local reproduction bundles, and an official SDK stdio MCP adapter exposing five Core tools. Corrected bundle replay through filesystem aliases.
+- Add failure predicates, comparison, repeated-trial Bisect, text/JSON/files/environment minimization, local replay bundles and a five-tool MCP adapter.
+- Correct bundle replay through filesystem aliases.
 
 ## 0.1.0 — source implementation
 
-Implemented repeated command execution, failure statistics, timeout/interruption handling, inspectable artifacts, a deterministic flaky demo, and cross-platform CI.
+- Add repeated execution, statistics, timeout/interruption handling, saved artifacts, a deterministic demo and cross-platform CI.

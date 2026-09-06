@@ -1,11 +1,11 @@
 # Executables and literal arguments
 
-Available in **FailTrace 1.2.0** builds. See the [README](../README.md#availability-and-contributing) for publication status. Version 1.1.0 does not support these options. The commands below use a checkout built with `npm ci` and `npm run build`.
+Use the published CLI to pass literal executable arguments. [Install](INSTALL.md) · [Documentation index](README.md) · [Compatibility](COMPATIBILITY.md#direct-execution-in-120)
 
 Use an existing program that accepts an input filename without writing an environment-variable adapter or constructing shell commands:
 
 ```sh
-node dist/cli/index.js minimize --input failing.json --format json --exec node --arg check.mjs --arg "{input}" --stderr-contains "TARGET_FAILURE"
+npx --yes failtrace@1.3.0 minimize --input failing.json --format json --exec node --arg check.mjs --arg "{input}" --stderr-contains "TARGET_FAILURE"
 ```
 
 The checker receives the current candidate filename as its first argument. Spaces, quotes and shell operators in that filename stay part of the argument. The same syntax can launch Python, a compiled test executable, or another installed runtime; install the target's own dependencies first.
@@ -21,7 +21,7 @@ The checker receives the current candidate filename as its first argument. Space
 For example, this passes `--filter` and `checkout` as separate arguments:
 
 ```sh
-node dist/cli/index.js run --exec node --arg tests.mjs --arg --filter --arg checkout --repeat 20
+npx --yes failtrace@1.3.0 run --exec node --arg tests.mjs --arg --filter --arg checkout --repeat 20
 ```
 
 Arguments are limited to 4,096 strings. Executable/command UTF-8 bytes plus the compact JSON representation of arguments must fit the existing 64 KiB command allowance. Null bytes are rejected. Argument contents are saved in local evidence and can contain private values; inspect them before sharing.
@@ -68,7 +68,7 @@ Saved runs and trials include `args` only for direct execution. Comparison inclu
 Minimization records absolute candidate paths locally. Select the reduced input and explicitly replace machine-specific executable/input values when building a portable replay:
 
 ```sh
-node dist/cli/index.js bundle <final-run-id-or-path> --file check.mjs --input <minimized-input-path> --exec node --arg check.mjs --arg "{input}"
+npx --yes failtrace@1.3.0 bundle <final-run-id-or-path> --file check.mjs --input <minimized-input-path> --exec node --arg check.mjs --arg "{input}"
 ```
 
 The bundle stores the reviewed argument template, and its included engine binds the selected input path after relocation. Creating a bundle never runs the target. An entire argument equal to `{input}` requires an explicit input selection. The portable-command check rejects recorded absolute executable and candidate paths; use a portable override and include the needed files. This check does not discover every path embedded in arbitrary argument text or target configuration, so inspect those values before sharing.

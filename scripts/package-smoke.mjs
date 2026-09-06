@@ -146,6 +146,8 @@ process.exitCode = failed ? 1 : 0;
   assert(inventory.entries.some(entry => entry.path === `runs/${run.id}` && entry.status === 'completed'));
   assert(inventory.entries.some(entry => entry.kind === 'minimizations' && entry.status === 'limit_reached'));
   assert(inventory.bytes > 0);
+  assert.equal((await api.inventoryArtifacts({ cwd: project, maxBytes: 1 })).budget.status, 'over_budget');
+  assert.equal((await api.inventoryArtifacts({ cwd: project, maxBytes: inventory.bytes })).budget.status, 'within_budget');
   console.log(JSON.stringify({
     total: run.statistics.total, failed: run.statistics.failed,
     artifactDirectory: run.artifactDirectory, comparison: 'passed', inspection: 'passed', inventory: 'passed',
@@ -554,6 +556,11 @@ try {
   const artifactHelp = await npmRun(['exec', '--offline', '--', 'failtrace', 'artifacts', '--help'], consumer);
   assert(/\bfailtrace artifacts\b/.test(artifactHelp.stdout) && artifactHelp.stdout.includes('--directory'),
     'Installed command-specific help must explain storage inspection');
+  assert(artifactHelp.stdout.includes('--max-bytes'), 'Installed help must explain the storage budget check');
+  const storageCheck = await npmRun(['exec', '--offline', '--', 'failtrace', 'artifacts', '--max-bytes', '1', '--json'], consumer)
+    .then(() => { throw new Error('Retained investigation evidence must exceed one byte.'); }, error => error);
+  assert.equal(storageCheck.code, 1);
+  assert.equal(JSON.parse(storageCheck.stdout).budget.status, 'over_budget');
   const demoOutput = await npmRun(['exec', '--offline', '--', 'failtrace', 'demo', '--json'], consumer);
   const demo = JSON.parse(demoOutput.stdout);
   assert.equal(demo.status, 'completed');
@@ -601,7 +608,8 @@ try {
       installedDirectCore: direct.core, installedDirectCli: direct.cli, installedDirectMinimize: direct.minimize,
       installedDirectReplay: direct.replay, installedArgumentChangeGuard: direct.argumentChangeGuard, installedDirectMcp: mcpChecks.directExecution,
       unrelatedErrorGuard: verification.unrelatedErrorGuard, installedSkippedCheckGuard: verification.skippedCheckGuard,
-      installedOriginalWorkflows: 'passed', installedOriginalMcpWorkflows: mcpChecks.originalWorkflows },
+      installedOriginalWorkflows: 'passed', installedOriginalMcpWorkflows: mcpChecks.originalWorkflows,
+      installedStorageBudget: 'passed' },
     namedProjectActions: verification.namedProjectActions,
     core: { total: core.total, failed: core.failed, comparison: core.comparison, inspection: core.inspection, inventory: core.inventory },
     retained: keep,

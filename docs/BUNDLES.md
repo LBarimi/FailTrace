@@ -52,3 +52,5 @@ Local copies use bounded snapshot reads and reject changing sources. Git source 
 Replay configurations use schema 2 for these environment prerequisites and sharing choices. New replay scripts require their matching configuration. Previously created bundles retain their included engine/scripts and behavior; rebuilding a bundle from an older saved run uses the new defaults and limits.
 
 Replay still needs the target's tools, dependencies, services and platform shell. It reports finite target observations, not proof that a defect is absent. See the [command reference](CLI.md#create-a-portable-local-bundle) and [resource limits](RESOURCE-LIMITS.md).
+
+[Documentation index](README.md)

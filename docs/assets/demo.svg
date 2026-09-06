@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="960" height="568" viewBox="0 0 960 568" role="img" aria-labelledby="title description">
 <title id="title">FailTrace: reproduce, minimize, verify, replay</title>
-<desc id="description">A real guided demo recorded 7 passing and 3 failing trials, reduced 6 JSON elements to [&quot;BUG&quot;], rejected an unrelated crash, observed no target in two healthy fixed-candidate trials, and created a replayable bundle.</desc>
+<desc id="description">An original controlled demo recorded 7 passing and 3 failing trials, reduced 6 JSON elements to [&quot;BUG&quot;], rejected an unrelated crash, observed no target in two healthy fixed-candidate trials, and created a replayable bundle.</desc>
 <rect width="960" height="568" rx="18" fill="#0c1523"/>
 <path d="M18 0H942Q960 0 960 18V52H0V18Q0 0 18 0" fill="#182538"/>
 <circle cx="26" cy="26" r="6" fill="#ff6f72"/><circle cx="48" cy="26" r="6" fill="#edc26c"/><circle cx="70" cy="26" r="6" fill="#66d2a0"/>
@@ -8,7 +8,7 @@
 <text x="96" y="32" fill="#8fa5bf" font-size="14">FailTrace — local debugging evidence</text>
 <text x="34" y="92" fill="#f1f6fc" font-size="23">$ failtrace demo</text>
 <text x="34" y="141" fill="#81b4ff" font-size="16">01  REPRODUCE</text>
-<text x="70" y="176" fill="#d8e4f3" font-size="18">7 passed   3 failed   30.0% observed failure rate</text>
+<text x="70" y="176" fill="#d8e4f3" font-size="18">7 healthy trials   3 target failures   logs saved</text>
 <text x="34" y="220" fill="#81b4ff" font-size="16">02  MINIMIZE</text>
 <text x="70" y="252" fill="#d8e4f3" font-size="18">6 JSON elements  →  [&quot;BUG&quot;]   final failure verified</text>
 <text x="34" y="301" fill="#81b4ff" font-size="16">03  VERIFY A PROPOSED FIX</text>

@@ -8,7 +8,10 @@ import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const { stdout } = await promisify(execFile)(process.execPath, [join(root, 'dist/cli/index.js'), 'demo', '--json'], {
+assert(process.argv.length === 2 || (process.argv.length === 4 && process.argv[2] === '--cli'),
+  'Usage: node scripts/render-demo.mjs [--cli installed/dist/cli/index.js]');
+const cli = process.argv[3] ? resolve(process.argv[3]) : join(root, 'dist/cli/index.js');
+const { stdout } = await promisify(execFile)(process.execPath, [cli, 'demo', '--json'], {
   cwd: root, windowsHide: true, timeout: 120_000, maxBuffer: 2 * 1024 * 1024,
 });
 const demo = JSON.parse(stdout);
@@ -25,7 +28,7 @@ const escape = (text) => String(text).replaceAll('&', '&amp;').replaceAll('<', '
 const text = (x, y, value, color = '#d8e4f3', size = 18) => `<text x="${x}" y="${y}" fill="${color}" font-size="${size}">${escape(value)}</text>`;
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="568" viewBox="0 0 960 568" role="img" aria-labelledby="title description">
 <title id="title">FailTrace: reproduce, minimize, verify, replay</title>
-<desc id="description">A real guided demo recorded ${stats.passed} passing and ${stats.failed} failing trials, reduced ${demo.reduction.originalInput.length} JSON elements to ${escape(JSON.stringify(demo.reduction.minimizedInput))}, rejected an unrelated crash, observed no target in two healthy fixed-candidate trials, and created a replayable bundle.</desc>
+<desc id="description">An original controlled demo recorded ${stats.passed} passing and ${stats.failed} failing trials, reduced ${demo.reduction.originalInput.length} JSON elements to ${escape(JSON.stringify(demo.reduction.minimizedInput))}, rejected an unrelated crash, observed no target in two healthy fixed-candidate trials, and created a replayable bundle.</desc>
 <rect width="960" height="568" rx="18" fill="#0c1523"/>
 <path d="M18 0H942Q960 0 960 18V52H0V18Q0 0 18 0" fill="#182538"/>
 <circle cx="26" cy="26" r="6" fill="#ff6f72"/><circle cx="48" cy="26" r="6" fill="#edc26c"/><circle cx="70" cy="26" r="6" fill="#66d2a0"/>
@@ -33,7 +36,7 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="568" vi
 ${text(96, 32, 'FailTrace — local debugging evidence', '#8fa5bf', 14)}
 ${text(34, 92, '$ failtrace demo', '#f1f6fc', 23)}
 ${text(34, 141, '01  REPRODUCE', '#81b4ff', 16)}
-${text(70, 176, `${stats.passed} passed   ${stats.failed} failed   ${(stats.failureRate * 100).toFixed(1)}% observed failure rate`)}
+${text(70, 176, `${stats.passed} healthy trials   ${stats.failed} target failures   logs saved`)}
 ${text(34, 220, '02  MINIMIZE', '#81b4ff', 16)}
 ${text(70, 252, `${demo.reduction.originalInput.length} JSON elements  →  ${JSON.stringify(demo.reduction.minimizedInput)}   final failure verified`)}
 ${text(34, 301, '03  VERIFY A PROPOSED FIX', '#81b4ff', 16)}

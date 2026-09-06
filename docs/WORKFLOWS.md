@@ -49,3 +49,5 @@ This example helps distinguish an ordering problem from a generic intermittent c
 CI is configured to run the original fixture tests and source workflows on the existing OS/Node matrix. The installed-package gate runs the bundled examples from a fresh consumer, resolving its Core and CLI from that installation. A real MCP stdio connection also exercises the installed examples through run, compare, minimize, Verify, bundle and saved-evidence inspection. These are maintainer checks; they do not claim that an autonomous agent chose the tool or that an independent developer adopted it.
 
 All fixtures are authored for FailTrace. They demonstrate recognizable debugging problems under controlled conditions, and do not establish production reliability, broad performance superiority, statistical confidence or defect elimination.
+
+[Documentation index](README.md)

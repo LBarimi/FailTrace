@@ -52,9 +52,10 @@ async function main(): Promise<number> {
         print(`FailTrace - artifact storage\n\n${inventory.directory}\n${inventory.bytes} logical bytes in ${inventory.files} files${inventory.complete ? '' : ' (partial scan)'}\n`);
         for (const entry of inventory.entries) print(`${entry.bytes.toString().padStart(12)}  ${entry.status ?? 'unknown'}  ${entry.path}${entry.referencedBy.length ? `  [referenced by ${entry.referencedBy.length}]` : ''}${entry.complete ? '' : '  [incomplete]'}`);
         for (const issue of inventory.issues) print(`\n${issue}`);
+        if (inventory.budget) print(`\nStorage budget: ${inventory.budget.status} (${inventory.bytes} / ${inventory.budget.maxBytes} logical bytes).`);
         print('\nRead-only snapshot. Reported states and missing references do not establish safe deletion.');
         result(inventory);
-        exitCode = inventory.complete ? 0 : 2;
+        exitCode = !inventory.complete ? 2 : inventory.budget?.status === 'over_budget' ? 1 : 0;
         break;
       }
       case 'demo': {

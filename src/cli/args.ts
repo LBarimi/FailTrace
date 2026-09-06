@@ -9,7 +9,7 @@ export type CliInvocation =
   | { kind: 'help'; command?: HelpCommand }
   | { kind: 'version' }
   | ({ kind: 'demo' } & Common)
-  | ({ kind: 'artifacts'; directory?: string; maxEntries?: number } & Common)
+  | ({ kind: 'artifacts'; directory?: string; maxEntries?: number; maxBytes?: number } & Common)
   | ({ kind: 'run'; captureEnv?: string[]; concurrency?: number; captureContext?: NonNullable<RunOptions['captureContext']> } & Common & Experiment)
   | ({ kind: 'verify'; json?: boolean } & Omit<VerifyOptions, 'signal' | 'onTrialComplete' | 'env'>)
   | ({ kind: 'compare' } & Common & CompareOptions)
@@ -47,7 +47,7 @@ const directFlags = ['exec', 'arg'];
 const experiments = ['command', ...directFlags, 'repeat', 'timeout', ...predicateFlags, ...executionFlags, 'regex-flags', 'nunit-message', ...outputFlags];
 const allowed: Record<string, string[]> = {
   demo: ['cwd', 'json'],
-  artifacts: ['directory', 'max-entries', 'cwd', 'json'],
+  artifacts: ['directory', 'max-entries', 'max-bytes', 'cwd', 'json'],
   run: [...directFlags, 'repeat', 'timeout', 'concurrency', ...outputFlags, ...predicateFlags, ...executionFlags, 'regex-flags', 'nunit-message', 'capture-env', 'capture-context', 'context-input', 'context-setup', 'context-source', 'cwd', 'json'],
   verify: ['command', ...directFlags, 'cwd', 'repeat', 'timeout', 'concurrency', ...outputFlags, 'healthy-exit-code', 'allow-change', 'json'],
   compare: ['trial-a', 'trial-b', 'max-lines', 'max-bytes', 'cwd', 'json'],
@@ -135,6 +135,7 @@ export function parseArgs(argv: string[]): CliInvocation {
   if (kind === 'artifacts') return { kind, ...common,
     ...(get('directory') === undefined ? {} : { directory: get('directory')! }),
     ...(get('max-entries') === undefined ? {} : { maxEntries: integer(get('max-entries')!, 'Max entries', 1, 100_000) }),
+    ...(get('max-bytes') === undefined ? {} : { maxBytes: integer(get('max-bytes')!, 'Max bytes', 1) }),
   };
   if (kind === 'verify') {
     const baseline = positional[0];

@@ -57,3 +57,5 @@ Ask about a second use after an agreed interval, for example two weeks, only if 
 Group repeated blockers by the step they prevented. Prefer the smallest change that removes a demonstrated barrier: installation, predicate choice, evidence inspection, patch verification, or sharing. Recheck the affected step in a later willing session. Do not infer feature demand from a single suggestion or choose an arbitrary conversion threshold as proof of adoption.
 
 [Adoption priorities and evidence limits](ADOPTION.md)
+
+[Documentation index](README.md)

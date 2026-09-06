@@ -1,37 +1,30 @@
 # FailTrace
 
-**Debugging experiments for AI coding agents and developers.**
+**Reproduce the failure. Check the fix.**
 
-Turn a hard-to-reproduce failure into saved trials, a smaller reproducer, and evidence you can inspect after a proposed fix.
+A test fails intermittently. Your coding agent changes the code. One passing retry leaves you guessing.
 
-Use FailTrace from the **CLI or an MCP client** to repeat commands, compare failures, isolate regressions, minimize inputs, verify patches, and package a replay. Everything runs locally. No AI API, account, or telemetry is required.
+FailTrace repeats the same check, saves a failing baseline, and checks the proposed fix against it. Use the **CLI or MCP tools** to get trial results, a smaller reproducer, and evidence your agent can inspect before accepting a patch.
 
-[![CI](https://github.com/LBarimi/FailTrace/actions/workflows/ci.yml/badge.svg)](https://github.com/LBarimi/FailTrace/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![CI](https://github.com/LBarimi/FailTrace/actions/workflows/ci.yml/badge.svg)](https://github.com/LBarimi/FailTrace/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**[Try the demo](#quick-start)** · **[Connect your coding agent](docs/AGENT-WORKFLOWS.md)** · **[Use your own command](#use-it-on-your-own-failure)** · **[Recheck a unit test](#recheck-an-existing-unit-test)**
+Local execution. No AI API, account, or telemetry required. Keep your existing test runner and assertions.
 
 ## Quick start
 
-Requires **Node.js 22.12+ and npm**. No source checkout is needed:
+With **Node.js 22.12+ and npm**, run this in any working directory:
 
 ```sh
 npx --yes failtrace@1.3.0 demo
 ```
 
-![Animated FailTrace demo: record failures, shrink the input, reject an unrelated crash, and check the next patch](docs/assets/demo.gif)
+![FailTrace demo: capture a failure, reduce its input, reject an unrelated crash, and check a patch](docs/assets/demo.gif)
 
-Recorded from the controlled CLI demo; output is abridged and timing edited. [Static version](docs/assets/demo-poster.png) · [Full results and limits](docs/DEMO.md) · [Install for everyday use](docs/INSTALL.md)
+An original, controlled CLI example with abridged output and edited timing. [Static walkthrough](docs/assets/demo.svg) · [Static poster](docs/assets/demo-poster.png) · [Demo details](docs/DEMO.md)
 
-The demo saves its evidence under `.failtrace/` and prints a command to replay the reduced failure.
+The demo reduces six input items to `["BUG"]`, rejects a patch that crashes for another reason, and checks a working patch. It saves the evidence in `.failtrace/` and prints a replay command. These are example outcomes, not performance measurements; a passing sample does not prove a bug is gone.
 
 ## For coding agents
-
-Give your agent a consistent way to run debugging experiments and return the evidence behind its conclusions.
-
-- **Follow the same failure.** Select an exact NUnit test, target message, exit code, or regular expression before investigating.
-- **Inspect saved work.** Get structured counts and bounded summaries, then page through the trial logs you need without running the command again.
-- **Recheck a patch.** Verify compares a candidate with a captured baseline and separates target observations from unrelated errors or incomplete evidence.
 
 Connect the local stdio MCP server through your client's configuration:
 
@@ -39,89 +32,57 @@ Connect the local stdio MCP server through your client's configuration:
 npx --yes failtrace@1.3.0 mcp --cwd "/absolute/path/to/your/project"
 ```
 
-**[Connect your MCP client and try an investigation →](docs/AGENT-WORKFLOWS.md)**
+**[Copy the MCP configuration and check the connection →](docs/AGENT-WORKFLOWS.md#mcp-client-configuration-and-windows-paths)**
 
-Your client launches this command; running it alone in a terminal waits for MCP requests. The guide covers Windows command shims and an optional project instruction snippet.
+Your client launches this command. Running it alone in a terminal waits for MCP requests. The guide includes Windows setup.
 
-Then try asking your agent:
+Then ask your agent:
 
-> Use FailTrace to investigate this intermittent test failure. Choose its failure signature, run a bounded sample, compare a healthy trial with a matching failure, and explain what the evidence supports. Capture a baseline before editing, then verify the proposed change.
+> Use FailTrace to capture this test failure before editing. Choose the exact test or failure message, save a bounded baseline, and inspect the matching trial. After the change, verify against that baseline and explain any unrelated errors or incomplete evidence.
 
-Seven tools expose the same Core engine: `failtrace_run`, `failtrace_compare`, `failtrace_bisect`, `failtrace_minimize`, `failtrace_verify`, `failtrace_bundle`, and the read-only `failtrace_inspect_run`. Agents that use a shell can call the CLI with `--json`.
-
-An installed MCP server makes the tools available; the agent still chooses when to use them. A healthy sample with no target observed does not prove a bug is gone.
+The seven MCP tools share the CLI's Core engine. They retain the failure signature and investigation evidence across repetition, comparison, regression search, minimization, verification and replay. Agents can retrieve saved trial and log pages without rerunning the command. Shell-capable agents can also use the CLI with `--json`.
 
 ## Recheck an existing unit test
 
-**Follow a failing test through the fix.** Keep your existing NUnit or Unity assertions. FailTrace tracks the exact test, captures a baseline, and rechecks it after your agent changes the code.
+**Follow an exact NUnit or Unity test through a fix.** Each attempt gets a fresh NUnit 3 report. Missing or skipped tests and unrelated failures stay inconclusive, so an agent cannot accept them as evidence that the selected test passed.
 
-- **Fresh results for every attempt.** Each trial gets its own NUnit 3 report.
-- **Clear outcomes for your agent.** MCP returns the selected test's result and a reason when evidence is incomplete. Missing, skipped or unrelated failed tests stay inconclusive.
-- **Continue the investigation.** Use the same test with regression search, input minimization and replay bundles.
+[Connect your test or try the original EditMode example →](docs/UNIT-TESTS.md)
 
-**[Try the original Unity example or connect your NUnit test →](docs/UNIT-TESTS.md)**
-
-Available in **1.3.0** through CLI and MCP. Unity validation covers the documented Windows EditMode example.
+NUnit support is included in 1.3.0 through CLI and MCP. The documented Unity validation covers the Windows EditMode example.
 
 ## Use it on your own failure
 
-Run this from your project, replacing the command and error message with your own:
+From your project, replace the command and message with your own:
 
 ```sh
 npx --yes failtrace@1.3.0 run "npm test -- checkout" --repeat 20 --stderr-contains "checkout failed"
 ```
 
-FailTrace saves each trial's output and prints an investigation ID. Exit `1` can mean the failure you are investigating was recorded. Add `--json` for automation, and use the [command reference](docs/CLI.md) to inspect or continue that investigation.
+Each trial saves its output. Exit `1` can mean the target failure was recorded; inspect the result before retrying. To check a patch, [capture a baseline before editing](docs/VERIFY.md).
 
-For repeated use, [save the experiment settings in your project scripts](docs/PROJECT-WORKFLOW.md) and capture a baseline before changing code.
+| Your next question | Command |
+| --- | --- |
+| How often does this failure appear? | `run` |
+| What differs between a healthy and failing trial? | `compare` |
+| Which Git change introduced it? | `bisect` |
+| What input is enough to reproduce it? | `minimize` |
+| What happened after the proposed fix? | `verify` |
+| How can I replay this investigation? | `bundle` |
 
-| When you need to… | Use | What you get |
-| --- | --- | --- |
-| Measure an intermittent failure | `run` | Recorded outcomes, target matches, durations, and logs |
-| Inspect a passing and failing attempt | `compare` | Bounded output differences, full hashes, and selected environment changes |
-| Locate a regression | `bisect` | Repeated candidate trials and a sampled boundary on Git's first-parent history |
-| Shrink a large reproducer | `minimize` | Reduced text, JSON, files, or environment keys, with a separate final check |
-| Check a proposed fix | `verify` | Target observations and execution health against a captured baseline |
-| Retrieve omitted agent evidence | `failtrace_inspect_run` | Saved trial pages and bounded output, without executing a command |
-| Hand the investigation to someone else | `bundle` | Selected source/input, a manifest, and replay scripts |
-
-The target command can use any runtime; FailTrace itself requires Node.js. Input reduction needs your command to read the candidate input. [CLI reference](docs/CLI.md) · [Verify workflow](docs/VERIFY.md) · [Bundle guide](docs/BUNDLES.md)
+[Command reference](docs/CLI.md) · [Literal executable arguments](docs/DIRECT-EXECUTION.md) · [Reusable project scripts](docs/PROJECT-WORKFLOW.md)
 
 ## What the results establish
 
-- Repetition and Bisect report observations under chosen settings. They do not provide statistical confidence; concurrency can change failure behavior.
-- Minimization rechecks its result but does not promise the smallest possible input. Check `status` and `finalVerified`.
-- Verify's `target_not_observed` means no target match in a healthy, comparable sample. Execution checkpoints and NUnit reports add evidence about the selected check; a finite sample does not prove that the defect was eliminated.
-- Bundles include selected files and the Node Core engine. Target dependencies, services, and uncaptured environment state still need setup.
-- Commands run with your local permissions. Cleanup is best effort. Logs, commands, source, and inputs can contain private information: review them before sharing.
+FailTrace reports observations under the chosen settings. Verify separates a target observed, a healthy sample without that target, and inconclusive evidence. Bisect reports a sampled first-parent boundary; minimization rechecks its result without promising the smallest possible input.
 
-[Result and exit-code details](docs/CLI.md#artifacts-and-exit-codes) · [Resource limits](docs/RESOURCE-LIMITS.md) · [Performance scope](docs/PERFORMANCE.md)
+Commands run with your permissions, and process cleanup is best effort. Retained stdout/stderr is capped by default at **16 MiB per trial and 256 MiB per run or bisect/minimization**. Previous investigations accumulate separately. Review logs, commands and selected files before sharing; bundles still require the target's dependencies and setup.
+
+[Result and exit-code reference](docs/CLI.md#artifacts-and-exit-codes) · [Resource limits](docs/RESOURCE-LIMITS.md) · [Storage inventory](docs/ARTIFACTS.md) · [Bundle guide](docs/BUNDLES.md)
 
 ## Availability and contributing
 
-**1.3.0 is published on npm and as a [GitHub release](https://github.com/LBarimi/FailTrace/releases/tag/v1.3.0), with a matching [MCP Registry entry](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.LBarimi%2Ffailtrace/versions/1.3.0).** The commands above use that exact package. See [installation alternatives](docs/INSTALL.md), the [1.x compatibility contract](docs/COMPATIBILITY.md), and [migration from 0.x](docs/MIGRATING-TO-1.md).
+The quick start uses published **1.3.0**: [npm installation options](docs/INSTALL.md), [GitHub release](https://github.com/LBarimi/FailTrace/releases/tag/v1.3.0), and [MCP Registry entry](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.LBarimi%2Ffailtrace/versions/1.3.0). The source prepares 1.4.0; installation examples remain on the verified public version until publication completes. See the [changelog](CHANGELOG.md).
 
-Version 1.3.0 connects existing NUnit and Unity tests to the same Core, CLI and MCP workflow, with fresh per-trial reports and saved-evidence checks during Verify. [Changes and migration notes](CHANGELOG.md#130) · [Product roadmap](docs/ROADMAP.md)
+**[Documentation: choose your next task →](docs/README.md)**
 
-**Try an original investigation:** [trace a lost data revision or an overlapping update](docs/WORKFLOWS.md) using original runnable examples. They reduce a reproducer and distinguish a working patch from a checker that was silently skipped using [completed-check signals](docs/EXECUTION-EVIDENCE.md). These examples ship with 1.2.0.
-
-The CLI also provides a [read-only storage inventory](docs/ARTIFACTS.md) for retained evidence and known investigation references.
-
-For existing programs that accept an input-file argument, the 1.2.0 [direct execution mode](docs/DIRECT-EXECUTION.md) passes literal arguments and can bind the reduced input without modifying the program. Command-specific help explains each operation and its next steps.
-
-**[Tell us where FailTrace helped or got stuck →](https://github.com/LBarimi/FailTrace/issues/new?template=workflow.yml)**
-
-A first-install problem, a useful investigation, or a second use on your own project helps decide what to improve. Private logs are optional. Our goal is useful, repeated adoption by people and agents.
-
-To work on the source:
-
-```sh
-git clone https://github.com/LBarimi/FailTrace.git
-cd FailTrace
-npm ci
-npm test
-npm run typecheck
-npm run demo
-```
-
-`npm test` builds the source first. Core is also an ESM TypeScript API exported by `failtrace`; CLI and MCP call the same engine. [Contributing](CONTRIBUTING.md) · [Implementation](docs/IMPLEMENTATION.md) · [Adoption priorities](docs/ADOPTION.md)
+[Development instructions](CONTRIBUTING.md#development) · [Compatibility](docs/COMPATIBILITY.md) · [Roadmap](docs/ROADMAP.md)

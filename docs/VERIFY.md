@@ -112,3 +112,5 @@ Real repeated tests can share database state, seeds, services or resource conten
 Bisect/minimize stop when a finite match threshold is decided; that is a different workload. A future counterexample-only check could stop on the first target match, but its observed rate would not be a full-budget estimate. Statistical early stopping needs a separately reviewed sequential procedure. Verify currently uses fixed budgets.
 
 The release gate includes unchanged and fixed controls, a remaining target failure, nonmatching syntax/setup errors, context changes, ineligible baselines and cancellation. Package smoke checks exercise installed Core, CLI and MCP against a fixed control and unrelated-error guard. Independent use of this workflow, not the addition of a command name, is the adoption test.
+
+[Documentation index](README.md)

@@ -10,15 +10,7 @@ Prefer a recognizable debugging problem, a demonstrable result, easier integrati
 
 ## What is verified
 
-Version [1.3.0](https://github.com/LBarimi/FailTrace/releases/tag/v1.3.0), commit `15ea03fab879c4d7d54ddc94055ec983f8ae23c6`, passed 517 tests and all seven [CI gates](https://github.com/LBarimi/FailTrace/actions/runs/34038135326); the three-OS [performance gates](https://github.com/LBarimi/FailTrace/actions/runs/34038135287) passed. Archive SHA-256 `59c132e256e5832c803e3aaef75c4aff02b9ccc0192af0e022813e2004b30eff` matched the reviewed GitHub asset and public npm download. A fresh-cache public installation exercised Core, CLI, seven MCP tools, original workflows and replay. NUnit-specific public npx MCP checks reproduced the selected test, verified a passing control, rejected skipped/missing reports and retrieved saved test evidence. The [1.3.0 MCP Registry record](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.LBarimi%2Ffailtrace/versions/1.3.0) was verified active. These are maintainer distribution checks, not evidence of independent adoption.
-
-Version [1.2.0](https://github.com/LBarimi/FailTrace/releases/tag/v1.2.0), commit `f1dc9c2e66cab62f291c8b38287b776d2352286b`, passed 466 tests and all seven [CI gates](https://github.com/LBarimi/FailTrace/actions/runs/34015895302). The three-OS [performance gates](https://github.com/LBarimi/FailTrace/actions/runs/34015895263) also passed. Archive SHA-256 `c6977d9e023292aaf4caf612ea119e3fc75a60e5243942dc493e31c20001741a` matched the reviewed GitHub asset and public npm download. A fresh-cache public installation exercised the demo, Core, CLI, seven MCP tools, literal arguments, minimization, Verify, skipped-check rejection, original workflows, manifests and replay. The [1.2.0 MCP Registry record](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.LBarimi%2Ffailtrace/versions/1.2.0) was verified active. These are maintainer distribution checks, not evidence of independent adoption.
-
-The published [1.1.0 release](https://github.com/LBarimi/FailTrace/releases/tag/v1.1.0), source commit `c7f9e7ce3ebc36b5e72fc9ee88cfbc57ff73781c`, passed 374 tests and all seven [release CI gates](https://github.com/LBarimi/FailTrace/actions/runs/33954024895). Its reviewed archive SHA-256 is `dd52ef2a36ade281c6795fb708765f4f6da509b31f9fce3e10f7d559c68237bb`.
-
-On 2026-09-05, the reviewed GitHub archive matched the public npm download. Fresh installations outside the checkout exercised the demo, Core, CLI, Verify, saved inspection, bundle manifests and replay. Installed CLI/MCP checks exercised target-first comparison and Bisect's unrelated/declared exit policies. The matching versioned MCP Registry record was active. These checks establish distribution and tested behavior, not independent adoption. Installation routes and version-specific limits are in the [README](../README.md).
-
-The source checkout adds original [data-import and asynchronous-update workflows](WORKFLOWS.md). Maintainer tests show how affected behavior, a valid fix, a skipped checker and a preparation error lead to different conclusions. These workflows are included in 1.2.0 builds and do not establish production use.
+The [release validation records](RELEASE-VALIDATION.md) cover package installation, CLI/Core/MCP checks, original workflows and replay. The [unit-test guide](UNIT-TESTS.md) records the controlled EditMode integration scope. These checks establish functionality and distribution integrity.
 
 ## What remains unknown
 
@@ -49,3 +41,5 @@ Use the [voluntary debugging-session guide](WORKFLOW-OBSERVATION.md) to record t
 | Is adoption improving? | Dated, attributable observations using the same definitions | Small samples cannot establish broad adoption |
 
 No runtime telemetry, account requirement, unsolicited outreach or automatic data collection is part of this plan. Keep claims tied to inspectable evidence and adjust priorities when users show a different bottleneck.
+
+[Documentation index](README.md)

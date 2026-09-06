@@ -72,3 +72,5 @@ Bisect cannot classify a commit without the checkpoint. Minimization never accep
 The checkpoint establishes that selected text was observed in a clean, fully captured trial. Timeouts, signals, output truncation and write errors cannot establish completion even if an earlier output chunk contained the text. Ordinary repetition still attempts its full budget; threshold experiments stop without a decision when required evidence is missing.
 
 This is not coverage instrumentation, proof that the target's checker is correct, statistical confidence, or proof that a bug was eliminated. A wrongly placed or misleading marker can still produce misleading evidence. Keep input, setup and source declarations meaningful, emit the signal at the real completion point, and retain the captured baseline before editing.
+
+[Documentation index](README.md)

@@ -1,13 +1,12 @@
 # Inspect local evidence storage
 
-**Added in 1.2.0:** the read-only `artifacts` command and `inventoryArtifacts` Core API. See the [README](../README.md#availability-and-contributing) for publication status. The commands below use a source build.
+The published package includes the read-only `artifacts` command and `inventoryArtifacts` Core API. The optional storage budget described below requires version **1.4.0** or a source build. [Documentation index](README.md)
 
 Repeated investigations retain logs, copied inputs and reports. To see where that space went without executing a saved command:
 
 ```sh
-npm run build
-node dist/cli/index.js artifacts
-node dist/cli/index.js artifacts --cwd /path/to/project --json
+npx --yes failtrace@1.3.0 artifacts
+npx --yes failtrace@1.3.0 artifacts --cwd /path/to/project --json
 ```
 
 The default storage root is `.failtrace` within the chosen working directory. Select a custom **storage root**, such as one previously passed to Core `artifactsDir`, with `--directory`. Do not select an individual run when you want its neighboring investigations and references included.
@@ -27,6 +26,28 @@ JSON includes logical regular-file bytes, file counts, reported status, scan iss
 
 The `snapshot` field fingerprints observed paths and filesystem identities/timestamps. It detects ordinary changes between scans; it is not a content hash, tamper-proof evidence, lock or cleanup approval.
 
+## Check a storage budget
+
+For a long-running debugging workspace, check retained evidence before starting another investigation. For a source build, use the commands below; version 1.3.0 does not accept this option. With an installed 1.4.0 or newer package, use `failtrace artifacts --max-bytes N --json`:
+
+```sh
+npm run build
+node dist/cli/index.js artifacts --cwd /path/to/project --max-bytes 1073741824 --json
+```
+
+The positive integer is a logical-byte budget (the example uses 1 GiB). Core callers pass `maxBytes` to `inventoryArtifacts`. The result adds `budget: { maxBytes, status }`; without a budget, existing results and exit codes are unchanged.
+
+| Observation | Budget status | CLI exit |
+| --- | --- | --- |
+| Complete scan, bytes at or below the budget | `within_budget` | `0` |
+| Complete scan, bytes above the budget | `over_budget` | `1` |
+| Incomplete scan, observed bytes at or below the budget | `unknown` | `2` |
+| Incomplete scan, observed bytes already above the budget | `over_budget` | `2` |
+
+Only continue a surrounding job when the check exits `0`. Shell-capable agents can inspect the same JSON; a Core caller should require both `complete` and `budget.status === 'within_budget'`. An incomplete scan must not be interpreted as available capacity. A missing storage root has zero retained bytes and is not created by this check.
+
+This is a point-in-time check, not a quota: another writer can add data immediately afterward. No bytes are reserved, subsequent writes are not intercepted, and no files are deleted. Use a workspace filesystem quota when a hard disk cap is required. The seven MCP tools remain unchanged.
+
 ## Preserve an investigation's evidence
 
 A reported `completed` state is not proof that no process is reading the data. References are only those found in the scanned report fields: another project, script or copied report may still depend on a run. A missing `referencedBy` entry does not establish that deletion is safe. Legacy metadata may also contain original absolute paths after it has been copied elsewhere.
@@ -42,4 +63,4 @@ const inventory = await inventoryArtifacts({ cwd: projectDirectory, maxEntries: 
 // Inspect inventory.complete and inventory.issues before interpreting totals.
 ```
 
-Shell-capable agents can use the CLI with `--json`. This source addition does not add a new MCP tool. See [per-experiment limits](RESOURCE-LIMITS.md) for controls that bound newly generated evidence.
+Shell-capable agents can use the CLI with `--json`. Storage inventory is available through CLI and Core. See [per-experiment limits](RESOURCE-LIMITS.md) for controls that bound newly generated evidence.

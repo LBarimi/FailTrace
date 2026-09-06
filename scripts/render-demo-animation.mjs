@@ -1,5 +1,6 @@
 // Maintainer-only GIF renderer. See docs/DEMO.md; no runtime dependency is added.
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
@@ -52,8 +53,8 @@ const escape = value => String(value).replaceAll('&', '&amp;').replaceAll('<', '
 const text = (x, y, value, size = 20, fill = c.ink, extra = '') => `<text x="${x}" y="${y}" fill="${fill}" font-size="${size}" ${extra}>${escape(value)}</text>`;
 const rect = (x, y, w, h, fill, radius = 8, extra = '') => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${radius}" fill="${fill}" ${extra}/>`;
 const mono = `font-family="'Cascadia Code', 'DejaVu Sans Mono', Consolas, monospace"`;
-const headings = ['Catch the failure.', 'Keep only what breaks.', 'A new crash can hide the old bug.', 'Check the patch. Keep the evidence.'];
-const descriptions = ['Repeat a command and save each outcome.', 'Reduce the input while preserving the target failure.', 'Verify flags an unrelated error after a proposed change.', 'No target match in a healthy sample. Replay stays available.'];
+const headings = ['This test fails. Then it passes.', 'Keep the input that triggers it.', 'The error disappeared. Did the fix work?', 'Check the patch against the baseline.'];
+const descriptions = ['Save repeated trials so your agent can inspect the failure.', 'Six items become one. The same failure still reproduces.', 'An unrelated crash makes this candidate inconclusive.', 'Two healthy trials, no target observed. Keep the replay.'];
 
 function scene(stage, step) {
   let body = '';
@@ -105,8 +106,8 @@ ${text(40, 502, 'Recorded CLI demo · abridged output · edited timing · finite
 </g></svg>`;
 }
 
-const frames = [{ svg: scene(0, 0), delay: 500 }];
-for (let i = 1; i <= 10; i++) frames.push({ svg: scene(0, i), delay: i === 10 ? 1700 : 120 });
+// The first frame carries the problem and its observed result even before playback.
+const frames = [{ svg: scene(0, 10), delay: 2200 }];
 for (const [stage, delays] of [[1, [700, 900, 1800]], [2, [650, 700, 2400]], [3, [850, 3500]]]) {
   for (let step = 0; step < delays.length; step++) frames.push({ svg: scene(stage, step), delay: delays[step] });
 }
@@ -118,7 +119,17 @@ const gif = await sharp(Buffer.concat(pixels), { raw: { width, height: height * 
   .gif({ loop: 0, delay: frames.map(frame => frame.delay), colours: 128, dither: 0, effort: 7 }).toBuffer();
 assert(gif.length < 1024 * 1024, 'Keep the README GIF below 1 MiB.');
 await writeFile(join(assets, 'demo.gif'), gif);
-await sharp(Buffer.from(scene(2, 2))).png().toFile(join(assets, 'demo-poster.png'));
+await sharp(Buffer.from(scene(0, 10))).png().toFile(join(assets, 'demo-poster.png'));
+const sha256 = {};
+for (const name of ['demo.gif', 'demo-poster.png', 'demo.svg']) {
+  sha256[name] = createHash('sha256').update(await readFile(join(assets, name))).digest('hex');
+}
+await writeFile(join(assets, 'demo-recording.json'), JSON.stringify({
+  version, scenario: 'original-guided-demo', editedTiming: true,
+  outcomes: { trials: 10, targetMatches: 3, reducedInput: demo.reduction.minimizedInput,
+    unrelatedCandidate: unrelated.status, fixedCandidate: fixed.status, healthyFixedTrials: fixed.healthyTrials },
+  sha256,
+}, null, 2) + '\n');
 // Inspectable vector storyboards are private render evidence, not package files.
 const privateFrames = join(demo.artifactDirectory, 'animation-frames');
 await mkdir(privateFrames);

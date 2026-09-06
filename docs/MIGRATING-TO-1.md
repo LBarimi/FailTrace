@@ -53,3 +53,5 @@ New `repro.json` files use schema 2. Existing bundles remain paired with their o
 ## Before adopting the stable release
 
 After its public version is available, install that exact package in a separate project, run the guided demo and replay its bundle. Check your own scripts against the new status handling and result shapes, then update pinned MCP clients together. Preserve old evidence while reviewing the migration. The [release process](RELEASING.md) requires cross-platform CI and the same verified archive on GitHub and npm before distribution is declared complete.
+
+[Documentation index](README.md)

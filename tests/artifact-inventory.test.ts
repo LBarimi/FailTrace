@@ -177,6 +177,52 @@ assert.match(inventory.entries[0].issues.join(' '), /too complex/);
     await expect(inventoryArtifacts({ signal: controller.signal })).rejects.toThrow('cancel inventory');
   });
 
+  it('checks an inclusive storage budget without changing existing evidence', async () => {
+    const cwd = await workspace();
+    expect((await inventoryArtifacts({ cwd, maxBytes: 1 })).budget?.status).toBe('within_budget');
+    expect(await readdir(cwd)).toEqual([]);
+    await put(cwd, 'evidence.txt', '12345');
+    expect((await inventoryArtifacts({ cwd })).budget).toBeUndefined();
+    expect((await inventoryArtifacts({ cwd, maxBytes: 5 })).budget).toEqual({ maxBytes: 5, status: 'within_budget' });
+    expect((await inventoryArtifacts({ cwd, maxBytes: 4 })).budget).toEqual({ maxBytes: 4, status: 'over_budget' });
+    expect(await readFile(join(cwd, '.failtrace/evidence.txt'), 'utf8')).toBe('12345');
+  });
+
+  it('never reports available storage from an incomplete scan', async () => {
+    const cwd = await workspace();
+    await put(cwd, 'run.json', '{');
+    const result = await inventoryArtifacts({ cwd, maxBytes: 100 });
+    expect(result).toMatchObject({ complete: false, bytes: 1, budget: { status: 'unknown' } });
+    await put(cwd, 'evidence.txt', 'already over budget');
+    expect(await inventoryArtifacts({ cwd, maxBytes: 1 })).toMatchObject({
+      complete: false, budget: { status: 'over_budget' },
+    });
+    expect((await inventoryArtifacts({ cwd, maxEntries: 1, maxBytes: 100 })).budget?.status).toBe('unknown');
+  });
+
+  it.each([0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1, NaN, Infinity])('rejects invalid byte budgets %s before scanning', async maxBytes => {
+    await expect(inventoryArtifacts({ cwd: '\0', maxBytes })).rejects.toThrow(/maxBytes/);
+    expect(() => parseArgs(['artifacts', '--max-bytes', String(maxBytes)])).toThrow(/Max bytes/);
+  });
+
+  it('returns distinct CLI exits for within, over, and incomplete storage checks', async () => {
+    const cwd = await workspace();
+    await put(cwd, 'evidence.txt', '12345');
+    const execute = promisify(execFile);
+    const args = [cliPath, 'artifacts', '--max-bytes'];
+    const within = await execute(process.execPath, [...args, '5', '--json'], { cwd, windowsHide: true });
+    expect(JSON.parse(within.stdout).budget.status).toBe('within_budget');
+    expect(within.stderr).toBe('');
+    await expect(execute(process.execPath, [...args, '4', '--json'], { cwd, windowsHide: true }))
+      .rejects.toMatchObject({ code: 1, stderr: '', stdout: expect.stringContaining('"over_budget"') });
+    await put(cwd, 'run.json', '{');
+    await expect(execute(process.execPath, [...args, '100', '--json'], { cwd, windowsHide: true }))
+      .rejects.toMatchObject({ code: 2, stderr: '', stdout: expect.stringContaining('"unknown"') });
+    await expect(execute(process.execPath, [...args, '1'], { cwd, windowsHide: true }))
+      .rejects.toMatchObject({ code: 2, stdout: expect.stringContaining('Storage budget: over_budget') });
+    expect(await readFile(join(cwd, '.failtrace/evidence.txt'), 'utf8')).toBe('12345');
+  });
+
   it('supports a selected storage root in the CLI and never accepts a target command', async () => {
     const cwd = await workspace();
     await put(cwd, 'runs/first/run.json', complete);

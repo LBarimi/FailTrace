@@ -1,14 +1,8 @@
 # Use FailTrace with a coding agent
 
-**NUnit integration in 1.3.0:** [NUnit and Unity unit tests](UNIT-TESTS.md) use existing MCP tools with `predicate.kind: "nunit_test"`, a fresh `{testReport}` destination and structured `trial.unitTest` evidence. The guide covers baseline capture, patch verification and missing/skipped tests. Version 1.2.0 does not provide this predicate; see the README for publication status.
+Connect FailTrace, run one experiment, and inspect its saved evidence. For an existing NUnit test, use the [unit-test workflow](UNIT-TESTS.md).
 
-This guide targets published FailTrace 1.3.0. Version 1.2.0 adds [execution checkpoints](EXECUTION-EVIDENCE.md); use a supporting version throughout that workflow. See the [installation instructions](../README.md#quick-start) for verified npm and GitHub package commands.
-
-Ask your agent to measure a flaky command, compare the saved evidence, or reduce a reproducing input. FailTrace performs the repeated experiments locally and returns inspectable results; the agent uses those results to investigate the code.
-
-> Use FailTrace to run `npm test -- checkout` 20 times with a 30-second timeout. Match the known stderr message `checkout failed`. Report actual predicate matches separately from timeouts or command setup errors, then compare one clean passing trial with one matching trial. Use the returned artifact paths.
-
-Install FailTrace from the npm registry, connect the local server, and try an experiment in any project. No source checkout or build is needed for this path. Installing the server makes its tools available; choosing a tool remains the agent's decision. The optional project instructions below help it recognize suitable tasks.
+[Documentation index](README.md) · [Install once for repeated use](INSTALL.md) · [Result interpretation](#read-tool-results-correctly)
 
 ## Start the local server
 
@@ -71,11 +65,7 @@ Ask the agent:
 
 > List the available FailTrace tools, then run the inline Node experiment below with `failtrace_run`. Use five trials and a 5-second timeout. The fifth trial prints `FAILTRACE_DEMO` on stderr and exits with code 7. Report the actual `matchedTrials`, pass/fail counts, and artifact directory; inspect the matching trial's stderr before calling the setup successful.
 
-Version 1.1.0 exposes seven tools: `failtrace_run`, `failtrace_compare`, `failtrace_bisect`, `failtrace_minimize`, `failtrace_verify`, `failtrace_bundle`, and `failtrace_inspect_run`. A client may add a server prefix to their displayed names.
-
-`failtrace_verify` and `captureContext` on `failtrace_run` require version 0.5.0 or later. List the installed server's tools before assuming the selected package provides them.
-
-Version 0.4.0 adds optional `concurrency` to `failtrace_run`; it defaults to `1` and is not accepted by bisect/minimize. Overlapping commands can change failure probability through shared resources. Returned trials stay sorted by index. Versions through 0.3.1 predate this option; see [performance guidance](PERFORMANCE.md).
+The server exposes seven tools: `failtrace_run`, `failtrace_compare`, `failtrace_bisect`, `failtrace_minimize`, `failtrace_verify`, `failtrace_bundle`, and `failtrace_inspect_run`. A client may prefix their displayed names. Trials run sequentially by default; request concurrency only when overlapping execution suits the target.
 
 The `failtrace_run` arguments are:
 

@@ -33,3 +33,5 @@ A separate worker measures a complete investigation: baseline, JSON reduction, i
 Core and fixture files are copied once before sampling and hashed. The engine snapshot preserves its package layout and license so bundle creation tests the actual engine. All cases run sequentially in fresh workers and directories; import/setup time is outside per-operation wall time. Parent CPU excludes target/replay subprocesses, and RSS is the worker's lifetime peak, including earlier workflow stages. The existing I/O hook still measures JavaScript calls and logical bytes rather than physical device work. Direct shell lacks evidence validation and durable metadata.
 
 `report.json` whitelists counts, status labels, digests and measurements, with min/median/max for each case/stage. Raw paths, commands, source patches, inputs and output remain in the private case directories. Cache state and other OS activity are not controlled. Do not run tests, installations or other benchmarks at the same time when collecting candidate results. Small timing differences require more evidence and are not portable performance claims.
+
+[Documentation index](README.md)

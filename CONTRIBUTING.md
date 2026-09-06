@@ -1,6 +1,6 @@
 # Contributing to FailTrace
 
-Help a developer or coding agent turn a difficult failure into useful evidence. A reproducible bug report, a clearer installation step, or an example from a real project can be more valuable than another feature.
+Help a developer or coding agent turn a difficult failure into useful evidence. A reproducible bug report, a clearer installation step, or a small original reproducer can be more valuable than another feature.
 
 ## Try it, then tell us what happened
 
@@ -19,6 +19,7 @@ npm ci
 npm run build
 node dist/cli/index.js demo
 npm run typecheck
+npm run check:docs
 npm test
 npm run test:package
 ```
@@ -31,7 +32,7 @@ Read the repository's [AGENTS.md](https://github.com/LBarimi/FailTrace/blob/main
 
 - Reproduce and fix a reported first-install, process cleanup, or artifact problem.
 - Improve an agent setup recipe against the client's official documentation.
-- Add a small real-world example that shows a failure being isolated or reduced.
+- Add a small original example that shows a failure being isolated or reduced.
 - Improve an error that leaves a new user unsure what to do next.
 
 Discuss substantial features in an issue first. Describe the user's debugging task, the current workaround, and why the existing operations are insufficient. We prioritize adoption and integration over feature count.

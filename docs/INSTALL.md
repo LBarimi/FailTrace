@@ -45,3 +45,5 @@ npm exec --yes --allow-remote=root --package=https://github.com/LBarimi/FailTrac
 The command-scoped `--allow-remote=root` permits the explicitly requested URL on npm 12. Registry installation does not need this flag, and the command does not change npm's persistent configuration. Older npm versions that do not recognize it can omit it. See [npm's URL install policy](https://docs.npmjs.com/using-npm/config/#allow-remote).
 
 Before upgrading an existing integration, read the [compatibility contract](COMPATIBILITY.md) and [migration guide](MIGRATING-TO-1.md).
+
+[Documentation index](README.md)

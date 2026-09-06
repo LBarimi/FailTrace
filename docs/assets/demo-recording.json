@@ -1,0 +1,20 @@
+{
+  "version": "1.3.0",
+  "scenario": "original-guided-demo",
+  "editedTiming": true,
+  "outcomes": {
+    "trials": 10,
+    "targetMatches": 3,
+    "reducedInput": [
+      "BUG"
+    ],
+    "unrelatedCandidate": "inconclusive",
+    "fixedCandidate": "target_not_observed",
+    "healthyFixedTrials": 2
+  },
+  "sha256": {
+    "demo.gif": "cee2cd21948d0b32719c1cd30581c7dad95461c4df88e243c3b0b8817a16d840",
+    "demo-poster.png": "89c0e2042a9ecb75d7a0ca131c0df7bca0dcbb05ff845a927a3819b2717c4a76",
+    "demo.svg": "32e47d1ab33c4a3e29dd925dce025dc99685238a6c39f9d14cc38dcff039b3ca"
+  }
+}

@@ -21,16 +21,22 @@ For your own investigation, choose a specific failure signature, arrange the tar
 
 ## README animation
 
-The README GIF is an animated summary of a recorded FailTrace 1.0.0 CLI demo. It follows the same observations above and highlights the unrelated-error check. The layout abbreviates the CLI output and edits timing for readability; it is not a recording of an autonomous agent, a GUI shipped with FailTrace, or a speed measurement. [Static poster](assets/demo-poster.png) · [Full static summary](assets/demo.svg)
+The README GIF summarizes the original CLI demo: a failure that comes and goes, a reduced input, an unrelated crash, and a checked patch. The first frame and poster show the observed failure immediately. The layout abbreviates output and edits timing; it depicts CLI results, not an autonomous agent session or a speed measurement. [Static poster](assets/demo-poster.png) · [Full static summary](assets/demo.svg)
+
+The [recording manifest](assets/demo-recording.json) records the CLI version, checked outcomes and asset hashes. It contains no raw logs, environment values or local machine paths. The current recording uses the source build with unchanged 1.3.0 demo behavior.
 
 To regenerate it, use Node.js and the optional maintainer image renderer. This does not add a runtime dependency to FailTrace:
 
 ```sh
 npm install --prefix .failtrace/media-tools --no-save --package-lock=false sharp@0.35.4
 npm run build
+node scripts/render-demo.mjs
 node scripts/render-demo-animation.mjs
+npm run check:docs
 ```
 
-The renderer executes the demo and validates the depicted results before writing `docs/assets/demo.gif` and `docs/assets/demo-poster.png`. Use `--cli <installed-package>/dist/cli/index.js` to record an independently installed release, or `--sharp <sharp-package-directory>` to use an existing renderer installation. Raw evidence and vector storyboards stay under the generated `.failtrace/demos/<id>/` directory. The GIF must remain below 1 MiB. Rendering uses [Sharp's GIF output](https://sharp.pixelplumbing.com/api-output/#gif).
+The renderers execute the demo and validate the depicted results before writing the static SVG, GIF, poster and recording manifest. Use `--cli <installed-package>/dist/cli/index.js` on both renderers to record an independently installed package, or `--sharp <sharp-package-directory>` on the animation renderer to use an existing image library. Raw evidence and vector storyboards stay under `.failtrace/demos/<id>/`. Keep the GIF below 1 MiB.
 
-Review each scene and the animation at README width before committing. Only validated demo values enter the artwork; local command paths, artifact paths, environment values and raw logs must remain private. Keep the caption's recorded version consistent with the CLI used to render. `node scripts/render-demo.mjs` separately regenerates the full static SVG summary from a fresh source demo.
+Review each scene at README width before committing. Only validated fixture values enter the artwork. Generate the SVG before the animation so the manifest covers all three current assets; `check:docs` rejects stale versions or changed assets.
+
+[Documentation index](README.md)

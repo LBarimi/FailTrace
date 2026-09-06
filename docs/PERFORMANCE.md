@@ -194,3 +194,5 @@ The benchmark separates costs before changing execution paths. The following are
 | Retention of old investigations | Managed output and copy budgets already exist. Removing inactive historical investigations needs an explicit policy that preserves active and referenced evidence. |
 
 Version 1.0 uses a fresh platform shell for each trial, bounded stdout/stderr pipes with backpressure, streamed substring rereads, isolated regex workers, and on-demand comparison hashes. Choose bounded experiments and measure the actual CI filesystem before applying FailTrace to every test invocation.
+
+[Documentation index](README.md)

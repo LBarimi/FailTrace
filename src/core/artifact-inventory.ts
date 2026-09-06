@@ -13,6 +13,8 @@ export interface ArtifactInventoryOptions {
   directory?: string;
   /** Traversed files and directories together. Default 20000; maximum 100000. */
   maxEntries?: number;
+  /** Optional limit for a read-only storage check; does not reserve or delete bytes. */
+  maxBytes?: number;
   signal?: AbortSignal;
 }
 export interface ArtifactInventoryEntry {
@@ -45,8 +47,16 @@ export interface ArtifactInventory {
   files: number;
   metadataBytesRead: number;
   snapshot: string;
+  /** Present only when maxBytes was requested. This is not a filesystem quota. */
+  budget?: ArtifactStorageBudget;
   entries: ArtifactInventoryEntry[];
   issues: string[];
+}
+
+export interface ArtifactStorageBudget {
+  maxBytes: number;
+  /** A partial scan can show an exceeded limit, but cannot establish room remaining. */
+  status: 'within_budget' | 'over_budget' | 'unknown';
 }
 
 const metadataNames = new Set(['run.json', 'bisect.json', 'result.json', 'verify.json', 'demo.json', 'repro.json']);
@@ -65,6 +75,9 @@ function owner(path: string): { path: string; kind: ArtifactKind } {
 export async function inventoryArtifacts(options: ArtifactInventoryOptions = {}): Promise<ArtifactInventory> {
   const maxEntries = options.maxEntries ?? 20_000;
   if (!Number.isSafeInteger(maxEntries) || maxEntries < 1 || maxEntries > 100_000) throw new Error('Inventory maxEntries must be between 1 and 100000.');
+  if (options.maxBytes !== undefined && (!Number.isSafeInteger(options.maxBytes) || options.maxBytes < 1)) {
+    throw new Error('Inventory maxBytes must be a positive safe integer.');
+  }
   if (options.directory !== undefined && (typeof options.directory !== 'string' || !options.directory.trim() || options.directory.includes('\0'))) {
     throw new Error('Provide an artifact storage directory.');
   }
@@ -77,7 +90,9 @@ export async function inventoryArtifacts(options: ArtifactInventoryOptions = {})
   // Canonicalize that base, then reject redirects within the selected storage path.
   const directory = inside(fromCwd) ? resolve(cwd, fromCwd) : resolve(cwd, options.directory ?? '.failtrace');
   const result: ArtifactInventory = { schemaVersion: 1, directory, exists: false, complete: true, scannedEntries: 0, maxEntries,
-    bytes: 0, files: 0, metadataBytesRead: 0, snapshot: '', entries: [], issues: [] };
+    bytes: 0, files: 0, metadataBytesRead: 0, snapshot: '', entries: [], issues: [],
+    ...(options.maxBytes === undefined ? {} : { budget: { maxBytes: options.maxBytes, status: 'within_budget' } }),
+  };
   options.signal?.throwIfAborted();
   // Reject links in the requested root and its ancestors, including junctions.
   const ancestors: string[] = [];
@@ -209,5 +224,7 @@ export async function inventoryArtifacts(options: ArtifactInventoryOptions = {})
   result.entries = [...groups.values()].sort((a, b) => a.path.localeCompare(b.path));
   for (const group of result.entries) { group.references.sort(); group.referencedBy.sort(); }
   result.snapshot = createHash('sha256').update(fingerprints.sort().join('\n')).digest('hex');
+  if (result.budget) result.budget.status = result.bytes > result.budget.maxBytes
+    ? 'over_budget' : result.complete ? 'within_budget' : 'unknown';
   return result;
 }

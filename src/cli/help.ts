@@ -279,14 +279,16 @@ in a healthy sample, 2 inconclusive/error. ${interruption}
 Available since FailTrace 1.2.0. No files are deleted.
 
 Usage:
-  failtrace artifacts [--directory STORAGE_ROOT] [--max-entries N] [--json]
+  failtrace artifacts [--directory STORAGE_ROOT] [--max-entries N] [--max-bytes N] [--json]
 
 Options:
   --directory STORAGE_ROOT  Storage root (default: .failtrace relative to cwd)
   --max-entries N           Entry inspection budget (20000; maximum 100000)
+  --max-bytes N             Optional logical storage budget in bytes (no quota)
 ${common}
 Example:
   failtrace artifacts --json
+  failtrace artifacts --max-bytes 1073741824 --json
 
 Next:
   Read issues and complete before relying on totals from a partial scan.
@@ -295,7 +297,10 @@ Next:
 Reports logical bytes, known references, and unknown files; does not delete,
 create artifacts, or execute commands. Reported state and absent references
 do not establish that an investigation is inactive or safe to delete.
-Exit: 0 complete snapshot, 2 partial/invalid/error. ${interruption}
+Budget: within_budget, over_budget, or unknown when a partial scan cannot decide.
+This check does not reserve space or stop concurrent writers.
+Exit: 0 complete within budget (or no budget), 1 complete over budget,
+2 partial/invalid/error. ${interruption}
 `,
   mcp: `FailTrace mcp - expose local debugging experiments to coding agents
 

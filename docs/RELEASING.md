@@ -4,6 +4,8 @@ Publish the exact reviewed GitHub release archive to npm using its public HTTPS 
 
 ## Prepare and verify the public archive
 
+Run `npm run check:docs` before release preparation. It checks package/runtime/MCP consistency, local documentation links, and the demo recording's asset hashes. Install examples and demo assets follow the published version declared in `docs/INSTALL.md`, which can lag a source release being prepared. After verifying publication, update that declaration, current install pins and demo assets together; retain historical versions in release records and migration notes. This offline check does not establish publication; public installation verification below remains required.
+
 1. Use an exact version with matching package, runtime, lockfile, and MCP metadata. Keep the existing release gates: the exact `main` commit must pass all six Windows/macOS/Linux and Node.js 22/24 CI jobs, plus the `minimum-node` installed-package check on Node.js 22.12.0. Any existing version tag must point to that commit.
 2. Run the [Prepare release tarball workflow](https://github.com/LBarimi/FailTrace/blob/main/.github/workflows/release.yml). It builds, packs, smoke-tests the installed package outside the checkout, and produces the archive, `SHA256SUMS`, and `release.json`. This workflow prepares artifacts; it does not publish them.
 3. Review those artifacts, then attach the same archive and checksum to the corresponding public GitHub release. Download the HTTPS asset without authentication and confirm its SHA-256 matches the reviewed checksum. Preserve those exact bytes; do not repack the source or substitute another archive for npm publication.
@@ -36,3 +38,5 @@ node --input-type=module -e "const v = '<VERSION>'; const r = await fetch('https
 After these checks, the existing [MCP Registry workflow](https://github.com/LBarimi/FailTrace/blob/main/.github/workflows/mcp-registry.yml) can publish the matching server metadata; it independently requires the exact public npm version and successful CI.
 
 This procedure prevents local archive inputs in future publications. It does not remove metadata from versions already published. Treat any existing exposure as a separate registry issue and report only removal that has been verified publicly.
+
+[Documentation index](README.md)

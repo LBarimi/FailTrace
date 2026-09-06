@@ -48,3 +48,5 @@ Statistical uncertainty requires a defined sampling plan. Sequential trials are 
 Output, input copies, input complexity and metadata are bounded; see [resource limits](RESOURCE-LIMITS.md). Target services, dependency setup and state reset remain the caller's responsibility. Concurrency changes resource contention and may change failure behavior.
 
 Core stays independent of CLI/MCP, AI providers and cloud services. No hosted service, accounts or telemetry are needed. Additional predicate modes, environment matrices and reducers require evidence of a useful debugging problem before implementation.
+
+[Documentation index](README.md)

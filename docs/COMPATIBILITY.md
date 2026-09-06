@@ -1,5 +1,9 @@
 # Compatibility contract for 1.x
 
+## Storage budget check in 1.4.0
+
+`inventoryArtifacts({ maxBytes })` adds an optional `budget` result; omitted options preserve the existing inventory contract. `artifacts --max-bytes N` exits 1 only for a complete scan over budget; partial scans still exit 2. It does not reserve space, delete files or change the seven MCP tools. Version 1.3.0 does not include the option. See [storage budget semantics](ARTIFACTS.md#check-a-storage-budget).
+
 ## NUnit test evidence in 1.3.0
 
 The opt-in `nunit_test` predicate follows an exact NUnit 3 test fullname and optional failure message. Use 1.3.0 or newer throughout run, saved inspection, comparison, Verify and replay; older versions do not understand the new predicate. Existing predicates and the seven MCP tool names remain supported. New `unitTest` evidence is additive, bounded and validated when loading stored records. Missing/skipped tests, unrelated failures and incomplete reports are inconclusive. This integration supports NUnit 3 XML, including the documented Unity variant; it does not accept JUnit, TRX or NUnit 2. See the [unit-test contract and example](UNIT-TESTS.md).
@@ -69,3 +73,5 @@ This covers these formats and representative records, not every historical artif
 Missing old fields retain their meaning. An absent concurrency value means legacy sequential execution where the operation supports it. An absent output cap remains unknown in loaded evidence. Pre-0.5.0 records without captured context can still be compared and inspected but are not valid Verify baselines. Capture a fresh baseline instead of inventing context or treating missing data as a successful fix.
 
 There is no general importer that migrates every old `bisect.json`, minimization report, Verify report or reproduction config. Read those as their declared version, follow their saved run references where available, or use the original package/bundle. Old self-contained bundles retain their original engine and behavior; installing a newer FailTrace does not upgrade them.
+
+[Documentation index](README.md)

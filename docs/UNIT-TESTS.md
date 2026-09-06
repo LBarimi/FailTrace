@@ -120,3 +120,5 @@ The automated Node suite separately exercises report validation, stale/missing r
 - [Unity Editor command-line behavior](https://docs.unity3d.com/6000.0/Documentation/Manual/EditorCommandLineArguments.html)
 - [NUnit 3 XML format](https://docs.nunit.org/articles/nunit/technical-notes/usage/Test-Result-XML-Format.html)
 - [Verify contract](VERIFY.md)
+
+[Documentation index](README.md)
