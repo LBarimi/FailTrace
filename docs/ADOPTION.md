@@ -26,7 +26,7 @@ The initial inspection on 2026-09-04 found zero stars and forks before distribut
 
 ## Current priorities
 
-The unreleased [NUnit/Unity integration](UNIT-TESTS.md) addresses the requested workflow of checking an existing game unit test through an agent. A maintainer-controlled Unity EditMode example exercises a failing baseline, a source fix and a skipped-test negative control over MCP. This establishes a working integration in the documented environment, not independent adoption or a production performance claim.
+The 1.3.0 [NUnit/Unity integration](UNIT-TESTS.md) addresses the requested workflow of checking an existing game unit test through an agent. A maintainer-controlled Unity EditMode example exercises a failing baseline, a source fix and a skipped-test negative control over MCP. This establishes a working integration in the documented environment, not independent adoption or a production performance claim.
 
 1. **Shorten time to useful evidence.** Help a developer connect an existing command, select a meaningful target, capture a baseline and interpret the next result. Keep saved commands and context inspectable.
 2. **Preserve the meaning of a check.** Distinguish target matches, skipped execution, unrelated failures and incomplete evidence. Make useful negative controls easy to run.

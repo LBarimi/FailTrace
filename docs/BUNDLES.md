@@ -1,6 +1,6 @@
 # Review a bundle before sharing
 
-**Unreleased NUnit integration:** NUnit bundles include the XML parser and its licenses for offline Core replay. Raw NUnit reports can contain machine/user metadata and are included only with `--include-evidence`; review them alongside other original evidence. See [unit-test integration](UNIT-TESTS.md).
+**NUnit integration in 1.3.0:** NUnit bundles include the XML parser and its licenses for offline Core replay. Raw NUnit reports can contain machine/user metadata and are included only with `--include-evidence`; review them alongside other original evidence. See [unit-test integration](UNIT-TESTS.md).
 
 The controls on this page require FailTrace 1.0. Version 0.6.0 includes original evidence and captured environment values by default. See [installation and publication status](../README.md#quick-start) when selecting a package version.
 

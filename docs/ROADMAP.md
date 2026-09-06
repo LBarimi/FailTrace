@@ -20,6 +20,10 @@ This expresses product emphasis. An investigation can use just the operations it
 
 The original milestones are implemented. Their completion is not an adoption metric. See the [compatibility contract](COMPATIBILITY.md), [command reference](CLI.md) and [performance scope](PERFORMANCE.md).
 
+## NUnit and Unity integration in 1.3.0
+
+[Existing unit tests](UNIT-TESTS.md) can supply an exact failure predicate through Core, CLI and the existing MCP tools. Fresh NUnit 3 reports distinguish executed passes, target failures and incomplete evidence. Verify retains the selected test and rereads its saved report. The original Unity EditMode example demonstrates the complete agent workflow in the documented environment. See the README for publication status.
+
 ## Improvements in 1.2.0
 
 Version 1.2.0 supports [execution checkpoints](EXECUTION-EVIDENCE.md). A baseline can require a message emitted after the intended check has run. Verify inherits it and reports an inconclusive result when a candidate silently skips that check. Core, CLI, MCP, saved inspection, comparison, classification and replay preserve the condition. Published 1.1.0 does not include this option.

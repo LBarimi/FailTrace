@@ -1,6 +1,6 @@
 # Use FailTrace with a coding agent
 
-**Unreleased source integration:** [NUnit and Unity unit tests](UNIT-TESTS.md) use existing MCP tools with `predicate.kind: "nunit_test"`, a fresh `{testReport}` destination and structured `trial.unitTest` evidence. The guide covers baseline capture, patch verification and missing/skipped tests. Published npm 1.2.0 does not provide this predicate.
+**NUnit integration in 1.3.0:** [NUnit and Unity unit tests](UNIT-TESTS.md) use existing MCP tools with `predicate.kind: "nunit_test"`, a fresh `{testReport}` destination and structured `trial.unitTest` evidence. The guide covers baseline capture, patch verification and missing/skipped tests. Version 1.2.0 does not provide this predicate; see the README for publication status.
 
 This guide targets published FailTrace 1.2.0. Version 1.2.0 adds [execution checkpoints](EXECUTION-EVIDENCE.md); use a supporting version throughout that workflow. See the [installation instructions](../README.md#quick-start) for verified npm and GitHub package commands.
 

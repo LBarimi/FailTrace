@@ -9,7 +9,7 @@ Use FailTrace from the **CLI or an MCP client** to repeat commands, compare fail
 [![CI](https://github.com/LBarimi/FailTrace/actions/workflows/ci.yml/badge.svg)](https://github.com/LBarimi/FailTrace/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**[Try the demo](#quick-start)** · **[Connect your coding agent](docs/AGENT-WORKFLOWS.md)** · **[Use your own command](#use-it-on-your-own-failure)**
+**[Try the demo](#quick-start)** · **[Connect your coding agent](docs/AGENT-WORKFLOWS.md)** · **[Use your own command](#use-it-on-your-own-failure)** · **[Recheck a unit test](#recheck-an-existing-unit-test)**
 
 ## Quick start
 
@@ -51,6 +51,18 @@ Seven tools expose the same Core engine: `failtrace_run`, `failtrace_compare`, `
 
 An installed MCP server makes the tools available; the agent still chooses when to use them. A healthy sample with no target observed does not prove a bug is gone.
 
+## Recheck an existing unit test
+
+**Follow a failing test through the fix.** Keep your existing NUnit or Unity assertions. FailTrace tracks the exact test, captures a baseline, and rechecks it after your agent changes the code.
+
+- **Fresh results for every attempt.** Each trial gets its own NUnit 3 report.
+- **Clear outcomes for your agent.** MCP returns the selected test's result and a reason when evidence is incomplete. Missing, skipped or unrelated failed tests stay inconclusive.
+- **Continue the investigation.** Use the same test with regression search, input minimization and replay bundles.
+
+**[Try the original Unity example or connect your NUnit test →](docs/UNIT-TESTS.md)**
+
+This integration requires **1.3.0 or newer**. The 1.3.0 release is being prepared; the guide currently includes source-build instructions. Unity validation covers the documented Windows EditMode example.
+
 ## Use it on your own failure
 
 Run this from your project, replacing the command and error message with your own:
@@ -87,7 +99,7 @@ The target command can use any runtime; FailTrace itself requires Node.js. Input
 
 ## Availability and contributing
 
-**Source checkout, unreleased:** [Investigate an existing NUnit or Unity unit test](docs/UNIT-TESTS.md). Select an exact test through CLI or MCP, preserve a fresh NUnit 3 report per trial, and verify a patch without accepting missing or skipped tests. Includes an original Unity inventory example. Published npm 1.2.0 does not include this integration.
+**Prepared for 1.3.0; publication pending:** [Investigate an existing NUnit or Unity unit test](docs/UNIT-TESTS.md). Select an exact test through CLI or MCP, preserve a fresh NUnit 3 report per trial, and verify a patch without accepting missing or skipped tests. Includes an original Unity inventory example. Published npm 1.2.0 does not include this integration.
 
 **1.2.0 is published on npm and as a [GitHub release](https://github.com/LBarimi/FailTrace/releases/tag/v1.2.0).** The commands above use that exact package. See [installation alternatives](docs/INSTALL.md), the [1.x compatibility contract](docs/COMPATIBILITY.md), and [migration from 0.x](docs/MIGRATING-TO-1.md).
 

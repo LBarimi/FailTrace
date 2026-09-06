@@ -1,5 +1,9 @@
 # Compatibility contract for 1.x
 
+## NUnit test evidence in 1.3.0
+
+The opt-in `nunit_test` predicate follows an exact NUnit 3 test fullname and optional failure message. Use 1.3.0 or newer throughout run, saved inspection, comparison, Verify and replay; older versions do not understand the new predicate. Existing predicates and the seven MCP tool names remain supported. New `unitTest` evidence is additive, bounded and validated when loading stored records. Missing/skipped tests, unrelated failures and incomplete reports are inconclusive. This integration supports NUnit 3 XML, including the documented Unity variant; it does not accept JUnit, TRX or NUnit 2. See the [unit-test contract and example](UNIT-TESTS.md).
+
 ## Direct execution in 1.2.0
 
 Optional `args` on Core/MCP command options selects literal executable invocation; the CLI exposes it with `--exec` and repeated `--arg`. Absence preserves the existing shell command contract, while an explicit empty array still selects direct execution. Saved trials and runs retain argument values. Compare and Verify include arguments and execution mode in command identity, and Verify never inherits execution authority from a saved baseline. Minimize and bundle replay bind only entire `{input}` arguments. Use a supporting build throughout; older readers cannot enforce the new identity. See [direct execution and input binding](DIRECT-EXECUTION.md).

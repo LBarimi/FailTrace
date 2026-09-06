@@ -1,6 +1,6 @@
 # Investigate an existing NUnit or Unity test
 
-**Source checkout feature, unreleased. Published npm 1.2.0 does not include these options.** Build this checkout with `npm ci` and `npm run build`. Configure your MCP client to launch `node` with the absolute path to this checkout's `dist/cli/index.js`, followed by `mcp --cwd` and your project directory.
+**Added in 1.3.0.** Check the [README publication status](../README.md#availability-and-contributing) before choosing a package; version 1.2.0 does not include these options. The source workflow below is available during release preparation. Build this checkout with `npm ci` and `npm run build`. Configure your MCP client to launch `node` with the absolute path to this checkout's `dist/cli/index.js`, followed by `mcp --cwd` and your project directory.
 
 FailTrace uses an existing test as the failure oracle. Your framework writes NUnit 3 XML; FailTrace follows one exact test, saves fresh evidence and rechecks a proposed change. Your project still supplies the assertions and reproduction scenario.
 
