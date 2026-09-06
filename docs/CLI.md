@@ -1,5 +1,7 @@
 # Command reference
 
+**Source checkout, unreleased:** `--nunit-test FULLNAME` and optional `--nunit-message TEXT` select NUnit 3 evidence for run/bisect/minimize. Pass a complete `--arg "{testReport}"` to the runner's report option, or use `FAILTRACE_TEST_REPORT` in a wrapper. Verify inherits the selected test. See the [unit-test guide](UNIT-TESTS.md); these flags are unavailable in published 1.2.0.
+
 Since 1.2.0, **command-specific help** is available: `failtrace minimize --help`, `failtrace verify --help`, and each other command show their own options, examples, result meanings, and next steps. `failtrace --help` remains the short command overview. Help does not run a target, read investigation evidence, or create artifacts.
 
 Version 1.2.0 also adds the read-only `artifacts` command. It reports bounded storage totals and known investigation references; see the [storage inventory guide](ARTIFACTS.md).

@@ -60,6 +60,27 @@ async function exerciseInstalledCore() {
   }
   const project = join(consumer, 'independent project');
   await mkdir(project);
+  // Exercise XML parsing and Verify from the installed package, including its runtime dependency.
+  const nunit = join(project, 'nunit.mjs');
+  await writeFile(nunit, `import {writeFile} from 'node:fs/promises';
+const failed = process.argv[2] === 'failed';
+const state = failed ? 'Failed' : 'Passed';
+await writeFile(process.env.FAILTRACE_TEST_REPORT, '<test-run result="'+state+'" total="1" passed="'+(failed?0:1)+'" failed="'+(failed?1:0)+'" skipped="0" inconclusive="0"><test-suite result="'+state+'"><test-case fullname="Installed.Test" result="'+state+'"/></test-suite></test-run>');
+process.exitCode = failed ? 1 : 0;
+`);
+  const nunitBaseline = await api.runTrials({ command: process.execPath, args: ['nunit.mjs', 'failed'], cwd: project, repeat: 1,
+    predicate: { kind: 'nunit_test', fullName: 'Installed.Test' }, captureContext: { sourceFiles: ['nunit.mjs'] } });
+  assert.equal(api.assessRun(nunitBaseline), 'reproduced');
+  const nunitFixed = await api.verifyFix({ baseline: nunitBaseline.artifactDirectory, command: process.execPath, args: ['nunit.mjs', 'passed'], cwd: project,
+    allowChanges: [{ field: 'command', reason: 'Select passing installed control.' }] });
+  assert.equal(nunitFixed.status, 'target_not_observed');
+  const nunitBundle = await api.createBundle({ run: nunitBaseline.artifactDirectory, cwd: project,
+    files: ['nunit.mjs'], command: 'node', args: ['nunit.mjs', 'failed'] });
+  const runNode = (await import('node:util')).promisify((await import('node:child_process')).execFile);
+  await assert.rejects(runNode(process.execPath, [join(nunitBundle.directory, 'repro.mjs')], { cwd: project, windowsHide: true, timeout: 15000 }),
+    error => error.code === 1 && error.stdout.includes('Target failure reproduced: 1 / 1'));
+  const unityExample = join(installed, 'examples', 'unit-tests', 'unity', 'InventoryTests.cs');
+  assert((await readFile(unityExample, 'utf8')).includes('SaveRoundTripPreservesItems'));
   await assert.rejects(api.runTrials({ cwd: project, command: 'unused', repeat: 100001 }), /100000/);
   await assert.rejects(api.runTrials({ cwd: project, command: 'unused', concurrency: 65 }), /64/);
   const target = join(project, 'target.mjs');

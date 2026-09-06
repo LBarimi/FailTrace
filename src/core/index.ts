@@ -2,6 +2,8 @@ export { runTrials, validateRunOptions, VERSION, DEFAULT_REPEAT, DEFAULT_TIMEOUT
 export { aggregateStatistics } from './statistics.js';
 export { assessRun, validatePredicate, DEFAULT_PREDICATE } from './predicates.js';
 export { validateExecutionRequirement } from './execution-evidence.js';
+export { parseNUnitReport, MAX_TEST_REPORT_BYTES, TEST_REPORT_ARGUMENT } from './nunit-report.js';
+export type { NUnitEvidence, NUnitPredicate } from './nunit-report.js';
 export type { ExecutionRequirement } from './types.js';
 export { loadRun } from './run-reader.js';
 export { inspectRunEvidence } from './inspect.js';

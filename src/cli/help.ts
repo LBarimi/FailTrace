@@ -16,6 +16,11 @@ const predicates = `Failure condition (choose one; default: non-zero exit):
   --exit-code N              Match exactly this exit code, including 0
   --stdout-contains TEXT | --stderr-contains TEXT
   --stdout-regex REGEX   | --stderr-regex REGEX [--regex-flags imsu]
+  --nunit-test FULLNAME      Read one exact test from a fresh NUnit 3 report
+  --nunit-message TEXT       Also require this text in the target failure message
+  With --nunit-test, pass --arg "{testReport}" as the runner's result path,
+  or have a wrapper write to FAILTRACE_TEST_REPORT. Missing, skipped, ambiguous
+  or unrelated failed tests are inconclusive. XML reader limit: 4 MiB.
   Regex checks allow at most 16 MiB and one second per evaluation.
   Use --stderr-contains=--message for text starting with --.
 

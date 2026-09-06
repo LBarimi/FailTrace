@@ -42,6 +42,7 @@ export interface InspectedTrial {
   status: TrialStatus;
   failureMatched: boolean | null;
   executionMatched?: boolean | null;
+  unitTest?: TrialResult['unitTest'];
   unhealthy: boolean;
   exitCode: number | null;
   durationMs: number;
@@ -132,6 +133,8 @@ function matchingState(trial: TrialResult): boolean | null {
 function unhealthyTrial(trial: TrialResult, run: RunSummary): boolean {
   const matched = matchingState(trial);
   return !sameCommand(trial, run)
+    || (run.predicate?.kind === 'nunit_test' && (!trial.unitTest || trial.unitTest.outcome === 'inconclusive'
+      || trial.unitTest.fullName !== run.predicate.fullName || (trial.unitTest.outcome === 'failed') !== matched))
     || (run.executionRequirement !== undefined && trial.executionMatched !== true)
     || trial.terminationReason !== 'exit'
     || trial.signal !== null
@@ -159,6 +162,7 @@ function projectTrial(trial: TrialResult, run: RunSummary): InspectedTrial {
     status: trial.status,
     ...(run.executionRequirement === undefined ? {} : { executionMatched: trial.executionMatched ?? null }),
     failureMatched: matchingState(trial),
+    ...(trial.unitTest === undefined ? {} : { unitTest: structuredClone(trial.unitTest) }),
     unhealthy: unhealthyTrial(trial, run),
     exitCode: trial.exitCode,
     durationMs: trial.durationMs,

@@ -87,6 +87,8 @@ The target command can use any runtime; FailTrace itself requires Node.js. Input
 
 ## Availability and contributing
 
+**Source checkout, unreleased:** [Investigate an existing NUnit or Unity unit test](docs/UNIT-TESTS.md). Select an exact test through CLI or MCP, preserve a fresh NUnit 3 report per trial, and verify a patch without accepting missing or skipped tests. Includes an original Unity inventory example. Published npm 1.2.0 does not include this integration.
+
 **1.2.0 is published on npm and as a [GitHub release](https://github.com/LBarimi/FailTrace/releases/tag/v1.2.0).** The commands above use that exact package. See [installation alternatives](docs/INSTALL.md), the [1.x compatibility contract](docs/COMPATIBILITY.md), and [migration from 0.x](docs/MIGRATING-TO-1.md).
 
 Version 1.2.0 adds literal executable arguments, completed-check evidence, read-only storage inspection and stronger saved-evidence checks. Review the migration notes when upgrading existing workflows. [Changes and migration notes](CHANGELOG.md#120) · [Product roadmap](docs/ROADMAP.md)

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Add an NUnit 3 test predicate to Core, CLI and existing MCP tools. Follow an exact test fullname and optional failure message through run, bisect, minimize, Verify and replay. Assign a fresh result path per trial through `{testReport}` or `FAILTRACE_TEST_REPORT`.
+- Return bounded test outcomes, report counts, reasons and digests. Missing/skipped/ambiguous tests, unrelated failures, unhealthy processes and incomplete reports are inconclusive. Verify rereads saved XML instead of trusting a claimed pass.
+- Add an isolated original Unity EditMode inventory example and an agent workflow guide. Load the XML parser only for NUnit interpretation; NUnit bundles include its runtime and licenses for offline Core replay.
+
 ## 1.2.0
 
 Published on npm and as the [1.2.0 GitHub release](https://github.com/LBarimi/FailTrace/releases/tag/v1.2.0), with matching reviewed archive bytes, a fresh public installation and an active MCP Registry record. See the [README](README.md#availability-and-contributing) for installation.

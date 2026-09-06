@@ -40,15 +40,15 @@ function integer(value: string, name: string, min = 1, max = Number.MAX_SAFE_INT
   return result;
 }
 
-const predicateFlags = ['exit-code', 'stdout-contains', 'stderr-contains', 'stdout-regex', 'stderr-regex'];
+const predicateFlags = ['exit-code', 'stdout-contains', 'stderr-contains', 'stdout-regex', 'stderr-regex', 'nunit-test'];
 const outputFlags = ['max-output-bytes', 'max-total-output-bytes'];
 const executionFlags = ['require-stdout-contains', 'require-stderr-contains'];
 const directFlags = ['exec', 'arg'];
-const experiments = ['command', ...directFlags, 'repeat', 'timeout', ...predicateFlags, ...executionFlags, 'regex-flags', ...outputFlags];
+const experiments = ['command', ...directFlags, 'repeat', 'timeout', ...predicateFlags, ...executionFlags, 'regex-flags', 'nunit-message', ...outputFlags];
 const allowed: Record<string, string[]> = {
   demo: ['cwd', 'json'],
   artifacts: ['directory', 'max-entries', 'cwd', 'json'],
-  run: [...directFlags, 'repeat', 'timeout', 'concurrency', ...outputFlags, ...predicateFlags, ...executionFlags, 'regex-flags', 'capture-env', 'capture-context', 'context-input', 'context-setup', 'context-source', 'cwd', 'json'],
+  run: [...directFlags, 'repeat', 'timeout', 'concurrency', ...outputFlags, ...predicateFlags, ...executionFlags, 'regex-flags', 'nunit-message', 'capture-env', 'capture-context', 'context-input', 'context-setup', 'context-source', 'cwd', 'json'],
   verify: ['command', ...directFlags, 'cwd', 'repeat', 'timeout', 'concurrency', ...outputFlags, 'healthy-exit-code', 'allow-change', 'json'],
   compare: ['trial-a', 'trial-b', 'max-lines', 'max-bytes', 'cwd', 'json'],
   bisect: [...experiments, 'good', 'bad', 'min-failures', 'healthy-exit-code', 'inconclusive-exit-code', 'cwd', 'json'],
@@ -66,6 +66,8 @@ function parsePredicate(values: Map<string, string[]>): FailurePredicate | undef
   const selected = predicateFlags.filter((flag) => values.has(flag));
   if (selected.length > 1) throw new Error('Choose one failure predicate.');
   const flag = selected[0];
+  const messageContains = values.get('nunit-message')?.[0];
+  if (messageContains !== undefined && flag !== 'nunit-test') throw new Error('--nunit-message requires --nunit-test.');
   const regexFlags = values.get('regex-flags')?.[0];
   if (regexFlags !== undefined && flag !== 'stdout-regex' && flag !== 'stderr-regex') {
     throw new Error('--regex-flags requires --stdout-regex or --stderr-regex.');
@@ -73,6 +75,7 @@ function parsePredicate(values: Map<string, string[]>): FailurePredicate | undef
   if (flag === undefined) return undefined;
   const value = values.get(flag)![0]!;
   if (flag === 'exit-code') return { kind: 'exit_code', value: integer(value, 'Exit code', 0, 0xffff_ffff) };
+  if (flag === 'nunit-test') return { kind: 'nunit_test', fullName: value, ...(messageContains === undefined ? {} : { messageContains }) };
   if (flag === 'stdout-contains' || flag === 'stderr-contains') {
     return { kind: flag === 'stdout-contains' ? 'stdout_contains' : 'stderr_contains', value };
   }

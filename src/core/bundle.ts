@@ -9,6 +9,7 @@ import { BundleWriter, DEFAULT_MAX_BUNDLE_BYTES, MAX_BUNDLE_FILES, portableRelat
 import { bundleEnvironment, type BundleEnvironmentRequirement } from './bundle-environment.js';
 import { validateRunOptions, VERSION } from './run-trials.js';
 import { INPUT_ARGUMENT, validateCommand } from './command.js';
+import { copyCoreDependencies } from './bundle-dependencies.js';
 
 export interface BundleOptions {
   run: string;
@@ -334,6 +335,7 @@ export async function createBundle(options: BundleOptions): Promise<BundleResult
       for (const trial of run.trials) {
         evidencePaths.add(trial.stdoutPath);
         evidencePaths.add(trial.stderrPath);
+        if (trial.unitTest?.sha256 && trial.unitTest.reportPath) evidencePaths.add(trial.unitTest.reportPath);
         evidencePaths.add(`${dirname(trial.stdoutPath).replaceAll('\\', '/')}/result.json`);
       }
       for (const path of evidencePaths) {
@@ -343,6 +345,7 @@ export async function createBundle(options: BundleOptions): Promise<BundleResult
       }
     }
     await writer.directory(engineDirectory, 'engine', 'engine', options.signal, true);
+    if (run.predicate?.kind === 'nunit_test') await copyCoreDependencies(writer, options.signal);
     await writer.text('engine/package.json', '{"type":"module"}\n', 'engine');
     const license = await readFile(resolve(engineDirectory, '../../LICENSE'), 'utf8');
     await writer.text('engine/LICENSE', license, 'engine');

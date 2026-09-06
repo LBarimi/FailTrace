@@ -54,6 +54,11 @@ export function formatSummary(summary: RunSummary): string {
     `  Passed         ${statistics.passed}`,
     `  Failed         ${statistics.failed}`,
     `  Matched        ${matched}`,
+    ...(summary.predicate?.kind === 'nunit_test' ? [
+      `  NUnit test     ${summary.predicate.fullName}`,
+      `  Inconclusive   ${summary.trials.filter(trial => trial.unitTest?.outcome === 'inconclusive').length}`,
+      ...summary.trials.filter(trial => trial.unitTest?.reason).slice(0, 3).map(trial => `  Trial ${trial.index}: ${trial.unitTest!.reason}`),
+    ] : []),
     ...(summary.executionRequirement === undefined ? [] : [`  Checkpoint     ${statistics.total - missingExecution} / ${statistics.total} observed`]),
     `  Failure rate   ${(statistics.failureRate * 100).toFixed(1)}%`,
     '',
@@ -68,7 +73,9 @@ export function formatSummary(summary: RunSummary): string {
       : summary.status === 'resource_limited' ? summary.metadataLimit
         ? 'Run inconclusive: metadata allowance reached. Completed evidence is preserved.'
         : 'Run inconclusive: output limit reached. Partial logs are preserved.'
-      : summary.status === 'error' ? 'Run inconclusive: evidence could not be fully persisted.'
+      : summary.status === 'error' ? summary.predicate?.kind === 'nunit_test'
+        ? 'Run inconclusive: NUnit test evidence is incomplete or unhealthy. Inspect trial reasons.'
+        : 'Run inconclusive: evidence could not be fully persisted.'
       : missingExecution > 0 ? 'Run inconclusive: required execution checkpoint missing. Check whether the intended check ran.'
       : matched > 0 ? 'Failure reproduced.' : statistics.failed > 0
         ? 'Target failure not reproduced; inspect execution failure evidence.' : 'No failure reproduced in this run.',

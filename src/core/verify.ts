@@ -3,7 +3,7 @@ import { mkdir, readdir, realpath, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { writeJsonAtomic } from './artifacts.js';
 import { captureEnvironment } from './environment.js';
-import { validatePredicate } from './predicates.js';
+import { matchesFailure, validatePredicate } from './predicates.js';
 import { matchesExecution, validateExecutionRequirement } from './execution-evidence.js';
 import { loadRun, safeArtifactPath } from './run-reader.js';
 import { runTrials, validateRunOptions } from './run-trials.js';
@@ -170,6 +170,10 @@ async function checkEvidenceFiles(run: RunSummary, signal?: AbortSignal): Promis
       if (trial.stdoutPath !== `${folder}/stdout.txt` || trial.stderrPath !== `${folder}/stderr.txt`) throw new Error('Invalid output path.');
       for (const path of [trial.stdoutPath, trial.stderrPath]) {
         if (!(await stat(await safeArtifactPath(run.artifactDirectory, path))).isFile()) throw new Error('Missing output file.');
+      }
+      if (run.predicate?.kind === 'nunit_test' && (!trial.unitTest
+        || await matchesFailure(trial, run.artifactDirectory, run.predicate) !== trial.failureMatched)) {
+        return ['Saved NUnit evidence is missing or no longer agrees with the recorded target outcome.'];
       }
       if (run.executionRequirement !== undefined
         && !await matchesExecution(trial, run.artifactDirectory, run.executionRequirement)) {

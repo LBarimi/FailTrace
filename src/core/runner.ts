@@ -8,6 +8,7 @@ import { effectiveEnvironment } from './environment.js';
 import { DEFAULT_MAX_OUTPUT_BYTES, DEFAULT_MAX_TOTAL_OUTPUT_BYTES, OutputBudget, type OutputLimit } from './output-budget.js';
 import type { TrialOptions, TrialResult } from './types.js';
 import { SubstringMatcher } from './substring-matcher.js';
+import { nunitReportDestination, TEST_REPORT_ARGUMENT } from './nunit-report.js';
 
 interface ExecutionResult {
   exitCode: number | null;
@@ -25,6 +26,7 @@ function commandEnvironment(options: TrialOptions): NodeJS.ProcessEnv {
   return effectiveEnvironment({
     ...options.env,
     FAILTRACE_TRIAL_INDEX: String(options.index),
+    ...(options.predicate?.kind === 'nunit_test' ? { FAILTRACE_TEST_REPORT: nunitReportDestination(options.runDirectory, options.index) } : {}),
   });
 }
 
@@ -54,7 +56,9 @@ async function execute(
     };
     child = options.args === undefined
       ? spawn(options.command, spawnOptions)
-      : spawn(options.command, options.args, spawnOptions);
+      : spawn(options.command, options.predicate?.kind === 'nunit_test'
+        ? options.args.map(arg => arg === TEST_REPORT_ARGUMENT ? nunitReportDestination(options.runDirectory, options.index) : arg)
+        : options.args, spawnOptions);
   } catch (error) {
     return {
       exitCode: null,

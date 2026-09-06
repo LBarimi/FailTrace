@@ -28,6 +28,7 @@
     "examples/advanced-demo-fixed.js",
     "examples/advanced-input.json",
     "examples/workflows",
+    "examples/unit-tests",
     "README.md",
     "CONTRIBUTING.md",
     "CHANGELOG.md",
@@ -75,6 +76,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/server": "^2.0.0",
+    "saxes": "6.0.0",
     "zod": "^4.5.4"
   }
 }

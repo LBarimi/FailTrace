@@ -9,6 +9,7 @@ import { outputLimits } from './output-budget.js';
 import { readBoundedFile } from './bounded-file.js';
 import { MAX_INVESTIGATION_METADATA_BYTES, MAX_RECORDED_TRIALS } from './metadata-budget.js';
 import { validateCommand } from './command.js';
+import { validateNUnitEvidence } from './nunit-report.js';
 
 /** Resolve a referenced artifact without accepting escapes or symbolic links. */
 export async function safeArtifactPath(directory: string, path: string): Promise<string> {
@@ -33,6 +34,7 @@ export async function safeArtifactPath(directory: string, path: string): Promise
 function validateTrial(value: unknown): asserts value is TrialResult {
   if (!value || typeof value !== 'object') throw new Error('Invalid trial metadata.');
   const trial = value as TrialResult;
+  if (trial.unitTest !== undefined) validateNUnitEvidence(trial.unitTest, trial.index);
   validateCommand(trial.command, trial.args);
   if (trial.executionMatched !== undefined && typeof trial.executionMatched !== 'boolean') throw new Error('Invalid execution evidence metadata.');
   if (!Number.isSafeInteger(trial.index) || trial.index < 1 || typeof trial.command !== 'string'

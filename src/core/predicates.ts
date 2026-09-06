@@ -3,12 +3,14 @@ import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Worker } from 'node:worker_threads';
 import type { FailurePredicate, RunSummary, TrialResult } from './types.js';
+import { readNUnitEvidence, validateNUnitPredicate } from './nunit-report.js';
 
 export const DEFAULT_PREDICATE: FailurePredicate = { kind: 'nonzero_exit' };
 export const MAX_REGEX_OUTPUT_BYTES = 16 * 1024 * 1024;
 
 export function validatePredicate(predicate: FailurePredicate = DEFAULT_PREDICATE): void {
   switch (predicate.kind) {
+    case 'nunit_test': return validateNUnitPredicate(predicate);
     case 'nonzero_exit': return;
     case 'exit_code':
       if (!Number.isSafeInteger(predicate.value) || predicate.value < 0 || predicate.value > 0xffff_ffff) {
@@ -92,6 +94,13 @@ export async function matchesFailure(
   // Infrastructure outcomes are distinct from a reproduced target predicate.
   if (trial.terminationReason !== 'exit' || trial.exitCode === null || trial.spawningFailed || trial.outputLimit || trial.error) return false;
   switch (predicate.kind) {
+    case 'nunit_test': {
+      const evidence = await readNUnitEvidence(trial, runDirectory, predicate);
+      if (evidence.outcome === 'inconclusive') throw new Error(evidence.reason);
+      if (trial.unitTest !== undefined && (evidence.sha256 !== trial.unitTest.sha256 || evidence.fullName !== trial.unitTest.fullName
+        || evidence.outcome !== trial.unitTest.outcome)) throw new Error('Saved NUnit report changed after capture.');
+      return evidence.outcome === 'failed';
+    }
     case 'nonzero_exit': return trial.exitCode !== 0;
     case 'exit_code': return trial.exitCode === predicate.value;
     case 'stdout_contains': return contains(join(runDirectory, trial.stdoutPath), predicate.value);
@@ -118,6 +127,8 @@ export function assessRun(summary: RunSummary, minFailures = 1): 'reproduced' | 
       || trial.spawningFailed || trial.timedOut || trial.signal !== null || trial.error !== undefined || trial.outputLimit !== undefined
       || trial.exitCode === null || !Number.isSafeInteger(trial.exitCode) || trial.exitCode < 0
       || (summary.executionRequirement !== undefined && trial.executionMatched !== true)
+      || (summary.predicate?.kind === 'nunit_test' && (!trial.unitTest || trial.unitTest.outcome === 'inconclusive'
+        || trial.unitTest.fullName !== summary.predicate.fullName || (trial.unitTest.outcome === 'failed') !== trial.failureMatched))
       || !['passed', 'failed'].includes(trial.status)
       || (trial.failureMatched !== undefined && trial.failureMatched !== (trial.status === 'failed'))) {
       return 'inconclusive';

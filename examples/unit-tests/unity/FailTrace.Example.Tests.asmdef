@@ -1,0 +1,5 @@
+{
+  "name": "FailTrace.Example.Tests",
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

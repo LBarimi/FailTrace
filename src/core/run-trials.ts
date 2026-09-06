@@ -11,6 +11,7 @@ import { DEFAULT_PREDICATE, matchesFailure, validatePredicate } from './predicat
 import { matchesExecution, validateExecutionRequirement } from './execution-evidence.js';
 import { captureContext, contextDeclaration, snapshotsEqual } from './verify-context.js';
 import type { RunOptions, RunSummary } from './types.js';
+import { readNUnitEvidence } from './nunit-report.js';
 import { OutputBudget, outputLimits } from './output-budget.js';
 import { diagnosticMessage, MAX_CONCURRENCY, MAX_METADATA_BYTES, MAX_RECORDED_TRIALS,
   MetadataBudget, MetadataLimitError, trialMetadataAllowance } from './metadata-budget.js';
@@ -152,6 +153,14 @@ async function executeRun(options: RunOptions, budget: OutputBudget, metadata: M
         summary.trials.push(trial);
         let predicateError: unknown;
         try {
+          if (summary.predicate?.kind === 'nunit_test') {
+            trial.unitTest = await readNUnitEvidence(trial, directory, summary.predicate);
+            trial.failureMatched = trial.unitTest.outcome === 'failed';
+            if (trial.unitTest.outcome === 'inconclusive' && trial.terminationReason === 'exit' && !trial.error) {
+              trial.error = trial.unitTest.reason ?? 'NUnit evidence is inconclusive.';
+              stopScheduling = true;
+            }
+          }
           // Fresh captures supply substring results; saved evidence is still read and rechecked by Verify.
           trial.failureMatched ??= await matchesFailure(trial, directory, summary.predicate);
           if (summary.executionRequirement !== undefined) {
@@ -227,6 +236,12 @@ async function executeRun(options: RunOptions, budget: OutputBudget, metadata: M
       ? 'interrupted'
       : 'completed';
     if (summary.status === 'error') summary.error = 'Command output could not be fully persisted; inspect trial errors.';
+    if (summary.predicate?.kind === 'nunit_test' && summary.trials.some(trial => trial.unitTest?.outcome === 'inconclusive')
+      && summary.status === 'completed') {
+      summary.status = 'error';
+      summary.error = 'NUnit test evidence is inconclusive; inspect each trial unitTest.reason.';
+      delete summary.decision;
+    }
   } catch (error) {
     summary.status = 'error';
     delete summary.decision;

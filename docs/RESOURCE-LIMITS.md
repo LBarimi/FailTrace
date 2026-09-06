@@ -1,5 +1,7 @@
 # Experiment resource limits
 
+**Unreleased NUnit integration:** XML reads are limited to 4 MiB per report, with 10,000 cases, 100,000 elements and 64 nesting levels. Target-written XML is separate from piped stdout/stderr budgets and no filesystem quota is implied. See [NUnit evidence limits](UNIT-TESTS.md#evidence-and-limits).
+
 These controls require FailTrace 1.0 and are absent from 0.6.0. See [installation and publication status](../README.md#quick-start) when selecting a package version.
 
 Repeated commands can emit unlimited output even when their input is small. An unattended debugging agent needs a finite evidence allowance and an explicit outcome when evidence is incomplete.

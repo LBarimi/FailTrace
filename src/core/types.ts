@@ -1,12 +1,14 @@
 import type { ContextCaptureOptions, RunContext } from './verify-context.js';
 import type { OutputBudget, OutputLimit, OutputLimits } from './output-budget.js';
 import type { MetadataLimit } from './metadata-budget.js';
+import type { NUnitEvidence, NUnitPredicate } from './nunit-report.js';
 
 export type TrialStatus = 'passed' | 'failed' | 'timed_out' | 'spawn_error' | 'interrupted' | 'resource_limited' | 'output_error';
 export type TerminationReason = 'exit' | 'signal' | 'timeout' | 'spawn_error' | 'interrupted' | 'output_limit' | 'output_error';
 
 /** A single, explicit target failure rule. Text predicates match decoded UTF-8 output. */
 export type FailurePredicate =
+  | NUnitPredicate
   | { kind: 'nonzero_exit' }
   | { kind: 'exit_code'; value: number }
   | { kind: 'stdout_contains' | 'stderr_contains'; value: string }
@@ -46,6 +48,8 @@ export interface TrialResult {
   failureMatched?: boolean;
   /** Checkpoint observed after a clean exit; absent means not requested or unknown. */
   executionMatched?: boolean;
+  /** NUnit 3 result for one exact test; report content is untrusted target output. */
+  unitTest?: NUnitEvidence;
   /** Output was incomplete. A truncated stream never establishes a target nonmatch. */
   outputLimit?: OutputLimit;
 }

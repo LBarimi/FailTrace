@@ -44,7 +44,7 @@ export interface ComparisonResult {
   stderr: OutputComparison;
 }
 
-export type ComparisonTrialEvidence = Pick<TrialResult, 'status' | 'exitCode' | 'terminationReason' | 'failureMatched' | 'executionMatched'>;
+export type ComparisonTrialEvidence = Pick<TrialResult, 'status' | 'exitCode' | 'terminationReason' | 'failureMatched' | 'executionMatched' | 'unitTest'>;
 
 async function compareOutput(a: string, b: string, maxBytes: number, maxLines: number, signal?: AbortSignal): Promise<OutputComparison> {
   // maxBytes limits the preview only. Hash every byte in the initial regular
@@ -100,6 +100,7 @@ function selectTrial(trials: TrialResult[], index: number | undefined, desired: 
 function trialEvidence(trial: TrialResult): ComparisonTrialEvidence {
   return { status: trial.status, exitCode: trial.exitCode, terminationReason: trial.terminationReason,
     ...(trial.executionMatched === undefined ? {} : { executionMatched: trial.executionMatched }),
+    ...(trial.unitTest === undefined ? {} : { unitTest: structuredClone(trial.unitTest) }),
     ...(trial.failureMatched === undefined ? {} : { failureMatched: trial.failureMatched }) };
 }
 
