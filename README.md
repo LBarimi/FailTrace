@@ -20,7 +20,7 @@ npx --yes failtrace@1.4.0 demo
 
 ![FailTrace demo: capture a failure, reduce its input, reject an unrelated crash, and check a patch](docs/assets/demo.gif)
 
-Original recorded results, presented in macOS-style windows with added pointers. Output is abridged and GIF timing edited. [Static walkthrough](docs/assets/demo.svg) · [Static poster](docs/assets/demo-poster.png) · [Recording details](docs/DEMO.md)
+[Static walkthrough](docs/assets/demo.svg) · [Static poster](docs/assets/demo-poster.png) · [Demo guide](docs/DEMO.md)
 
 The demo reduces six input items to `["BUG"]`, rejects a patch that crashes for another reason, and checks a working patch. It saves the evidence in `.failtrace/` and prints a replay command. These are example outcomes, not performance measurements; a passing sample does not prove a bug is gone.
 
@@ -42,9 +42,9 @@ Then ask your agent:
 
 The seven MCP tools share the CLI's Core engine. They retain the failure signature and investigation evidence across repetition, comparison, regression search, minimization, verification and replay. Agents can retrieve saved trial and log pages without rerunning the command. Shell-capable agents can also use the CLI with `--json`.
 
-![Recorded MCP calls: capture the target, inspect saved stderr, and verify a declared patch](docs/assets/agent-session.png)
+![MCP workflow: capture the target, inspect saved stderr, and verify a declared patch](docs/assets/agent-session.png)
 
-Actual tool-response excerpts from an original fixture. The agent can inspect the saved failure before checking the patch.
+The agent can inspect the saved failure before checking the patch.
 
 ## Recheck an existing unit test
 
@@ -56,7 +56,7 @@ NUnit support is included in 1.3.0 through CLI and MCP. The documented Unity val
 
 ![NUnit evidence: a failing baseline, a passing candidate, and a skipped test kept inconclusive](docs/assets/unit-test-evidence.png)
 
-Recorded NUnit 3 report controls. The selected test stays the same; a skipped report is not accepted as a passing test.
+The selected test stays the same; a skipped report is not accepted as a passing test.
 
 ## Use it on your own failure
 

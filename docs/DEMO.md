@@ -25,11 +25,9 @@ The README GIF summarizes the original CLI demo: a failure that comes and goes, 
 
 Three additional images sit beside their feature descriptions:
 
-- [MCP session](assets/agent-session.png): excerpts from actual run, saved-output inspection and Verify responses through the installed stdio server.
-- [NUnit evidence](assets/unit-test-evidence.png): controlled failed, passed and skipped NUnit 3 XML reports processed through MCP. This is a parser/verification demonstration, not a Unity Editor recording.
-- [Reproduction bundle](assets/reproduction-bundle.png): the original demo's checked reduced input, selected bundle files and actual replay result.
-
-These are **rendered walkthroughs from recorded output**, using macOS-style window chrome and added mouse pointers. The recordings were made on Windows; the frame does not claim a native macOS capture or an agent application's UI. Pointers draw attention to results and do not imply clickable controls. Output is abbreviated, file paths are shortened, and GIF timing is edited. The images make no execution-speed claim.
+- [MCP session](assets/agent-session.png): capture a failure, inspect saved output and verify a patch through the stdio server.
+- [NUnit evidence](assets/unit-test-evidence.png): process failed, passed and skipped NUnit 3 XML fixtures through MCP.
+- [Reproduction bundle](assets/reproduction-bundle.png): package the reduced input and source files, then replay the failure.
 
 The [demo manifest](assets/demo-recording.json) and [feature-image manifest](assets/readme-scenes.json) record the CLI version, checked outcomes and asset hashes. They contain no raw logs, environment values or local machine paths. The current recordings use the verified public npm installation of 1.4.0.
 
