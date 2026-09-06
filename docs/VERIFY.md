@@ -2,7 +2,7 @@
 
 Since 1.0.0, candidate runs inherit the baseline output caps. Changing them requires an `outputLimits` allowance with a reason; older baselines have unknown caps. Output exhaustion or an output write error always makes evidence inconclusive. See [resource limits](RESOURCE-LIMITS.md).
 
-**Unreleased source addition:** a baseline can require a completed-check message. Verify inherits that requirement and treats a skipped check as inconclusive even if the target exits `0`. See the [execution checkpoint example and evidence contract](EXECUTION-EVIDENCE.md). Published 1.1.0 does not include this option.
+**Since 1.2.0:** a baseline can require a completed-check message. Verify inherits that requirement and treats a skipped check as inconclusive even if the target exits `0`. See the [execution checkpoint example and evidence contract](EXECUTION-EVIDENCE.md). Version 1.1.0 does not include this option.
 
 **Implemented in 0.5.0.** Core `verifyFix`, CLI `verify`, and MCP `failtrace_verify` enforce the same evidence checks. Versions through 0.4.0 can use the manual run/compare procedure below. A minimization's `finalVerified` only says the reduced input still reproduces the defect; it does not verify a code fix.
 
@@ -84,7 +84,7 @@ For agents using a version through 0.4.0, call `failtrace_run` twice and `failtr
 
 A suitable report is: "The target matched 14/50 valid baseline trials and 0/50 valid candidate trials under the recorded conditions. All candidate commands exited successfully. The target was not observed in that candidate sample; elimination and statistical improvement have not been established." The counts here illustrate wording, not a measured FailTrace case.
 
-The original [event-import example](EXECUTION-EVIDENCE.md) preserves an affected baseline, checks a corrected importer, and rejects skipped checks and unrelated preparation errors. Its source changes are declared interventions. The checkpoint option requires the unreleased source build.
+The original [event-import example](EXECUTION-EVIDENCE.md) preserves an affected baseline, checks a corrected importer, and rejects skipped checks and unrelated preparation errors. Its source changes are declared interventions. The checkpoint option requires 1.2.0 or newer.
 
 ## Evidence requirements enforced by Core
 

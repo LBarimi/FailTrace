@@ -59,6 +59,6 @@ An agent with a shell can read and invoke these named actions. An MCP agent can 
 - Use explicit baselines instead of an automatically selected "latest" result. A previous investigation may belong to a different input or source state.
 - Review captured environment keys deliberately; never place tokens or private environment values in the script for convenience.
 
-**Unreleased source addition:** add `--require-stdout-contains CHECK_COMPLETED` (or the stderr form) to baseline capture when the target emits that message after the intended check. Verify inherits it. The option is unavailable in published 1.1.0; see the [execution checkpoint guide](EXECUTION-EVIDENCE.md). Without it, a normal exit alone does not establish that the intended test ran.
+**Since 1.2.0:** add `--require-stdout-contains CHECK_COMPLETED` (or the stderr form) to baseline capture when the target emits that message after the intended check. Verify inherits it. The option is unavailable in 1.1.0; see the [execution checkpoint guide](EXECUTION-EVIDENCE.md). Without it, a normal exit alone does not establish that the intended test ran.
 
 The installed-package checks exercise this script pattern from a fresh consumer, including an expected failing baseline, an unchanged-bug control and a healthy fixed candidate. This validates the command path; the setup effort and usefulness for independent users still need voluntary observation.

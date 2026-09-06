@@ -20,13 +20,13 @@ This expresses product emphasis. An investigation can use just the operations it
 
 The original milestones are implemented. Their completion is not an adoption metric. See the [compatibility contract](COMPATIBILITY.md), [command reference](CLI.md) and [performance scope](PERFORMANCE.md).
 
-## Unreleased source improvements
+## Improvements in 1.2.0
 
-The source checkout supports [execution checkpoints](EXECUTION-EVIDENCE.md). A baseline can require a message emitted after the intended check has run. Verify inherits it and reports an inconclusive result when a candidate silently skips that check. Core, CLI, MCP, saved inspection, comparison, classification and replay preserve the condition. Published 1.1.0 does not include this option.
+Version 1.2.0 supports [execution checkpoints](EXECUTION-EVIDENCE.md). A baseline can require a message emitted after the intended check has run. Verify inherits it and reports an inconclusive result when a candidate silently skips that check. Core, CLI, MCP, saved inspection, comparison, classification and replay preserve the condition. Published 1.1.0 does not include this option.
 
 Original authored workflow fixtures exercise affected implementations, valid fixes and misleading candidate controls. They demonstrate how evidence changes a debugging decision; they are not production incident reports or evidence of external adoption.
 
-[Named project actions](PROJECT-WORKFLOW.md) keep repeated baseline/verification settings inspectable using existing project scripts. The unreleased [storage inventory](ARTIFACTS.md) shows bounded totals and observed evidence references. It does not delete records or infer inactivity from their age.
+[Named project actions](PROJECT-WORKFLOW.md) keep repeated baseline/verification settings inspectable using existing project scripts. The 1.2.0 [storage inventory](ARTIFACTS.md) shows bounded totals and observed evidence references. It does not delete records or infer inactivity from their age.
 
 [Direct execution](DIRECT-EXECUTION.md) connects an existing executable to literal arguments, including a complete argument placeholder for the current minimization input. Core, CLI, MCP, comparison, Verify and bundle replay retain that execution contract. Command-specific help reduces the setup needed to use each operation. Fresh substring/checkpoint matching avoids reopening newly captured logs; saved evidence remains independently checked.
 

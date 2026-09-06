@@ -1,6 +1,6 @@
 # Inspect local evidence storage
 
-**Unreleased source functionality.** Published `failtrace@1.1.0` does not include `artifacts` or the `inventoryArtifacts` Core API. Build this checkout before using these commands.
+**Added in 1.2.0:** the read-only `artifacts` command and `inventoryArtifacts` Core API. See the [README](../README.md#availability-and-contributing) for publication status. The commands below use a source build.
 
 Repeated investigations retain logs, copied inputs and reports. To see where that space went without executing a saved command:
 

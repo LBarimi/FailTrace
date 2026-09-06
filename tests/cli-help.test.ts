@@ -57,7 +57,8 @@ describe('command-specific CLI help', () => {
     expect(result.stdout).toContain('FAILTRACE_INPUT_DIR');
     expect(result.stdout).toContain('status and finalVerified');
     expect(result.stdout).toContain('Baseline not_reproduced');
-    expect(result.stdout).toContain('source checkout');
+    expect(result.stdout).toContain('check.mjs must accept the input file');
+    expect(result.stdout).not.toContain('unreleased');
     expect(result.stdout).not.toContain('--capture-env');
     expect(result.stdout).not.toContain('--concurrency');
   });

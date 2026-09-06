@@ -24,7 +24,7 @@ CI requires metadata bytes at most `40,000 + 8,192 × repeat`, fsync calls at mo
 
 ## Original workflow and checkpoint costs
 
-After building the current source, run `node scripts/bench-workflows.mjs`. This separate harness requires the unreleased checkpoint and inventory APIs. Its defaults are three sequential samples, 2000 authored event records and five repeated trials per case. `--samples 1 --records 20 --repeat 1` provides a short harness check. Output must be a new directory; default output stays under `.failtrace/benchmarks/`.
+After building the current source, run `node scripts/bench-workflows.mjs`. This separate source harness requires the checkpoint and inventory APIs added in 1.2.0. Its defaults are three sequential samples, 2000 authored event records and five repeated trials per case. `--samples 1 --records 20 --repeat 1` provides a short harness check. Output must be a new directory; default output stays under `.failtrace/benchmarks/`.
 
 Each sample has paired direct-shell, ordinary Core and checkpoint-enabled Core runs, with small or larger generated inputs and either zero or 1 MiB of preceding stdout. The importer and independent checker are the same original fixture across each pair. The checker scans records for every ID and has quadratic target work; target runtime is part of wall time. This is a controlled input-processing problem, not a naturally occurring production incident or failure-rate estimate.
 

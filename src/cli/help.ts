@@ -19,13 +19,13 @@ const predicates = `Failure condition (choose one; default: non-zero exit):
   Regex checks allow at most 16 MiB and one second per evaluation.
   Use --stderr-contains=--message for text starting with --.
 
-Completed-check signal (optional, source checkout; unreleased):
+Completed-check signal (optional):
   --require-stdout-contains TEXT | --require-stderr-contains TEXT
   Choose one signal emitted after the intended check. A missing signal makes
   classification/verification inconclusive; it is separate from the failure.
 `;
 
-const directCommand = `Direct execution (source checkout; unreleased):
+const directCommand = `Direct execution:
   --exec PROGRAM --arg VALUE ...  Pass literal arguments without a target shell
   Repeat --arg for each argument, including flags. Do not combine --exec with
   a shell command. Quote values containing spaces for your invoking shell.
@@ -180,7 +180,7 @@ Shell scripts can instead read FAILTRACE_INPUT (text/json/env) or
 FAILTRACE_INPUT_DIR (files). Always test the candidate, not the original path.
 
 ${common}
-Example (source checkout; check.mjs must accept the input file as its argument):
+Example (check.mjs must accept the input file as its argument):
   failtrace minimize --input cases.json --format json --exec node --arg check.mjs --arg "{input}" --stderr-contains "TARGET_FAILURE"
 
 Next:
@@ -246,7 +246,7 @@ Options:
   --file PATH             Repeatable regular source files, relative to run cwd
   --input PATH            Selected input file or directory to relocate for replay
   --command COMMAND       Optional replay shell command override
-  --exec PROGRAM --arg VALUE ...  Optional direct replay command (unreleased)
+  --exec PROGRAM --arg VALUE ...  Optional direct replay command
   --output NEW_DIRECTORY  New destination (default: .failtrace/reproduction/<id>)
   --env-file JSON_FILE    Reviewed environment overrides; string values or null
   --include-env KEY       Repeatable captured values to include (default: none)
@@ -271,7 +271,7 @@ in a healthy sample, 2 inconclusive/error. ${interruption}
 `,
   artifacts: `FailTrace artifacts - inspect retained storage without changing it
 
-Source checkout only; unreleased, unavailable in failtrace@1.1.0.
+Available since FailTrace 1.2.0. No files are deleted.
 
 Usage:
   failtrace artifacts [--directory STORAGE_ROOT] [--max-entries N] [--json]
@@ -334,7 +334,7 @@ Commands:
   minimize   Shrink reproducing text, JSON, files or environment keys
   verify     Recheck a patch against a captured baseline
   bundle     Package selected files and evidence for local replay
-  artifacts  Read-only storage inventory (source checkout; unreleased)
+  artifacts  Read-only storage inventory
   mcp        Start the local stdio server for coding agents
 
 Start here:

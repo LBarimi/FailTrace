@@ -1,8 +1,8 @@
 # Performance and evidence
 
-This document describes execution controls, measurements of the **unreleased source candidate**, and explicitly versioned historical measurements. Older releases retain their original behavior. A historical optimization result is not a measurement of the current engine.
+This document describes execution controls, measurements of a **dated source candidate**, and explicitly versioned historical measurements. Older releases retain their original behavior. A historical optimization result is not a measurement of the current engine.
 
-## Unreleased execution and evidence changes
+## Execution and evidence changes in 1.2.0
 
 Fresh substring failure predicates and completion checkpoints are matched while bounded output is successfully written. This removes their separate post-run output reads. UTF-8 decoding and matches crossing chunk boundaries are preserved; a match seen before truncation, timeout or storage failure cannot establish complete evidence. Saved-run verification continues to read the retained output, so it does not trust a stale match after a log edit.
 

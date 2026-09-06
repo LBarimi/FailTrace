@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.2.0
+
+Release preparation: matching package, runtime and MCP metadata. See the [README](README.md#availability-and-contributing) for verified publication status.
 
 - Provide command-specific CLI help and preserve literal `-h`/`--help` option values instead of mistaking them for a help request.
 - Evaluate fresh substring predicates and completion checkpoints during bounded output capture, avoiding post-run log rereads. Truncated, interrupted or unsuccessfully saved output remains inconclusive; Verify still rechecks saved evidence.
@@ -10,7 +12,7 @@
 
 - Add opt-in literal executable arguments across Core, CLI and MCP, with complete-argument candidate input binding for minimization and portable bundle replay. Preserve shell command defaults, record exact arguments and include execution mode in comparison and Verify context. Verify continues requiring the caller's explicit current execution settings.
 
-- Add a bounded original-workflow benchmark with paired execution/checkpoint costs, independently checked reduction and patch controls, replay, and sanitized aggregate evidence for the unreleased candidate.
+- Add a bounded original-workflow benchmark with paired execution/checkpoint costs, independently checked reduction and patch controls, replay, and sanitized aggregate evidence for the recorded source candidate.
 
 - Add a read-only `artifacts` CLI command and `inventoryArtifacts` Core API for bounded logical storage totals, investigation grouping and observed evidence references. Incomplete scans are explicit; saved commands are never executed and no files are deleted.
 

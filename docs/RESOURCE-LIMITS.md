@@ -41,7 +41,7 @@ Bundles record the source run's caps and replay with them. Older source runs use
 
 Output byte budgets do not account for metadata, copied minimization inputs, Git worktrees, dependency installations, files written directly by the target, or previous investigations. The budgets below separately bound managed input copies and run metadata. They are not a total filesystem quota. No automatic deletion or retention schedule is applied.
 
-The unreleased source provides a [bounded read-only inventory](ARTIFACTS.md) of accumulated storage and known evidence links. Scan completeness and reported state do not grant deletion authority.
+Version 1.2.0 provides a [bounded read-only inventory](ARTIFACTS.md) of accumulated storage and known evidence links. Scan completeness and reported state do not grant deletion authority.
 
 Commands still run with local permissions. Timeout and descendant cleanup remain best effort, and a target can use files or processes outside these output pipes. Review sensitive output before sharing evidence.
 

@@ -1,12 +1,12 @@
 # Command reference
 
-The source checkout provides **unreleased command-specific help**: `failtrace minimize --help`, `failtrace verify --help`, and each other command show their own options, examples, result meanings, and next steps. `failtrace --help` remains the short command overview. Help does not run a target, read investigation evidence, or create artifacts.
+Since 1.2.0, **command-specific help** is available: `failtrace minimize --help`, `failtrace verify --help`, and each other command show their own options, examples, result meanings, and next steps. `failtrace --help` remains the short command overview. Help does not run a target, read investigation evidence, or create artifacts.
 
-The source checkout also adds the **unreleased** read-only `artifacts` command. It reports bounded storage totals and known investigation references; see the [storage inventory guide](ARTIFACTS.md).
+Version 1.2.0 also adds the read-only `artifacts` command. It reports bounded storage totals and known investigation references; see the [storage inventory guide](ARTIFACTS.md).
 
-The source checkout adds optional `--require-stdout-contains` / `--require-stderr-contains` checkpoints for run, bisect and minimize; Verify and bundle replay inherit the recorded condition. This is **unreleased**, unavailable in `failtrace@1.1.0`. Missing required evidence produces an inconclusive result; ordinary trial status/statistics still describe the failure predicate separately. See [execution evidence](EXECUTION-EVIDENCE.md).
+Version 1.2.0 adds optional `--require-stdout-contains` / `--require-stderr-contains` checkpoints for run, bisect and minimize; Verify and bundle replay inherit the recorded condition. These options are unavailable in `failtrace@1.1.0`. Missing required evidence produces an inconclusive result; ordinary trial status/statistics still describe the failure predicate separately. See [execution evidence](EXECUTION-EVIDENCE.md).
 
-This guide targets FailTrace 1.1.0. See the [installation instructions](../README.md#quick-start) for verified npm and GitHub package commands.
+This guide targets FailTrace 1.2.0. See the [installation instructions](../README.md#quick-start) for verified npm and GitHub package commands.
 
 See the [README](../README.md) for installation and the guided demo, and [agent workflows](AGENT-WORKFLOWS.md) for client setup.
 
@@ -111,7 +111,7 @@ failtrace minimize --input examples/advanced-input.json --format json --command 
 
 This deterministic example reduces a six-element array to `["BUG"]`, preserving the original file. The command reads each candidate from `FAILTRACE_INPUT`. It reports a known message only for the intended failure, avoiding acceptance of unrelated syntax or setup errors.
 
-**In this source checkout, unreleased:** JSON reduction rejects numeric tokens that parsing and reencoding would change, including rounded large integers, excessive fractional precision, nonfinite/underflowing exponents, and negative zero. Use `--format text` when exact numeric spelling matters. JSON and environment candidates use compact encoding to avoid adding formatting overhead. If an encoded candidate still exceeds `--max-input-bytes`, the result preserves the best available input with `status: "limit_reached"` and `finalVerified: false`.
+**Since 1.2.0:** JSON reduction rejects numeric tokens that parsing and reencoding would change, including rounded large integers, excessive fractional precision, nonfinite/underflowing exponents, and negative zero. Use `--format text` when exact numeric spelling matters. JSON and environment candidates use compact encoding to avoid adding formatting overhead. If an encoded candidate still exceeds `--max-input-bytes`, the result preserves the best available input with `status: "limit_reached"` and `finalVerified: false`.
 
 | Format | Input and reduction behavior |
 | --- | --- |

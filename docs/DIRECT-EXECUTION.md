@@ -1,6 +1,6 @@
 # Executables and literal arguments
 
-This functionality is **unreleased in the source checkout**. Build with `npm ci` and `npm run build`; published 1.1.0 does not support these options.
+Available in **FailTrace 1.2.0** builds. See the [README](../README.md#availability-and-contributing) for publication status. Version 1.1.0 does not support these options. The commands below use a checkout built with `npm ci` and `npm run build`.
 
 Use an existing program that accepts an input filename without writing an environment-variable adapter or constructing shell commands:
 
@@ -47,7 +47,7 @@ const reduced = await minimizeFailure({
 });
 ```
 
-Use the source-linked package for this example until a supporting version is published. The existing MCP run, bisect, minimize and verify tools accept the same optional `args` array. The bundle tool accepts an explicit argument override. No extra MCP tool or configuration format is needed.
+Use FailTrace 1.2.0 or newer for this example. The existing MCP run, bisect, minimize and verify tools accept the same optional `args` array. The bundle tool accepts an explicit argument override. No extra MCP tool or configuration format is needed.
 
 ## Candidate input binding
 

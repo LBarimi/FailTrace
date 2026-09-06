@@ -1,14 +1,18 @@
-# Compatibility contract for 1.0
+# Compatibility contract for 1.x
 
-## Unreleased direct execution
+## Direct execution in 1.2.0
 
 Optional `args` on Core/MCP command options selects literal executable invocation; the CLI exposes it with `--exec` and repeated `--arg`. Absence preserves the existing shell command contract, while an explicit empty array still selects direct execution. Saved trials and runs retain argument values. Compare and Verify include arguments and execution mode in command identity, and Verify never inherits execution authority from a saved baseline. Minimize and bundle replay bind only entire `{input}` arguments. Use a supporting build throughout; older readers cannot enforce the new identity. See [direct execution and input binding](DIRECT-EXECUTION.md).
 
-## Unreleased execution checkpoints
+## Execution checkpoints in 1.2.0
 
-The source checkout supports opt-in `executionRequirement` metadata and per-trial `executionMatched` evidence. Default behavior, existing status values and predicate statistics are preserved. A selected requirement changes classification: missing or unknown completion is inconclusive, including target-matching trials. Verify inherits the baseline condition and replay bundles include it. Use a build that supports checkpoints throughout this workflow; published 1.1.0 readers do not enforce these additional fields. See the [complete contract and example](EXECUTION-EVIDENCE.md).
+Version 1.2.0 supports opt-in `executionRequirement` metadata and per-trial `executionMatched` evidence. Default behavior, existing status values and predicate statistics are preserved. A selected requirement changes classification: missing or unknown completion is inconclusive, including target-matching trials. Verify inherits the baseline condition and replay bundles include it. Use a build that supports checkpoints throughout this workflow; published 1.1.0 readers do not enforce these additional fields. See the [complete contract and example](EXECUTION-EVIDENCE.md).
 
 This contract defines the supported surfaces for FailTrace 1.x. See [migration from 0.x](MIGRATING-TO-1.md) before upgrading. Publication status and available installation routes are recorded in the [README](../README.md#quick-start); a version in a checkout does not by itself establish public registry availability.
+
+## Migration review for 1.2.0 JSON reduction
+
+JSON minimization rejects numeric values that JavaScript parsing and reencoding cannot preserve, including rounded integers or fractions, overflow, underflow and negative zero. Use text mode when exact number spelling matters. Oversized encoded candidates retain an incomplete result with `status: "limit_reached"` and `finalVerified: false`. Saved-evidence readers also reject files that change during a bounded read and recompute statistics from the loaded trials.
 
 ## Supported integration surfaces
 

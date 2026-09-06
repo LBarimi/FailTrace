@@ -1,6 +1,6 @@
 # Did the intended check run?
 
-**Unreleased source feature.** The published `failtrace@1.1.0` package does not accept execution checkpoints. Build this checkout to try them. Keep the same build when recording, inspecting and verifying checkpoint-enabled evidence; older readers do not enforce this condition.
+**Added in 1.2.0.** See the [README](../README.md#availability-and-contributing) for publication status. Keep a supporting version when recording, inspecting and verifying checkpoint-enabled evidence; 1.1.0 and older readers do not enforce this condition. The example below uses a source build.
 
 A command can exit successfully because a test was skipped, no matching tests were selected, or an early return bypassed the check. A missing failure signature alone cannot distinguish these cases from a useful candidate sample.
 

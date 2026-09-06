@@ -1,6 +1,6 @@
 # Original debugging workflows
 
-**Unreleased source examples.** Build this checkout to run these cases. The published `failtrace@1.1.0` package does not include this workflow command or execution checkpoints.
+**Added in 1.2.0.** These original examples are included in the package and source. See the [README](../README.md#availability-and-contributing) for publication status. The workflow below builds and runs a source checkout.
 
 From the repository root:
 

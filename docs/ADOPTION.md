@@ -14,7 +14,7 @@ The published [1.1.0 release](https://github.com/LBarimi/FailTrace/releases/tag/
 
 On 2026-09-05, the reviewed GitHub archive matched the public npm download. Fresh installations outside the checkout exercised the demo, Core, CLI, Verify, saved inspection, bundle manifests and replay. Installed CLI/MCP checks exercised target-first comparison and Bisect's unrelated/declared exit policies. The matching versioned MCP Registry record was active. These checks establish distribution and tested behavior, not independent adoption. Installation routes and version-specific limits are in the [README](../README.md).
 
-The source checkout adds original [data-import and asynchronous-update workflows](WORKFLOWS.md). Maintainer tests show how affected behavior, a valid fix, a skipped checker and a preparation error lead to different conclusions. These source additions are unreleased and do not establish production use.
+The source checkout adds original [data-import and asynchronous-update workflows](WORKFLOWS.md). Maintainer tests show how affected behavior, a valid fix, a skipped checker and a preparation error lead to different conclusions. These workflows are included in 1.2.0 builds and do not establish production use.
 
 ## What remains unknown
 

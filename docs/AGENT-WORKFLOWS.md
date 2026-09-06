@@ -1,6 +1,6 @@
 # Use FailTrace with a coding agent
 
-This guide targets published FailTrace 1.1.0. The source checkout also provides [unreleased execution checkpoints](EXECUTION-EVIDENCE.md); use a supporting build throughout that workflow. See the [installation instructions](../README.md#quick-start) for verified npm and GitHub package commands.
+This guide targets published FailTrace 1.1.0. Version 1.2.0 adds [execution checkpoints](EXECUTION-EVIDENCE.md); use a supporting version throughout that workflow. See the [installation instructions](../README.md#quick-start) for verified npm and GitHub package commands.
 
 Ask your agent to measure a flaky command, compare the saved evidence, or reduce a reproducing input. FailTrace performs the repeated experiments locally and returns inspectable results; the agent uses those results to investigate the code.
 
@@ -57,7 +57,7 @@ Use `npx.cmd` on Windows when the client launches commands directly rather than 
 
 ### Source fallback and contributor setup
 
-For an original investigation against the source build, try the [data-import and asynchronous-update workflows](WORKFLOWS.md). Their completed-check requirement is unreleased; use the source server for those calls.
+For an original investigation against the source build, try the [data-import and asynchronous-update workflows](WORKFLOWS.md). Their completed-check requirement needs version 1.2.0 or newer.
 
 To build from source instead, clone the repository, run `npm ci` and `npm run build`, then configure `node` with the checkout's absolute `dist/cli/index.js`, `mcp`, `--cwd`, and absolute project path as separate arguments. Keep the checkout and rebuild after updates. The advanced source-demo recipe later in this guide uses a checkout; the connection test does not.
 
@@ -305,4 +305,4 @@ do not authorize client reconfiguration, publishing, or unrelated changes.
 | Verify tool is missing | Install 0.5.0 or later, or use the manual run/compare procedure with versions through 0.4.0. |
 | Bundle does not replay | Explicit source-file selection, target dependency setup, selected input, environment removals, and command portability. |
 
-Client setup references were checked against official documentation on **2026-09-04**. Published implementation sources are the repository's [MCP adapter](https://github.com/LBarimi/FailTrace/blob/main/src/mcp/index.ts) and [Core](https://github.com/LBarimi/FailTrace/tree/main/src/core). For unreleased additions, inspect `src/mcp/index.ts` and `src/core` in the source checkout. See the [README](../README.md) for availability.
+Client setup references were checked against official documentation on **2026-09-04**. Published implementation sources are the repository's [MCP adapter](https://github.com/LBarimi/FailTrace/blob/main/src/mcp/index.ts) and [Core](https://github.com/LBarimi/FailTrace/tree/main/src/core). For version 1.2.0 additions, inspect `src/mcp/index.ts` and `src/core` in the source checkout. See the [README](../README.md) for availability.
