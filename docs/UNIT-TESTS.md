@@ -3,7 +3,7 @@
 **Requires FailTrace 1.3.0 or newer and Node.js 22.12+.** Configure your MCP client to launch:
 
 ```sh
-npx --yes failtrace@1.3.0 mcp --cwd "/absolute/path/to/your/project"
+npx --yes failtrace@1.4.0 mcp --cwd "/absolute/path/to/your/project"
 ```
 
 Your client starts this local stdio server. See [client configuration and Windows shims](AGENT-WORKFLOWS.md). Version 1.2.0 does not include this predicate.
@@ -70,18 +70,18 @@ Suggested agent request:
 In a directory where you want to keep the isolated example:
 
 ```sh
-npm install --save-dev failtrace@1.3.0
+npm install --save-dev failtrace@1.4.0
 node node_modules/failtrace/examples/unit-tests/prepare-unity.mjs
 ```
 
-Contributors can instead build a checkout with `npm ci` and `npm run build`, then run `node examples/unit-tests/prepare-unity.mjs`. For CLI calls from that checkout, use `node dist/cli/index.js` in place of `npx --yes failtrace@1.3.0`.
+Contributors can instead build a checkout with `npm ci` and `npm run build`, then run `node examples/unit-tests/prepare-unity.mjs`. For CLI calls from that checkout, use `node dist/cli/index.js` in place of `npx --yes failtrace@1.4.0`.
 
 This creates a **new** `.failtrace/unity-unit-tests` project with an intentional inventory serialization defect. An existing destination is rejected. The template selects Unity `6000.0.48f1`, Test Framework `1.4.6` and the JSON serialization module. It contains an EditMode test, not a player or scene. Use an installed compatible Editor with a valid license.
 
 For that Editor on Windows, a first command from the same directory is:
 
 ```sh
-npx --yes failtrace@1.3.0 run --exec "C:/Program Files/Unity/Hub/Editor/6000.0.48f1/Editor/Unity.exe" --arg=-batchmode --arg=-nographics --arg=-projectPath --arg=. --arg=-runTests --arg=-testPlatform --arg=EditMode --arg=-testFilter --arg=FailTraceExample.InventoryTests.SaveRoundTripPreservesItems --arg=-testResults --arg="{testReport}" --arg=-logFile --arg=- --nunit-test FailTraceExample.InventoryTests.SaveRoundTripPreservesItems --nunit-message INVENTORY_ITEMS_LOST --repeat 1 --timeout 5m --cwd .failtrace/unity-unit-tests --json
+npx --yes failtrace@1.4.0 run --exec "C:/Program Files/Unity/Hub/Editor/6000.0.48f1/Editor/Unity.exe" --arg=-batchmode --arg=-nographics --arg=-projectPath --arg=. --arg=-runTests --arg=-testPlatform --arg=EditMode --arg=-testFilter --arg=FailTraceExample.InventoryTests.SaveRoundTripPreservesItems --arg=-testResults --arg="{testReport}" --arg=-logFile --arg=- --nunit-test FailTraceExample.InventoryTests.SaveRoundTripPreservesItems --nunit-message INVENTORY_ITEMS_LOST --repeat 1 --timeout 5m --cwd .failtrace/unity-unit-tests --json
 ```
 
 A target failure exits `1` and saves evidence. For a source-change baseline, add the declared files in the MCP example with repeatable `--context-source` and `--context-setup` flags. Change **only the generated project's** `InventoryStorage.Save` from `JsonUtility.ToJson(new Inventory())` to `JsonUtility.ToJson(inventory)`, then Verify. The fixture in `examples/` remains the reproducible broken control.

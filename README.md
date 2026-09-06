@@ -15,7 +15,7 @@ Local execution. No AI API, account, or telemetry required. Keep your existing t
 With **Node.js 22.12+ and npm**, run this in any working directory:
 
 ```sh
-npx --yes failtrace@1.3.0 demo
+npx --yes failtrace@1.4.0 demo
 ```
 
 ![FailTrace demo: capture a failure, reduce its input, reject an unrelated crash, and check a patch](docs/assets/demo.gif)
@@ -29,7 +29,7 @@ The demo reduces six input items to `["BUG"]`, rejects a patch that crashes for 
 Connect the local stdio MCP server through your client's configuration:
 
 ```sh
-npx --yes failtrace@1.3.0 mcp --cwd "/absolute/path/to/your/project"
+npx --yes failtrace@1.4.0 mcp --cwd "/absolute/path/to/your/project"
 ```
 
 **[Copy the MCP configuration and check the connection →](docs/AGENT-WORKFLOWS.md#mcp-client-configuration-and-windows-paths)**
@@ -55,7 +55,7 @@ NUnit support is included in 1.3.0 through CLI and MCP. The documented Unity val
 From your project, replace the command and message with your own:
 
 ```sh
-npx --yes failtrace@1.3.0 run "npm test -- checkout" --repeat 20 --stderr-contains "checkout failed"
+npx --yes failtrace@1.4.0 run "npm test -- checkout" --repeat 20 --stderr-contains "checkout failed"
 ```
 
 Each trial saves its output. Exit `1` can mean the target failure was recorded; inspect the result before retrying. To check a patch, [capture a baseline before editing](docs/VERIFY.md).
@@ -81,7 +81,7 @@ Commands run with your permissions, and process cleanup is best effort. Retained
 
 ## Availability and contributing
 
-The quick start uses published **1.3.0**: [npm installation options](docs/INSTALL.md), [GitHub release](https://github.com/LBarimi/FailTrace/releases/tag/v1.3.0), and [MCP Registry entry](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.LBarimi%2Ffailtrace/versions/1.3.0). The source prepares 1.4.0; installation examples remain on the verified public version until publication completes. See the [changelog](CHANGELOG.md).
+The quick start uses published **1.4.0**: [npm installation options](docs/INSTALL.md), [GitHub release](https://github.com/LBarimi/FailTrace/releases/tag/v1.4.0), and [MCP Registry entry](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.LBarimi%2Ffailtrace/versions/1.4.0). See the [changelog](CHANGELOG.md).
 
 **[Documentation: choose your next task →](docs/README.md)**
 

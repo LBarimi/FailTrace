@@ -9,10 +9,10 @@ Connect FailTrace, run one experiment, and inspect its saved evidence. For an ex
 With Node.js **22.12 or newer**, no checkout or global install is required:
 
 ```sh
-npx --yes failtrace@1.3.0 mcp --cwd "/absolute/path/to/project"
+npx --yes failtrace@1.4.0 mcp --cwd "/absolute/path/to/project"
 ```
 
-Replace the project path with an absolute path. Relative paths can resolve from a client-specific launch directory. Pinning `1.3.0` keeps tool names and schemas stable across reconnects. `--yes` accepts npm's first-use package installation without an interactive prompt that could block the MCP handshake; see the [official npm `npx` command reference](https://docs.npmjs.com/cli/v12/commands/npx/). FailTrace reserves stdout for protocol messages; npm notices and server diagnostics use stderr, while target-command stdout/stderr is written into run evidence.
+Replace the project path with an absolute path. Relative paths can resolve from a client-specific launch directory. Pinning `1.4.0` keeps tool names and schemas stable across reconnects. `--yes` accepts npm's first-use package installation without an interactive prompt that could block the MCP handshake; see the [official npm `npx` command reference](https://docs.npmjs.com/cli/v12/commands/npx/). FailTrace reserves stdout for protocol messages; npm notices and server diagnostics use stderr, while target-command stdout/stderr is written into run evidence.
 
 The client starts and owns this stdio process. Running it directly in a terminal waits for MCP requests; it is not an interactive prompt.
 
@@ -21,7 +21,7 @@ The client starts and owns this stdio process. Running it directly in a terminal
 If repeated `npx` startup or registry access is unsuitable, install the same exact version once:
 
 ```sh
-npm install --global failtrace@1.3.0
+npm install --global failtrace@1.4.0
 failtrace mcp --cwd "/absolute/path/to/project"
 ```
 
@@ -39,7 +39,7 @@ Clients that accept `mcpServers` JSON can use this configuration shape with thei
       "command": "npx",
       "args": [
         "--yes",
-        "failtrace@1.3.0",
+        "failtrace@1.4.0",
         "mcp",
         "--cwd",
         "/absolute/path/to/project"

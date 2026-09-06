@@ -161,7 +161,7 @@ Use `--command "node relative-script.js"` when the original command contains mac
 
 ## Inspect accumulated storage
 
-`failtrace artifacts --json` lists retained investigations, byte totals and known evidence references without executing saved commands. The optional `--max-bytes N` check requires 1.4.0 or a source build; see [storage budget checks and exit codes](ARTIFACTS.md#check-a-storage-budget).
+`failtrace artifacts --json` lists retained investigations, byte totals and known evidence references without executing saved commands. The optional `--max-bytes N` check requires 1.4.0 or newer; see [storage budget checks and exit codes](ARTIFACTS.md#check-a-storage-budget).
 
 ## Artifacts and exit codes
 

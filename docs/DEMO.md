@@ -1,6 +1,6 @@
 # What the guided demo shows
 
-Run the published example with `npx --yes failtrace@1.3.0 demo`. It uses bundled fixtures and writes to `.failtrace/demos/<id>/`.
+Run the published example with `npx --yes failtrace@1.4.0 demo`. It uses bundled fixtures and writes to `.failtrace/demos/<id>/`.
 
 The target is deliberately controlled so the workflow is easy to inspect:
 
@@ -23,7 +23,7 @@ For your own investigation, choose a specific failure signature, arrange the tar
 
 The README GIF summarizes the original CLI demo: a failure that comes and goes, a reduced input, an unrelated crash, and a checked patch. The first frame and poster show the observed failure immediately. The layout abbreviates output and edits timing; it depicts CLI results, not an autonomous agent session or a speed measurement. [Static poster](assets/demo-poster.png) · [Full static summary](assets/demo.svg)
 
-The [recording manifest](assets/demo-recording.json) records the CLI version, checked outcomes and asset hashes. It contains no raw logs, environment values or local machine paths. The current recording uses the source build with unchanged 1.3.0 demo behavior.
+The [recording manifest](assets/demo-recording.json) records the CLI version, checked outcomes and asset hashes. It contains no raw logs, environment values or local machine paths. The current recording uses a fresh public npm installation of 1.4.0.
 
 To regenerate it, use Node.js and the optional maintainer image renderer. This does not add a runtime dependency to FailTrace:
 

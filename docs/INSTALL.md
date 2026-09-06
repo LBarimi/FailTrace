@@ -1,19 +1,19 @@
 # Install FailTrace
 
-Requires Node.js **22.12+** and npm. The published version used here is **1.3.0**. Review the [1.3.0 changes](../CHANGELOG.md#130) and [compatibility notes](COMPATIBILITY.md) when upgrading.
+Requires Node.js **22.12+** and npm. The published version used here is **1.4.0**. Review the [1.4.0 changes](../CHANGELOG.md#140) and [compatibility notes](COMPATIBILITY.md) when upgrading.
 
 ## Try without a global install
 
 ```sh
-npx --yes failtrace@1.3.0 demo
+npx --yes failtrace@1.4.0 demo
 ```
 
-This does not put a permanent `failtrace` command on your shell's PATH. Continue using `npx --yes failtrace@1.3.0 <command>`, or choose an installation below. npm can download the package on first use; subsequent invocations normally use its cache.
+This does not put a permanent `failtrace` command on your shell's PATH. Continue using `npx --yes failtrace@1.4.0 <command>`, or choose an installation below. npm can download the package on first use; subsequent invocations normally use its cache.
 
 ## Install for a project
 
 ```sh
-npm install --save-dev failtrace@1.3.0
+npm install --save-dev failtrace@1.4.0
 npx failtrace demo
 ```
 
@@ -24,7 +24,7 @@ For an existing npm project, [name the baseline and verification actions](PROJEC
 ## Install globally
 
 ```sh
-npm install --global failtrace@1.3.0
+npm install --global failtrace@1.4.0
 failtrace demo
 ```
 
@@ -36,10 +36,10 @@ The CLI and MCP server ship in the same package. Follow the [MCP client setup gu
 
 ## GitHub release alternative
 
-The verified [v1.3.0 archive and checksum](https://github.com/LBarimi/FailTrace/releases/tag/v1.3.0) include compiled code:
+The verified [v1.4.0 archive and checksum](https://github.com/LBarimi/FailTrace/releases/tag/v1.4.0) include compiled code:
 
 ```sh
-npm exec --yes --allow-remote=root --package=https://github.com/LBarimi/FailTrace/releases/download/v1.3.0/failtrace-1.3.0.tgz -- failtrace demo
+npm exec --yes --allow-remote=root --package=https://github.com/LBarimi/FailTrace/releases/download/v1.4.0/failtrace-1.4.0.tgz -- failtrace demo
 ```
 
 The command-scoped `--allow-remote=root` permits the explicitly requested URL on npm 12. Registry installation does not need this flag, and the command does not change npm's persistent configuration. Older npm versions that do not recognize it can omit it. See [npm's URL install policy](https://docs.npmjs.com/using-npm/config/#allow-remote).

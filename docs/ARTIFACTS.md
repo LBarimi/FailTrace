@@ -1,12 +1,12 @@
 # Inspect local evidence storage
 
-The published package includes the read-only `artifacts` command and `inventoryArtifacts` Core API. The optional storage budget described below requires version **1.4.0** or a source build. [Documentation index](README.md)
+The published package includes the read-only `artifacts` command and `inventoryArtifacts` Core API. The optional storage budget described below requires version **1.4.0** or newer. [Documentation index](README.md)
 
 Repeated investigations retain logs, copied inputs and reports. To see where that space went without executing a saved command:
 
 ```sh
-npx --yes failtrace@1.3.0 artifacts
-npx --yes failtrace@1.3.0 artifacts --cwd /path/to/project --json
+npx --yes failtrace@1.4.0 artifacts
+npx --yes failtrace@1.4.0 artifacts --cwd /path/to/project --json
 ```
 
 The default storage root is `.failtrace` within the chosen working directory. Select a custom **storage root**, such as one previously passed to Core `artifactsDir`, with `--directory`. Do not select an individual run when you want its neighboring investigations and references included.
@@ -28,11 +28,10 @@ The `snapshot` field fingerprints observed paths and filesystem identities/times
 
 ## Check a storage budget
 
-For a long-running debugging workspace, check retained evidence before starting another investigation. For a source build, use the commands below; version 1.3.0 does not accept this option. With an installed 1.4.0 or newer package, use `failtrace artifacts --max-bytes N --json`:
+For a long-running debugging workspace, check retained evidence before starting another investigation. Use the published 1.4.0 package:
 
 ```sh
-npm run build
-node dist/cli/index.js artifacts --cwd /path/to/project --max-bytes 1073741824 --json
+npx --yes failtrace@1.4.0 artifacts --cwd /path/to/project --max-bytes 1073741824 --json
 ```
 
 The positive integer is a logical-byte budget (the example uses 1 GiB). Core callers pass `maxBytes` to `inventoryArtifacts`. The result adds `budget: { maxBytes, status }`; without a budget, existing results and exit codes are unchanged.
