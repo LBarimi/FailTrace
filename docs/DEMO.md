@@ -1,6 +1,6 @@
 # What the guided demo shows
 
-Run the published example with `npx --yes failtrace@1.4.0 demo`. It uses bundled fixtures and writes to `.failtrace/demos/<id>/`.
+Run the published example with `npx --yes failtrace@1.4.1 demo`. It uses bundled fixtures and writes to `.failtrace/demos/<id>/`.
 
 The target is deliberately controlled so the workflow is easy to inspect:
 
@@ -29,7 +29,7 @@ Three additional images sit beside their feature descriptions:
 - [NUnit evidence](assets/unit-test-evidence.png): process failed, passed and skipped NUnit 3 XML fixtures through MCP.
 - [Reproduction bundle](assets/reproduction-bundle.png): package the reduced input and source files, then replay the failure.
 
-The [demo manifest](assets/demo-recording.json) and [feature-image manifest](assets/readme-scenes.json) record the CLI version, checked outcomes and asset hashes. They contain no raw logs, environment values or local machine paths. The current recordings use the verified public npm installation of 1.4.0.
+The [demo manifest](assets/demo-recording.json) and [feature-image manifest](assets/readme-scenes.json) record the CLI version, checked outcomes and asset hashes. They contain no raw logs, environment values or local machine paths. The current recordings use the verified public npm installation of 1.4.1.
 
 To regenerate it, use Node.js and the optional maintainer image renderer. This does not add a runtime dependency to FailTrace:
 
