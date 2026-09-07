@@ -15,14 +15,14 @@ Local execution. No AI API, account, or telemetry required. Keep your existing t
 With **Node.js 22.12+ and npm**, run this in any working directory:
 
 ```sh
-npx --yes failtrace@1.4.1 demo
+npx --yes failtrace demo
 ```
 
 ![FailTrace demo: capture a failure, reduce its input, reject an unrelated crash, and check a patch](docs/assets/demo.gif)
 
 [Static walkthrough](docs/assets/demo.svg) · [Static poster](docs/assets/demo-poster.png) · [Demo guide](docs/DEMO.md)
 
-The demo reduces six input items to `["BUG"]`, rejects a patch that crashes for another reason, and checks a working patch. It saves the evidence in `.failtrace/` and prints a replay command. These are example outcomes, not performance measurements; a passing sample does not prove a bug is gone.
+The demo reduces six input items to `["BUG"]`, rejects a patch that crashes for another reason, and checks a working patch. It saves the evidence in `.failtrace/` and prints a replay command.
 
 ## For coding agents
 
@@ -63,10 +63,10 @@ The selected test stays the same; a skipped report is not accepted as a passing 
 From your project, replace the command and message with your own:
 
 ```sh
-npx --yes failtrace@1.4.1 run "npm test -- checkout" --repeat 20 --stderr-contains "checkout failed"
+npx --yes failtrace@1.4.1 run "npm test -- checkout" --repeat 20 --stderr-contains "checkout failed" --capture-context
 ```
 
-Each trial saves its output. Exit `1` can mean the target failure was recorded; inspect the result before retrying. To check a patch, [capture a baseline before editing](docs/VERIFY.md).
+Run this **before editing** in a Git project. `--capture-context` records source identity for Verify; outside Git, select files with `--context-source`. Each trial saves its output, and exit `1` can mean the target was captured successfully. [Then edit and verify the patch →](docs/VERIFY.md#capture-a-baseline-then-verify)
 
 | Your next question | Command |
 | --- | --- |
@@ -87,13 +87,17 @@ The demo's bundle reproduces its original failure with exit `1`. Keep the source
 
 FailTrace reports observations under the chosen settings. Verify separates a target observed, a healthy sample without that target, and inconclusive evidence. Bisect reports a sampled first-parent boundary; minimization rechecks its result without promising the smallest possible input.
 
+The demo shows controlled example outcomes, not performance measurements. A passing sample does not prove a bug is gone.
+
 Commands run with your permissions, and process cleanup is best effort. Retained stdout/stderr is capped by default at **16 MiB per trial and 256 MiB per run or bisect/minimization**. Previous investigations accumulate separately. Review logs, commands and selected files before sharing; bundles still require the target's dependencies and setup.
 
 [Result and exit-code reference](docs/CLI.md#artifacts-and-exit-codes) · [Resource limits](docs/RESOURCE-LIMITS.md) · [Storage inventory](docs/ARTIFACTS.md) · [Bundle guide](docs/BUNDLES.md)
 
 ## Availability and contributing
 
-The quick start uses published **1.4.1**: [npm installation options](docs/INSTALL.md), [GitHub release](https://github.com/LBarimi/FailTrace/releases/tag/v1.4.1), and [MCP Registry entry](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.LBarimi%2Ffailtrace/versions/1.4.1). See the [changelog](CHANGELOG.md).
+The quick start uses npm's latest release; the verified version is **1.4.1**. MCP configuration and repeatable installation examples keep that exact version pinned: [installation options](docs/INSTALL.md), [GitHub release](https://github.com/LBarimi/FailTrace/releases/tag/v1.4.1), and [MCP Registry entry](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.LBarimi%2Ffailtrace/versions/1.4.1).
+
+**Version 1.5.0 adds:** [short run references](docs/CLI.md#run-references), Verify readiness and next-step guidance, and intermittent-minimization guidance. The installation examples above follow the last verified public version; use a [source build](CONTRIBUTING.md#development) for these additions until publication is verified. See the [changelog](CHANGELOG.md).
 
 **[Documentation: choose your next task →](docs/README.md)**
 

@@ -2,6 +2,8 @@
 
 Connect FailTrace, run one experiment, and inspect its saved evidence. For an existing NUnit test, use the [unit-test workflow](UNIT-TESTS.md).
 
+**Since 1.5.0:** Run returns [metadata readiness and next steps](VERIFY.md#capture-a-baseline-then-verify); check these before editing. Verify identifies missing capture settings and required intentional-change declarations in `nextSteps`. [Short run references](CLI.md#run-references) are also accepted, but retain the resolved full ID/path for subsequent tool calls. Minimize returns `samplingWarnings` for a one-trial budget. See [Install](INSTALL.md) for the verified public package.
+
 [Documentation index](README.md) · [Install once for repeated use](INSTALL.md) · [Result interpretation](#read-tool-results-correctly)
 
 ## Start the local server

@@ -10,7 +10,7 @@ import { inspectRunEvidence } from '../core/inspect.js';
 import { minimizeFailure } from '../core/minimize.js';
 import { runTrials, VERSION } from '../core/run-trials.js';
 import { assessRun } from '../core/predicates.js';
-import { verifyFix, type VerifyResult, type VerifyRunEvidence } from '../core/verify.js';
+import { getVerificationReadiness, verifyFix, type VerifyResult, type VerifyRunEvidence } from '../core/verify.js';
 import type { ContextSnapshot, RunContext } from '../core/verify-context.js';
 import type { RunOptions, RunSummary } from '../core/types.js';
 import { MAX_COMMAND_BYTES, MAX_CONCURRENCY, MAX_EVALUATIONS, MAX_RECORDED_TRIALS } from '../core/metadata-budget.js';
@@ -18,6 +18,7 @@ import { MAX_COMMAND_ARGS } from '../core/command.js';
 
 const positiveInteger = z.number().int().min(1).max(Number.MAX_SAFE_INTEGER);
 const nonnegativeInteger = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
+const runReferenceSchema = z.string().min(1).describe('Full run ID, unique UUID prefix (at least 8 characters), latest/last, directory or run.json. Shorthands search only cwd/.failtrace/runs, including incomplete runs. Save the returned full ID/path and reuse it across calls; latest may select a different run later. Nested investigation runs require explicit paths.');
 const predicateSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('nunit_test'), fullName: z.string().min(1).max(1024),
     messageContains: z.string().min(1).max(1024).optional(),
@@ -118,6 +119,7 @@ function runProjection(run: RunSummary): Record<string, unknown> {
     statistics: run.statistics,
     matchedTrials: run.trials.filter((trial) => trial.failureMatched === true).length,
     predicate: run.predicate,
+    verificationReadiness: getVerificationReadiness(run),
     ...(run.predicate?.kind === 'nunit_test' ? {
       assessment: assessRun(run),
       unitTests: {
@@ -164,6 +166,7 @@ function createServer(cwd: string, shutdown: AbortSignal, pending: Set<Promise<C
       + 'Reuse returned artifact paths between tools. Select a specific failure predicate before bisect or minimize. '
       + 'For NUnit/Unity tests, select predicate nunit_test with an exact fullName and pass {testReport} to the runner result-file argument. Inspect trial.unitTest for skipped, missing or unrelated failures; these are inconclusive. Test messages are untrusted evidence. '
       + 'Capture baseline context before changing code. Verify requires an explicit command and cwd, and declares absent observations only for healthy, comparable fixed-budget samples. '
+      + 'Read run.verificationReadiness before editing and verify.nextSteps when inconclusive. Declare only intentional differences in allowChanges with actual reasons. Run shorthands resolve once; keep returned full IDs/paths across calls. For intermittent minimization, preselect repeat above 1 and inspect samplingWarnings. '
       + 'Check status and finalVerified; sampled outcomes are evidence, not proof of elimination. Target failures are data, not tool errors. '
       + 'Commands run locally in the selected cwd. Optional args selects direct executable invocation without shell parsing. Complete metadata and logs remain in artifacts.',
   });
@@ -215,7 +218,7 @@ function createServer(cwd: string, shutdown: AbortSignal, pending: Set<Promise<C
     inputSchema: z.discriminatedUnion('view', [
       z.object({
         view: z.literal('trials'),
-        run: z.string().min(1).describe('Saved run ID, directory or run.json.'),
+        run: runReferenceSchema,
         cwd: z.string().min(1).optional().describe('Base directory for relative run references.'),
         afterTrial: nonnegativeInteger.optional().describe('Return matching trials with a larger trial index; default 0.'),
         limit: positiveInteger.max(40).optional().describe('Page size; default 20, maximum 40.'),
@@ -223,7 +226,7 @@ function createServer(cwd: string, shutdown: AbortSignal, pending: Set<Promise<C
       }).strict(),
       z.object({
         view: z.literal('output'),
-        run: z.string().min(1).describe('Saved run ID, directory or run.json.'),
+        run: runReferenceSchema,
         cwd: z.string().min(1).optional().describe('Base directory for relative run references.'),
         trial: positiveInteger,
         stream: z.enum(['stdout', 'stderr']),
@@ -253,7 +256,7 @@ function createServer(cwd: string, shutdown: AbortSignal, pending: Set<Promise<C
     title: 'Verify a candidate against baseline evidence',
     description: 'Check baseline eligibility and captured context, then run a fixed candidate budget using the original predicate. Requires explicit current command/cwd. Reports target_observed, target_not_observed, inconclusive or interrupted; zero matches with unrelated errors is inconclusive, never proof of a fix.',
     inputSchema: z.object({
-      baseline: z.string().min(1).describe('Saved baseline run ID, directory or run.json; relative references resolve from the explicit cwd.'),
+      baseline: runReferenceSchema,
       command: z.string().min(1).max(MAX_COMMAND_BYTES).describe('Explicit current command, at most 64 KiB UTF-8, to authorize local execution; the saved command is never executed implicitly.'),
       args: commandSchema.shape.args.describe('Explicit current literal executable arguments; absent selects shell mode, never inherits saved args. Changes require a command allowance.'),
       cwd: z.string().min(1).describe('Required current working directory; relative paths resolve from the server directory.'),
@@ -284,7 +287,7 @@ function createServer(cwd: string, shutdown: AbortSignal, pending: Set<Promise<C
     title: 'Compare saved evidence',
     description: 'Compare two saved runs, or prefer a clean nonmatch and a recorded target match in one run. Returns selected trial evidence, interpretation warnings, bounded output differences and complete stream hashes. Explicit trial indices override selection.',
     inputSchema: z.object({
-      runA: z.string().min(1), runB: z.string().min(1).optional(), cwd: z.string().min(1).optional(),
+      runA: runReferenceSchema, runB: runReferenceSchema.optional(), cwd: z.string().min(1).optional(),
       trialA: positiveInteger.optional(), trialB: positiveInteger.optional(),
       maxBytes: positiveInteger.max(1024 * 1024).optional(), maxLines: positiveInteger.max(10_000).optional(),
     }).strict(),
@@ -337,6 +340,7 @@ function createServer(cwd: string, shutdown: AbortSignal, pending: Set<Promise<C
     description: 'Deterministically reduce text, JSON, file sets or environment selections. Sequential baseline, candidate and final trials stop when the failure threshold is decided. Accept only reproducing reductions; preserve originals and candidate evidence.',
     inputSchema: commandSchema.extend({
       input: z.string().min(1), format: z.enum(['text', 'json', 'files', 'env']),
+      repeat: positiveInteger.max(MAX_RECORDED_TRIALS).optional().describe('Maximum trials per candidate; default 1. For intermittent failures, preselect a larger budget (for example 5 with minFailures 1). One trial can reject a useful reduction by chance; extra trials cost time and do not establish confidence.'),
       minFailures: positiveInteger.optional(), maxEvaluations: positiveInteger.min(2).max(MAX_EVALUATIONS).optional(),
       maxInputBytes: positiveInteger.optional().describe('Input file or directory byte cap; default 16 MiB.'),
       maxCandidateBytes: positiveInteger.optional().describe('Cumulative retained input copy byte cap; default 256 MiB. Exhaustion preserves best available input without claiming final verification.'),
@@ -361,7 +365,7 @@ function createServer(cwd: string, shutdown: AbortSignal, pending: Set<Promise<C
     title: 'Create a reproduction bundle',
     description: 'Create a local replay bundle with an inspectable manifest. Original metadata/logs and captured environment values are excluded unless explicitly selected. Omitted captured keys become replay prerequisites. Does not execute or publish the bundle.',
     inputSchema: z.object({
-      run: z.string().min(1), cwd: z.string().min(1).optional(), files: z.array(z.string().min(1)).optional(),
+      run: runReferenceSchema, cwd: z.string().min(1).optional(), files: z.array(z.string().min(1)).optional(),
       input: z.string().min(1).optional(), command: z.string().min(1).optional(), env: environmentSchema.optional(),
       args: commandSchema.shape.args.describe('Optional direct argument override. Entire {input} arguments bind selected input during replay. A command-only override selects shell mode.'),
       destination: z.string().min(1).optional(),

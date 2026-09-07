@@ -1,5 +1,5 @@
 import { lstat, opendir, realpath, stat } from 'node:fs/promises';
-import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { dirname, isAbsolute, join, relative } from 'node:path';
 import { validatePredicate } from './predicates.js';
 import { validateExecutionRequirement } from './execution-evidence.js';
 import { MAX_METADATA_BYTES, type StoredRunSummary } from './run-metadata.js';
@@ -10,6 +10,7 @@ import { readBoundedFile } from './bounded-file.js';
 import { MAX_INVESTIGATION_METADATA_BYTES, MAX_RECORDED_TRIALS } from './metadata-budget.js';
 import { validateCommand } from './command.js';
 import { validateNUnitEvidence } from './nunit-report.js';
+import { resolveRunReference } from './run-reference.js';
 
 /** Resolve a referenced artifact without accepting escapes or symbolic links. */
 export async function safeArtifactPath(directory: string, path: string): Promise<string> {
@@ -51,17 +52,13 @@ function validateTrial(value: unknown): asserts value is TrialResult {
   }
 }
 
-/** Load an ID, run directory, or run.json, relocating file references to its actual directory. */
+/** Load an ID, unique UUID prefix, latest/last, directory or run.json. */
 export async function loadRun(reference: string, cwd = process.cwd(), signal?: AbortSignal): Promise<RunSummary> {
   signal?.throwIfAborted();
   if (typeof reference !== 'string' || !reference.trim() || reference.includes('\0')) throw new Error('Provide a run ID or path.');
-  let path = resolve(cwd, reference);
-  let info;
-  try { info = await stat(path); } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT' || !/^[\w.-]+$/.test(reference)) throw error;
-    path = resolve(cwd, '.failtrace', 'runs', reference);
-    info = await stat(path);
-  }
+  const resolved = await resolveRunReference(reference, cwd, signal);
+  let path = resolved.path;
+  const info = await stat(path);
   if (info.isDirectory()) path = join(path, 'run.json');
   path = await realpath(path);
   if ((await stat(path)).size > MAX_METADATA_BYTES) throw new Error('Run metadata exceeds the 32 MiB reader limit.');
@@ -71,6 +68,7 @@ export async function loadRun(reference: string, cwd = process.cwd(), signal?: A
   const value: unknown = JSON.parse(header.toString('utf8'));
   if (!value || typeof value !== 'object') throw new Error('Invalid run metadata.');
   const run = value as StoredRunSummary;
+  if (resolved.selectedId !== undefined && run.id !== resolved.selectedId) throw new Error('Selected run ID differs from its metadata. Use an explicit path to inspect the evidence.');
   validateCommand(run.command, run.args);
   if (![1, 2].includes(run.schemaVersion) || (run.schemaVersion === 2 && run.trialStorage !== 'individual')
     || (run.schemaVersion === 1 && run.trialStorage !== undefined)

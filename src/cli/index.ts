@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { bisectRegression, compareRuns, createBundle, inventoryArtifacts, minimizeFailure, runTrials, verifyFix, VERSION } from '../core/index.js';
+import { bisectRegression, compareRuns, createBundle, getVerificationReadiness, inventoryArtifacts, minimizeFailure, runTrials, verifyFix, VERSION } from '../core/index.js';
+import { minimizationWarnings } from '../core/minimize.js';
 import { parseArgs } from './args.js';
 import { formatComparison, formatDemoProgress, formatDemoResult, formatHeader, formatSummary, formatTrial, formatVerification } from './presentation.js';
 import { formatHelp } from './help.js';
@@ -80,8 +81,8 @@ async function main(): Promise<number> {
           ...invocation, signal: controller.signal,
           onTrialComplete: (trial) => print(formatTrial(trial, invocation.repeat)),
         });
-        print(formatSummary(summary));
-        result(summary);
+        if (invocation.json) result({ ...summary, verificationReadiness: getVerificationReadiness(summary) });
+        else print(formatSummary(summary));
         exitCode = summary.status === 'resource_limited' || summary.status === 'error'
           || (summary.executionRequirement !== undefined && summary.trials.some(trial => trial.executionMatched !== true))
           ? 2 : summary.statistics.failed > 0 ? 1 : 0;
@@ -121,6 +122,7 @@ async function main(): Promise<number> {
       }
       case 'minimize': {
         print(`FailTrace - failure minimization\n\nInput     ${invocation.input}\nFormat    ${invocation.format}\nCommand   ${displayCommand(invocation)}\n`);
+        for (const warning of minimizationWarnings(invocation.repeat)) print(`Sampling: ${warning}`);
         const reduction = await minimizeFailure({
           ...invocation, signal: controller.signal,
           onCandidate: (candidate) => print(`  ${String(candidate.index).padStart(3, '0')}  ${candidate.phase.padEnd(9)} ${String(candidate.units).padStart(5)} units  ${candidate.assessment}${candidate.accepted ? '  accepted' : ''}`),

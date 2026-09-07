@@ -93,6 +93,21 @@ Candidate runs and `bisect.json` remain under `.failtrace/bisects/<id>/`. Git wo
 
 In version 1.0, bisect JSON uses `schemaVersion: 2`. Each `candidates[].run` contains `trialCount`, `matchedTrials` and `metadataPath`, replacing its embedded `trials` array. Core callers read full details with `await loadRun(candidate.run.metadataPath)`; MCP clients can pass that path to `failtrace_inspect_run`. Trial files and source provenance remain in the candidate run directory after worktree cleanup. This changes the parent bisect result shape; it does not change the stored run schemas.
 
+## Run references
+
+**Requires 1.5.0; earlier versions accept full IDs and paths only.** See [Install](INSTALL.md) for the verified public package, or build this checkout and use `node dist/cli/index.js` in place of `failtrace`:
+
+```sh
+failtrace compare latest --cwd /path/to/project
+failtrace compare abcdef01 --cwd /path/to/project
+```
+
+`latest` (also `last`) selects the newest generated run ID directly under the chosen project's `.failtrace/runs`. This includes running, interrupted and incomplete runs: an unreadable newest run fails instead of falling back to older evidence. Ordering uses the timestamp and UUID in the directory name, not modification time or completion time. Simultaneous timestamps use UUID order as a stable tie-break; directory names depend on the machine clock.
+
+For a short reference, copy at least the first eight characters of the UUID after the timestamp. A match must be unique; ambiguity lists up to eight full IDs and asks for a longer reference. Explicit existing paths and exact full IDs retain precedence over UUID prefixes. Bare `latest`/`last` are reserved; use `./latest` for a literal path with that name.
+
+The lookup scans at most 100,000 direct entries, rejects redirected shorthand storage and skips directory links. It never searches sibling projects, custom storage or nested minimization/verification runs. Use their explicit paths. Returned comparison, inspection, verification and bundle evidence retains the selected full ID. Save that ID/path before editing or paging MCP results; `latest` can change between calls.
+
 ## Minimize a reproduction
 
 ```sh
@@ -117,6 +132,8 @@ File-set inputs use bounded streaming copies. They do not use hard links; modify
 `--max-input-bytes` bounds the original input and each candidate (16 MiB default), and `--max-candidate-bytes` bounds cumulative managed input copies (256 MiB default). Storage exhaustion preserves an existing best available input, reports `limit_reached`, and leaves `finalVerified` false. See [input storage scope](RESOURCE-LIMITS.md#minimization-input-storage).
 
 Use `--repeat N --min-failures K` to require repeated reproduction. The default evaluation budget is `--max-evaluations 200`, including baseline and final verification. Candidates are accepted only when the selected predicate still reproduces in clean trials. Original input, each candidate, its runs, the selected reduction, and `result.json` are retained under `.failtrace/minimizations/<id>/`.
+
+For an intermittent target, choose a trial budget before starting, for example `--repeat 5 --min-failures 1`. With the default single trial, a useful reduction can be rejected by chance, or the original/final check can fail to reproduce. More trials cost time; this example does not establish statistical confidence. Minimize does not inherit a previous run or its failure rate, and changing input can change that rate. **Since 1.5.0:** the CLI prints this sampling guidance before single-trial minimization, and Core/JSON/MCP results include `samplingWarnings`.
 
 Baseline, candidate, and independent final checks use the same sequential threshold early stopping described for bisect. The final check still runs as a separate evaluation. Each evaluation's `runDirectory` contains its observed trials and decision; do not interpret a short decided run as an interrupted run or its observed failure rate as a full-budget measurement. There is no minimize `--concurrency` option.
 

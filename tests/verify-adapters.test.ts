@@ -87,6 +87,7 @@ describe('built Verify CLI', () => {
     expect(before.code).toBe(1);
     expect(before.stderr).toBe('');
     const baseline = JSON.parse(before.stdout) as RunSummary;
+    expect(JSON.parse(before.stdout).verificationReadiness).toMatchObject({ eligible: true, scope: 'recorded_metadata', nextSteps: [] });
     expect(baseline).toHaveProperty('context');
     const args = ['verify', baseline.artifactDirectory, '--command', command, '--cwd', cwd];
     const unchanged = await invoke([...args, '--json'], cwd);
@@ -97,6 +98,9 @@ describe('built Verify CLI', () => {
     const undeclared = await invoke([...args, '--json'], cwd);
     expect(undeclared.code).toBe(2);
     expect(JSON.parse(undeclared.stdout).status).toBe('inconclusive');
+    expect(JSON.parse(undeclared.stdout).nextSteps).toContainEqual(expect.objectContaining({ code: 'declare_change', field: 'source', mcpField: 'allowChanges' }));
+    const guidance = await invoke(args, cwd);
+    expect(guidance.stdout).toContain('--allow-change "source:<describe the intended change>"');
     const changedArgs = [...args, '--allow-change', 'source:repair target logic'];
     const after = await invoke([...changedArgs, '--json'], cwd);
     expect(after.code).toBe(0);
@@ -124,6 +128,10 @@ describe('built Verify CLI', () => {
     const result = await invoke(['verify', baseline.artifactDirectory, '--command', command, '--cwd', cwd, '--allow-change', 'source:changed', '--json'], cwd);
     expect(result.code).toBe(2);
     expect(JSON.parse(result.stdout)).toMatchObject({ status: 'inconclusive', candidate: null, baselineEligibility: { eligible: false } });
+    expect(JSON.parse(result.stdout).nextSteps).toContainEqual(expect.objectContaining({ code: 'capture_context', mcpField: 'captureContext' }));
+    const guidance = await invoke(['verify', baseline.artifactDirectory, '--command', command, '--cwd', cwd], cwd);
+    expect(guidance.stdout).toContain('--capture-context');
+    expect(guidance.stdout).toContain('original failing code');
     await expect(readFile(join(cwd, 'must-not-exist'))).rejects.toMatchObject({ code: 'ENOENT' });
   });
 });

@@ -104,7 +104,13 @@ describe('official SDK stdio MCP adapter', () => {
       captureContext: { sourceFiles: ['check.mjs'] },
     } }));
     expect(before).toMatchObject({ assessment: 'reproduced', executionRequirement, executionEvidenceMissingTrials: 0, trials: [{ executionMatched: true }] });
+    expect(before.verificationReadiness).toMatchObject({ eligible: true, scope: 'recorded_metadata' });
     await writeFile(join(cwd, 'check.mjs'), 'console.log("Skipped");');
+    const undeclared = structured(await client.callTool({ name: 'failtrace_verify', arguments: {
+      command, cwd, baseline: 'latest',
+    } }));
+    expect(undeclared).toMatchObject({ status: 'inconclusive', candidate: null,
+      baseline: { id: before.id }, nextSteps: [{ code: 'declare_change', field: 'source', mcpField: 'allowChanges' }] });
     const after = structured(await client.callTool({ name: 'failtrace_verify', arguments: {
       command, cwd, baseline: before.artifactDirectory, allowChanges: [{ field: 'source', reason: 'Negative control: skip the check.' }],
     } }));
@@ -145,11 +151,13 @@ describe('official SDK stdio MCP adapter', () => {
     expect(run.status).toBe('completed');
     expect(run.statistics).toMatchObject({ total: 2, passed: 1, failed: 1, failureRate: 0.5 });
     expect(run.matchedTrials).toBe(1);
+    expect(run.verificationReadiness).toMatchObject({ eligible: false,
+      nextSteps: expect.arrayContaining([expect.objectContaining({ code: 'capture_context', mcpField: 'captureContext' })]) });
     expect(run.concurrency).toBe(1);
     const runDirectory = run.artifactDirectory as string;
     expect(await readFile(join(runDirectory, 'trials', '002', 'stderr.txt'), 'utf8')).toContain('EXPECTED_BUNDLE_FAILURE');
 
-    const comparison = await client.callTool({ name: 'failtrace_compare', arguments: { runA: runDirectory } });
+    const comparison = await client.callTool({ name: 'failtrace_compare', arguments: { runA: 'latest' } });
     expect(comparison.isError).toBe(false);
     expect(structured(comparison)).toMatchObject({ trialA: 1, trialB: 2, stderr: { equal: false }, warnings: [],
       selectedTrials: { a: { failureMatched: false, exitCode: 0 }, b: { failureMatched: true } } });

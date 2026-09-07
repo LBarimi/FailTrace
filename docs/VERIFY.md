@@ -8,6 +8,10 @@ Since 1.0.0, candidate runs inherit the baseline output caps. Changing them requ
 
 ## Capture a baseline, then verify
 
+**Since 1.5.0:** Run reports `verificationReadiness` through CLI JSON and MCP; human output shows the same metadata eligibility and next steps. Core callers use `getVerificationReadiness(run)`. This checks recorded metadata with healthy exit `0` by default, without opening evidence files or capturing additional context; Verify still rechecks saved files and current conditions. A custom Core caller may supply its healthy exit-code policy as a second argument. The derived readiness is not added to saved `run.json`.
+
+Verify reports `nextSteps` for missing baseline context or undeclared changes, with a stable `code`, message, applicable `cliOptions` and MCP field (`captureContext`, `predicate` or `allowChanges`). Guidance never executes a stored command, restores code or grants an allowance. If source has already been fixed without a usable baseline, record the original failing code in a workspace you control first. Capturing fixed code cannot recover the missing before-state. See [Install](INSTALL.md) for the verified public package.
+
 Before changing code, select the original failure signature, input and setup files. For example, adapt these project-owned paths and command:
 
 ```sh

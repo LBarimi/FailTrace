@@ -12,6 +12,7 @@ import type { ContextSnapshot, RunContext } from './verify-context.js';
 import type { EnvironmentSnapshot, ExecutionRequirement, FailurePredicate, RunOptions, RunSummary, TrialResult } from './types.js';
 import { outputLimits, type OutputLimits } from './output-budget.js';
 import { commandIdentity, sameCommand } from './command.js';
+import { RunReferenceError } from './run-reference.js';
 
 export type VerifyChangeField = 'command' | 'source' | 'inputs' | 'setup' | 'environment' | 'timeout' | 'concurrency' | 'outputLimits';
 export interface VerifyAllowedChange { field: VerifyChangeField; reason: string }
@@ -54,6 +55,17 @@ export interface VerifyContextChange {
   reason?: string;
 }
 export interface BaselineEligibility { eligible: boolean; reasons: string[] }
+export interface VerificationNextStep {
+  code: 'capture_context' | 'select_target' | 'capture_baseline' | 'declare_change' | 'inspect_evidence' | 'resolve_reference';
+  message: string;
+  cliOptions?: string[];
+  mcpField?: 'captureContext' | 'predicate' | 'allowChanges';
+  field?: VerifyChangeField;
+}
+export interface VerificationReadiness extends BaselineEligibility {
+  scope: 'recorded_metadata';
+  nextSteps: VerificationNextStep[];
+}
 export interface VerifyResult {
   schemaVersion: 1;
   id: string;
@@ -67,6 +79,7 @@ export interface VerifyResult {
   baselineEligibility: BaselineEligibility;
   changes: VerifyContextChange[];
   reasons: string[];
+  nextSteps?: VerificationNextStep[];
   healthyExitCodes: number[];
   plan: {
     command: string; cwd: string; repeat: number; timeoutMs: number; concurrency: number;
@@ -146,7 +159,7 @@ function healthReasons(run: RunSummary, codes: number[]): string[] {
     if (run.trials.some(trial => trial.executionMatched !== true)) reasons.push('Required execution checkpoint is missing or unknown in one or more trials.');
   }
   if (!knownEnvironment(run.environment) || run.concurrency === undefined) reasons.push('Selected environment or concurrency context is unknown.');
-  if (!validRunContext(run.context)) reasons.push('Declared input, setup and source context is missing or invalid; capture a fresh baseline with captureContext.');
+  if (!validRunContext(run.context)) reasons.push('Declared input, setup and source context is missing or invalid; capture a fresh baseline on the original failing code.');
   else if (!run.context.stable || !run.context.after || run.context.before.source.kind === 'unknown'
     || run.context.before.issues.length || run.context.after.issues.length || !snapshotsEqual(run.context.before, run.context.after)) {
     reasons.push('Recorded context is unknown, incomplete, or changed during the run.');
@@ -160,6 +173,33 @@ export function assessBaselineEligibility(run: RunSummary, exitCodes: number[] =
   const reasons = healthReasons(run, codes);
   if (!run.trials.some((trial) => trial.failureMatched === true)) reasons.push('Baseline contains no explicit target match; capture a reproducing baseline first.');
   return { eligible: reasons.length === 0, reasons };
+}
+
+/** Cheap guidance only: Verify still validates the saved files and candidate context. */
+export function getVerificationReadiness(run: RunSummary, exitCodes: number[] = [0]): VerificationReadiness {
+  const eligibility = assessBaselineEligibility(run, exitCodes);
+  const nextSteps: VerificationNextStep[] = [];
+  if (!validRunContext(run.context) || run.context.before.source.kind === 'unknown') {
+    nextSteps.push({ code: 'capture_context',
+      message: 'Before editing, rerun with --capture-context in Git, or --context-source "relative/source-file" for an explicit scope. If already edited, record the original failing code first; fixed code cannot recover the baseline.',
+      cliOptions: ['--capture-context', '--context-source "relative/source-file"'], mcpField: 'captureContext' });
+  }
+  if (!run.predicate) nextSteps.push({ code: 'select_target',
+    message: 'Record the intended failure with a predicate, such as --stderr-contains "target message", before editing.',
+    cliOptions: ['--stderr-contains "target message"'], mcpField: 'predicate' });
+  if (!run.trials.some(trial => trial.failureMatched === true)) nextSteps.push({ code: 'capture_baseline',
+    message: 'Capture the original failing code with a matching target before editing. Check the predicate, input connection and trial budget; a healthy fixed run cannot replace a failing baseline.' });
+  if (!eligibility.eligible && nextSteps.length === 0) nextSteps.push({ code: 'inspect_evidence',
+    message: 'Inspect the eligibility reasons and saved trials. Resolve incomplete, unstable or unhealthy evidence, then record a full-budget baseline on the original failing code.' });
+  return { ...eligibility, scope: 'recorded_metadata', nextSteps };
+}
+
+function undeclaredChangeSteps(changes: VerifyContextChange[]): VerificationNextStep[] {
+  return changes.filter(change => !change.allowed).map(({ field }) => ({
+    code: 'declare_change', field, mcpField: 'allowChanges',
+    cliOptions: [`--allow-change "${field}:<describe the intended change>"`],
+    message: `Review the ${field} difference. Only if intentional, repeat your Verify command with --allow-change "${field}:<describe the intended change>" (replace the placeholder). MCP: add { field: "${field}", reason: "your actual reason" } to allowChanges. Otherwise restore the unintended condition.`,
+  }));
 }
 
 async function checkEvidenceFiles(run: RunSummary, signal?: AbortSignal): Promise<string[]> {
@@ -248,8 +288,9 @@ export async function verifyFix(options: VerifyOptions): Promise<VerifyResult> {
   try {
     if (options.signal?.aborted) { report.status = 'interrupted'; report.reasons.push('Verification was interrupted before execution.'); return report; }
     let baseline: RunSummary;
-    try { baseline = await loadRun(options.baseline, cwd, options.signal); } catch {
-      report.reasons.push('Baseline could not be loaded. Provide a readable run ID or run.json and capture a fresh baseline if its evidence is incomplete.');
+    try { baseline = await loadRun(options.baseline, cwd, options.signal); } catch (error) {
+      report.reasons.push(error instanceof RunReferenceError ? error.message : 'Baseline could not be loaded. Provide a readable run ID or run.json and capture a fresh baseline if its evidence is incomplete.');
+      report.nextSteps = [{ code: 'resolve_reference', message: 'Use a full run ID, a unique UUID prefix of at least 8 characters, or an explicit run.json path. Check the explicit working directory. Preserve the selected full ID for subsequent calls.' }];
       report.baselineEligibility.reasons = [...report.reasons];
       return report;
     }
@@ -258,7 +299,11 @@ export async function verifyFix(options: VerifyOptions): Promise<VerifyResult> {
     report.baselineEligibility.reasons.push(...await checkEvidenceFiles(baseline, options.signal));
     report.baselineEligibility.eligible = report.baselineEligibility.reasons.length === 0;
     report.reasons.push(...report.baselineEligibility.reasons);
-    if (!report.baselineEligibility.eligible) return report;
+    if (!report.baselineEligibility.eligible) {
+      report.nextSteps = getVerificationReadiness(baseline, codes).nextSteps;
+      if (!report.nextSteps.length) report.nextSteps = [{ code: 'inspect_evidence', message: 'Inspect the saved baseline files and reported evidence errors. Recreate missing evidence from the original failing code before verifying a fix.' }];
+      return report;
+    }
     if (await realpath(cwd) !== baseline.context!.workingDirectory) {
       report.reasons.push('The explicit working directory differs from the recorded baseline directory. Capture a fresh baseline there.');
       return report;
@@ -283,6 +328,7 @@ export async function verifyFix(options: VerifyOptions): Promise<VerifyResult> {
     report.changes = changesBetween(baseline, { ...plan, environment, context }, allowed);
     if (report.changes.some((change) => !change.allowed)) {
       report.reasons.push('Candidate conditions changed without an explicit allowance and reason.');
+      report.nextSteps = undeclaredChangeSteps(report.changes);
       return report;
     }
     await writeJsonAtomic(report.metadataPath, report);
@@ -313,7 +359,10 @@ export async function verifyFix(options: VerifyOptions): Promise<VerifyResult> {
     report.reasons.push(...healthReasons(candidate, codes), ...await checkEvidenceFiles(candidate, options.signal));
     if (validRunContext(candidate.context)) {
       report.changes = changesBetween(baseline, { ...plan, environment: candidate.environment!, context: candidate.context.before }, allowed);
-      if (report.changes.some((change) => !change.allowed)) report.reasons.push('Candidate conditions changed without an explicit allowance and reason.');
+      if (report.changes.some((change) => !change.allowed)) {
+        report.reasons.push('Candidate conditions changed without an explicit allowance and reason.');
+        report.nextSteps = undeclaredChangeSteps(report.changes);
+      }
       if (!snapshotsEqual(context, candidate.context.before)) report.reasons.push('Candidate context changed between preflight and execution.');
       if (JSON.stringify(environmentIdentity(environment)) !== JSON.stringify(environmentIdentity(candidate.environment!))) {
         report.reasons.push('Selected environment changed between preflight and execution.');

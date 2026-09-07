@@ -1,5 +1,6 @@
 import { relative } from 'node:path';
 import type { ComparisonResult, RunSummary, TrialResult, VerifyResult } from '../core/index.js';
+import { getVerificationReadiness } from '../core/verify.js';
 import type { DemoProgress, DemoResult } from '../demo/index.js';
 
 export { HELP } from './help.js';
@@ -46,6 +47,7 @@ export function formatSummary(summary: RunSummary): string {
   const artifactPath = relative(process.cwd(), summary.artifactDirectory) || summary.artifactDirectory;
   const matched = summary.trials.filter((trial) => trial.failureMatched ?? trial.status === 'failed').length;
   const missingExecution = summary.executionRequirement === undefined ? 0 : summary.trials.filter(trial => trial.executionMatched !== true).length;
+  const readiness = getVerificationReadiness(summary);
   return [
     '',
     interrupted ? 'Results (partial - interrupted)' : 'Results',
@@ -82,6 +84,14 @@ export function formatSummary(summary: RunSummary): string {
     '',
     'Artifacts:',
     artifactPath,
+    '', `Run ID: ${summary.id}`,
+    'Next (from the same project, or add --cwd):',
+    '  failtrace compare latest',
+    'Keep the full ID above when you need to reuse this exact run.',
+    '', readiness.eligible ? 'Verify baseline: metadata eligible. Keep this ID before editing; Verify rechecks saved evidence.' : 'Verify baseline: not eligible with the default healthy exit code 0.',
+    ...(readiness.eligible ? ['For an intentional source edit, Verify needs --allow-change "source:<describe the intended change>".'] : []),
+    ...readiness.reasons.map(reason => `  ${reason}`),
+    ...readiness.nextSteps.map(step => `Next: ${step.message}`),
   ].join('\n');
 }
 
@@ -117,6 +127,7 @@ export function formatVerification(result: VerifyResult): string {
   const lines = ['', `Result  ${result.status}`, ''];
   for (const [label, evidence] of [['Baseline', result.baseline], ['Candidate', result.candidate]] as const) {
     lines.push(`${label}  ${evidence ? `${evidence.matchedTrials} target matches / ${evidence.completedTrials} completed / ${evidence.requestedTrials} requested; ${evidence.unhealthyTrials} unhealthy` : 'not run or unavailable'}`);
+    if (evidence) lines.push(`  Run ID: ${evidence.id}`);
     if (evidence && evidence.unhealthyTrials > 0) {
       lines.push(`  Infrastructure ${evidence.infrastructureTrials}; unrelated failures ${evidence.unrelatedFailureTrials}; invalid evidence ${evidence.invalidEvidenceTrials}`);
     }
@@ -125,6 +136,7 @@ export function formatVerification(result: VerifyResult): string {
     lines.push(`Changed ${change.field}  ${change.allowed ? 'declared' : 'not allowed'}${change.reason ? `: ${change.reason}` : ''}`);
   }
   for (const reason of result.reasons) lines.push(`Reason  ${reason}`);
+  for (const step of result.nextSteps ?? []) lines.push(`Next  ${step.message}`);
   lines.push('', result.status === 'target_not_observed'
     ? 'The target failure was not observed in this healthy, comparable sample. This does not prove elimination.'
     : result.status === 'target_observed' ? 'The target failure was observed in the candidate sample.'

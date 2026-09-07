@@ -2,6 +2,13 @@
 
 User-visible changes are listed here. [Compatibility](docs/COMPATIBILITY.md) covers integration contracts; [release validation](docs/RELEASE-VALIDATION.md) holds archive identities and installation checks.
 
+## 1.5.0
+
+- Resolve saved runs by unique UUID prefix or explicit `latest`/`last` in CLI, Core and MCP; retain full selected IDs and reject ambiguous matches.
+- Report baseline metadata readiness after Run and provide actionable CLI/MCP guidance for missing context and undeclared Verify changes.
+- Explain single-trial minimization limits and how to preselect a budget for intermittent failures without changing execution defaults.
+- Simplify the README quick start and show baseline capture before editing; keep MCP installation versions pinned.
+
 ## 1.4.1
 
 - Include complete notices for all five reviewed runtime dependencies, including the saxes notice omitted from its npm package and the MCP SDK's licensing transition terms.

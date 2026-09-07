@@ -14,6 +14,10 @@ import { diagnosticMessage, MAX_EVALUATIONS, MetadataBudget, MetadataLimitError,
 
 export type { MinimizeFormat } from './minimize-input.js';
 
+export function minimizationWarnings(repeat: number): string[] {
+  return repeat === 1 ? ['One trial per candidate can miss an intermittent failure and reject a useful reduction. For flaky targets, choose a larger budget before running, e.g. CLI --repeat 5 --min-failures 1 or MCP repeat: 5, minFailures: 1. This is an example budget, not a confidence guarantee; more trials can cost more time.'] : [];
+}
+
 export interface MinimizeOptions extends OutputLimits, InputLimits {
   command: string;
   /** Direct executable arguments; an entire {input} value binds each candidate path. */
@@ -67,6 +71,7 @@ export interface MinimizeResult extends OutputLimits, InputLimits {
   predicate: FailurePredicate;
   executionRequirement?: ExecutionRequirement;
   finalVerified: boolean;
+  samplingWarnings?: string[];
   storageLimit?: CandidateStorageLimit;
   metadataLimit?: MetadataLimit;
   evaluations: MinimizeEvaluation[];
@@ -165,6 +170,7 @@ export async function minimizeFailure(options: MinimizeOptions): Promise<Minimiz
     originalSize: candidateSize(initial), minimizedSize: candidateSize(initial),
     startedAt: new Date().toISOString(), endedAt: null, repeat, minFailures, timeoutMs, maxEvaluations,
     predicate: options.predicate ?? { kind: 'nonzero_exit' }, finalVerified: false, evaluations: [],
+    samplingWarnings: minimizationWarnings(repeat),
     ...(options.executionRequirement === undefined ? {} : { executionRequirement: { ...options.executionRequirement } }),
   };
   const metadataPath = join(artifactDirectory, 'result.json');

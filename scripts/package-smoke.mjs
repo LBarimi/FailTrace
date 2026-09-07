@@ -55,7 +55,7 @@ async function exerciseInstalledCore() {
   const within = relative(installed, imported);
   assert(!isAbsolute(within) && within !== '..' && !within.startsWith('..'), 'Core must resolve from the installed tarball');
   assert.equal(api.VERSION, process.env.FAILTRACE_SMOKE_VERSION);
-  for (const name of ['runTrials', 'compareRuns', 'bisectRegression', 'minimizeFailure', 'verifyFix', 'createBundle', 'inspectRunEvidence', 'inventoryArtifacts']) {
+  for (const name of ['runTrials', 'compareRuns', 'bisectRegression', 'minimizeFailure', 'verifyFix', 'getVerificationReadiness', 'createBundle', 'inspectRunEvidence', 'inventoryArtifacts']) {
     assert.equal(typeof api[name], 'function', `Missing public Core export: ${name}`);
   }
   const project = join(consumer, 'independent project');
@@ -71,6 +71,9 @@ process.exitCode = failed ? 1 : 0;
   const nunitBaseline = await api.runTrials({ command: process.execPath, args: ['nunit.mjs', 'failed'], cwd: project, repeat: 1,
     predicate: { kind: 'nunit_test', fullName: 'Installed.Test' }, captureContext: { sourceFiles: ['nunit.mjs'] } });
   assert.equal(api.assessRun(nunitBaseline), 'reproduced');
+  assert.equal(api.getVerificationReadiness(nunitBaseline).eligible, true);
+  assert.equal((await api.loadRun('latest', project)).id, nunitBaseline.id);
+  assert.equal((await api.loadRun(nunitBaseline.id.slice(25, 33), project)).id, nunitBaseline.id);
   const nunitFixed = await api.verifyFix({ baseline: nunitBaseline.artifactDirectory, command: process.execPath, args: ['nunit.mjs', 'passed'], cwd: project,
     allowChanges: [{ field: 'command', reason: 'Select passing installed control.' }] });
   assert.equal(nunitFixed.status, 'target_not_observed');
@@ -386,16 +389,20 @@ async function exerciseInstalledMcp(installedDirectory, verification, environmen
     const directBaseline = await callDirect('failtrace_run', { command: process.execPath, args: direct.args,
       cwd: direct.cwd, repeat: 1, predicate: direct.predicate, captureContext: { sourceFiles: ['check input.mjs'], inputFiles: ['input.txt'] } });
     assert.equal(directBaseline.matchedTrials, 1);
+    assert.equal(directBaseline.verificationReadiness.eligible, true);
     const changedArgs = [...direct.args];
     changedArgs[1] = 'other.txt';
-    const directVerification = await callDirect('failtrace_verify', { baseline: directBaseline.artifactDirectory,
+    const directVerification = await callDirect('failtrace_verify', { baseline: 'latest',
       cwd: direct.cwd, command: process.execPath, args: changedArgs });
     assert.equal(directVerification.status, 'inconclusive');
     assert.equal(directVerification.candidate, null);
     assert(directVerification.changes.some(change => change.field === 'command' && !change.allowed));
+    assert.equal(directVerification.baseline.id, directBaseline.id);
+    assert(directVerification.nextSteps.some(step => step.code === 'declare_change' && step.field === 'command'));
     const directReduced = await callDirect('failtrace_minimize', { command: process.execPath, args: direct.template,
       cwd: direct.cwd, input: 'input.txt', format: 'text', predicate: direct.predicate });
     assert.equal(directReduced.finalVerified, true);
+    assert(directReduced.samplingWarnings.some(warning => warning.includes('--repeat 5')));
     assert.equal(await readFile(directReduced.minimizedPath, 'utf8'), 'X');
     const directBundle = await callDirect('failtrace_bundle', { run: directReduced.final.runDirectory,
       cwd: direct.cwd, command: 'node', args: direct.template, input: directReduced.minimizedPath, files: ['check input.mjs'] });
@@ -617,7 +624,7 @@ try {
       installedDirectReplay: direct.replay, installedArgumentChangeGuard: direct.argumentChangeGuard, installedDirectMcp: mcpChecks.directExecution,
       unrelatedErrorGuard: verification.unrelatedErrorGuard, installedSkippedCheckGuard: verification.skippedCheckGuard,
       installedOriginalWorkflows: 'passed', installedOriginalMcpWorkflows: mcpChecks.originalWorkflows,
-      installedStorageBudget: 'passed' },
+      installedStorageBudget: 'passed', installedRunReferencesAndGuidance: 'passed' },
     namedProjectActions: verification.namedProjectActions,
     core: { total: core.total, failed: core.failed, comparison: core.comparison, inspection: core.inspection, inventory: core.inventory },
     retained: keep,

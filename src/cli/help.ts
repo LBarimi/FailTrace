@@ -97,6 +97,9 @@ Usage:
   failtrace compare <run-a> [run-b] [--trial-a N] [--trial-b N]
 
 Run references can be an ID, a run directory, or a run.json path.
+Also: a unique UUID prefix (at least 8 characters), latest, or last.
+Shorthands search only .failtrace/runs under --cwd; results retain full IDs.
+Latest means newest by generated ID, including incomplete runs; no fallback.
 With one run, prefer a clean exit-0 nonmatch and a target match.
 With two runs, select the first trial in each unless indices are supplied.
 This command reads saved evidence and does not execute the target.
@@ -190,6 +193,8 @@ Example (check.mjs must accept the input file as its argument):
 
 Next:
   Baseline not_reproduced: check the input connection and target signature.
+  Intermittent target: choose a budget such as --repeat 5 --min-failures 1.
+  One trial can miss a useful reduction; more trials cost more time.
   Check status and finalVerified before using minimizedPath.
   Bundle final.runDirectory with minimizedPath; see failtrace bundle --help.
 
@@ -205,6 +210,9 @@ Usage:
   failtrace verify <baseline> --exec PROGRAM [--arg VALUE ...] --cwd DIRECTORY
 
 Before editing, capture a run with --capture-context or explicit context files.
+Run reports metadata eligibility and next steps. After an intended source edit,
+use --allow-change "source:describe the intended fix"; other changes need their
+own declaration. Missing original context cannot be recovered from fixed code.
 The baseline must reproduce the target with complete, stable context evidence.
 Verify requires your explicit current command and working directory.
 
