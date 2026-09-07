@@ -29,7 +29,7 @@ The demo reduces six input items to `["BUG"]`, rejects a patch that crashes for 
 Connect the local stdio MCP server through your client's configuration:
 
 ```sh
-npx --yes failtrace@1.4.1 mcp --cwd "/absolute/path/to/your/project"
+npx --yes failtrace@1.5.0 mcp --cwd "/absolute/path/to/your/project"
 ```
 
 **[Copy the MCP configuration and check the connection →](docs/AGENT-WORKFLOWS.md#mcp-client-configuration-and-windows-paths)**
@@ -63,7 +63,7 @@ The selected test stays the same; a skipped report is not accepted as a passing 
 From your project, replace the command and message with your own:
 
 ```sh
-npx --yes failtrace@1.4.1 run "npm test -- checkout" --repeat 20 --stderr-contains "checkout failed" --capture-context
+npx --yes failtrace@1.5.0 run "npm test -- checkout" --repeat 20 --stderr-contains "checkout failed" --capture-context
 ```
 
 Run this **before editing** in a Git project. `--capture-context` records source identity for Verify; outside Git, select files with `--context-source`. Each trial saves its output, and exit `1` can mean the target was captured successfully. [Then edit and verify the patch →](docs/VERIFY.md#capture-a-baseline-then-verify)
@@ -95,9 +95,9 @@ Commands run with your permissions, and process cleanup is best effort. Retained
 
 ## Availability and contributing
 
-The quick start uses npm's latest release; the verified version is **1.4.1**. MCP configuration and repeatable installation examples keep that exact version pinned: [installation options](docs/INSTALL.md), [GitHub release](https://github.com/LBarimi/FailTrace/releases/tag/v1.4.1), and [MCP Registry entry](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.LBarimi%2Ffailtrace/versions/1.4.1).
+The quick start uses npm's latest release; the verified version is **1.5.0**. MCP configuration and repeatable installation examples keep that exact version pinned: [installation options](docs/INSTALL.md), [GitHub release](https://github.com/LBarimi/FailTrace/releases/tag/v1.5.0), and [MCP Registry entry](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.LBarimi%2Ffailtrace/versions/1.5.0).
 
-**Version 1.5.0 adds:** [short run references](docs/CLI.md#run-references), Verify readiness and next-step guidance, and intermittent-minimization guidance. The installation examples above follow the last verified public version; use a [source build](CONTRIBUTING.md#development) for these additions until publication is verified. See the [changelog](CHANGELOG.md).
+**Version 1.5.0 adds:** [short run references](docs/CLI.md#run-references), Verify readiness and next-step guidance, and intermittent-minimization guidance. See the [changelog](CHANGELOG.md).
 
 **[Documentation: choose your next task →](docs/README.md)**
 

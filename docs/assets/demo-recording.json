@@ -1,5 +1,5 @@
 {
-  "version": "1.4.1",
+  "version": "1.5.0",
   "scenario": "original-guided-demo",
   "editedTiming": true,
   "outcomes": {
@@ -13,8 +13,8 @@
     "healthyFixedTrials": 2
   },
   "sha256": {
-    "demo.gif": "d75bcfdbe3935c730dfacb8b07c96e38b1173981db3ddd6028ef77ee5dcb2559",
-    "demo-poster.png": "ed0be6e6528862400ba4e33014440fd63ca1b71a83ad9bd63542d6f298a4da7c",
+    "demo.gif": "6e842df1f8d18fe4a6dbc0cea13e8c75ad470876832de440ca858f582c241d31",
+    "demo-poster.png": "e271ec446fa87c94f355e5d7840e7d12253904aa0407d39e2d95c5311eb50cfc",
     "demo.svg": "32e47d1ab33c4a3e29dd925dce025dc99685238a6c39f9d14cc38dcff039b3ca"
   }
 }
