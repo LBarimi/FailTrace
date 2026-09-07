@@ -12,7 +12,7 @@ const directories: string[] = [];
 afterEach(async () => cleanupDirectories(directories));
 async function fixture(): Promise<string> {
   const cwd = await temporaryDirectory(); directories.push(cwd);
-  for (const path of ['docs', 'README.md', 'CHANGELOG.md', 'CONTRIBUTING.md', 'AGENTS.md', 'LICENSE',
+  for (const path of ['docs', 'README.md', 'CHANGELOG.md', 'CONTRIBUTING.md', 'AGENTS.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md',
     'package.json', 'package-lock.json', 'server.json', 'src', 'examples', '.github', 'tests', 'scripts']) {
     await cp(join(root, path), join(cwd, path), { recursive: true });
   }

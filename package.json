@@ -1,6 +1,6 @@
 {
   "name": "failtrace",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "mcpName": "io.github.LBarimi/failtrace",
   "description": "Reproduce, isolate, and minimize failures, then verify proposed fixes.",
   "type": "module",
@@ -34,12 +34,14 @@
     "CHANGELOG.md",
     "server.json",
     "docs",
-    "LICENSE"
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "check:docs": "node scripts/check-docs.mjs",
+    "check:licenses": "node scripts/check-licenses.mjs",
     "pretest": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -48,7 +50,7 @@
     "bench:ci": "npm run build && node scripts/bench.mjs --suite ci --check",
     "test:workflows": "npm run build && node examples/workflows/investigate.mjs",
     "demo": "node dist/cli/index.js demo",
-    "prepack": "npm run build"
+    "prepack": "npm run build && npm run check:licenses"
   },
   "repository": {
     "type": "git",

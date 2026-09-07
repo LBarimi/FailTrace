@@ -505,6 +505,13 @@ try {
   assert.equal(installed.version, manifest.version);
   assert.equal(installed.name, manifest.name);
   assert.equal(installed.mcpName, manifest.mcpName, 'Preserve the verified MCP Registry identity');
+  const licenseInventory = JSON.parse(await readFile(join(repository, 'docs/licenses/manifest.json'), 'utf8'));
+  const noticeFiles = new Set(['THIRD_PARTY_NOTICES.md', 'docs/licenses/manifest.json',
+    ...licenseInventory.packages.map(entry => entry.file)]);
+  for (const file of noticeFiles) {
+    assert.equal(await readFile(join(installedDirectory, file), 'utf8'), await readFile(join(repository, file), 'utf8'),
+      `Installed third-party notice differs or is missing: ${file}`);
+  }
   const server = JSON.parse(await readFile(join(installedDirectory, 'server.json'), 'utf8'));
   assert.equal(server.name, installed.mcpName);
   assert.equal(server.version, installed.version);
@@ -602,6 +609,7 @@ try {
   assert.match(replay.stdout, /Target failure reproduced: 1 \/ 1/);
   const report = {
     package: manifest.name, version: manifest.version, tarball: basename(tarball), sha256,
+    thirdPartyNotices: { packages: licenseInventory.packages.length, files: noticeFiles.size, verified: true },
     checks: { installedCli: 'passed', installedCore: 'passed', productionDependenciesOnly: 'passed', installedDemo: 'passed',
       installedVerifyCore: verification.core, installedVerifyCli: verification.cli, installedVerifyMcp: mcpChecks.verification,
       installedInspectMcp: mcpChecks.inspection, installedBundleManifest: 'passed', installedBundleReplay: 'passed',

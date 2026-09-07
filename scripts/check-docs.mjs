@@ -33,7 +33,7 @@ for (const entry of server.packages ?? []) {
   if (entry.registryType === 'npm' && entry.identifier === manifest.name && entry.version !== version) fail('server.json', 'npm package version differs');
 }
 
-const docs = ['README.md', 'CHANGELOG.md', 'CONTRIBUTING.md', 'AGENTS.md'];
+const docs = ['README.md', 'CHANGELOG.md', 'CONTRIBUTING.md', 'AGENTS.md', 'THIRD_PARTY_NOTICES.md'];
 async function collect(directory) {
   for (const item of await readdir(join(root, directory), { withFileTypes: true })) {
     if (item.isDirectory()) await collect(`${directory}/${item.name}`);

@@ -20,6 +20,7 @@ npm run build
 node dist/cli/index.js demo
 npm run typecheck
 npm run check:docs
+npm run check:licenses
 npm test
 npm run test:package
 ```

@@ -97,4 +97,4 @@ The quick start uses published **1.4.0**: [npm installation options](docs/INSTAL
 
 **[Documentation: choose your next task →](docs/README.md)**
 
-[Development instructions](CONTRIBUTING.md#development) · [Compatibility](docs/COMPATIBILITY.md) · [Roadmap](docs/ROADMAP.md)
+[Development instructions](CONTRIBUTING.md#development) · [Compatibility](docs/COMPATIBILITY.md) · [Roadmap](docs/ROADMAP.md) · [Third-party notices](THIRD_PARTY_NOTICES.md)

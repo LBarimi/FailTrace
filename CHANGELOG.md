@@ -2,6 +2,11 @@
 
 User-visible changes are listed here. [Compatibility](docs/COMPATIBILITY.md) covers integration contracts; [release validation](docs/RELEASE-VALIDATION.md) holds archive identities and installation checks.
 
+## 1.4.1
+
+- Include complete notices for all five reviewed runtime dependencies, including the saxes notice omitted from its npm package and the MCP SDK's licensing transition terms.
+- Check notice coverage, file identities and package inclusion before release; include the updated README walkthroughs.
+
 ## 1.4.0
 
 - Add an optional read-only storage budget check: `artifacts --max-bytes N` and Core `inventoryArtifacts({ maxBytes })`. Complete checks distinguish within/over budget; partial scans remain inconclusive. No automatic deletion or write quota is introduced.

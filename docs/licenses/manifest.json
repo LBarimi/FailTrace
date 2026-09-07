@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "packages": [
+    {
+      "name": "@modelcontextprotocol/core",
+      "version": "2.0.0",
+      "license": "MIT / Apache-2.0 transition; documentation CC-BY-4.0",
+      "file": "docs/licenses/mcp-sdk.txt",
+      "source": "https://registry.npmjs.org/@modelcontextprotocol/core/-/core-2.0.0.tgz",
+      "sha256": "0382b0057770ca05e9c350a50aa3b1c1fea84da0bc81d723bf00b9aa841be58a"
+    },
+    {
+      "name": "@modelcontextprotocol/server",
+      "version": "2.0.0",
+      "license": "MIT / Apache-2.0 transition; documentation CC-BY-4.0",
+      "file": "docs/licenses/mcp-sdk.txt",
+      "source": "https://registry.npmjs.org/@modelcontextprotocol/server/-/server-2.0.0.tgz",
+      "sha256": "0382b0057770ca05e9c350a50aa3b1c1fea84da0bc81d723bf00b9aa841be58a"
+    },
+    {
+      "name": "saxes",
+      "version": "6.0.0",
+      "license": "ISC (with historical notices)",
+      "file": "docs/licenses/saxes.txt",
+      "source": "https://github.com/lddubeau/saxes/blob/v6.0.0/LICENSE",
+      "sha256": "0fac2374380621b22e6b50451057721a9c52935b02d16d106a9f04897f061d0e"
+    },
+    {
+      "name": "xmlchars",
+      "version": "2.2.0",
+      "license": "MIT",
+      "file": "docs/licenses/xmlchars.txt",
+      "source": "https://registry.npmjs.org/xmlchars/-/xmlchars-2.2.0.tgz",
+      "sha256": "45d196313c2647d313cc65ca9b093d2d6974b64d35ee7346f2c60c9d518dff2c"
+    },
+    {
+      "name": "zod",
+      "version": "4.5.4",
+      "license": "MIT",
+      "file": "docs/licenses/zod.txt",
+      "source": "https://registry.npmjs.org/zod/-/zod-4.5.4.tgz",
+      "sha256": "3f1189b28e3866e0d979968d466b78f813f76827cfdca1fbb124cc0a5c8841f8"
+    }
+  ]
+}
